@@ -4,6 +4,15 @@
 #include "viper-eq-presets.h"
 #include "viper-build-info.h"
 #include <QApplication>
+#include <QAction>
+#include <QButtonGroup>
+#include <QDialogButtonBox>
+#include <QDesktopServices>
+#include <QMenu>
+#include <QRadioButton>
+#include <QSaveFile>
+#include <QSystemTrayIcon>
+#include <QUrl>
 #include <QByteArray>
 #include <QGuiApplication>
 #include <QScreen>
@@ -655,12 +664,16 @@ public:
         theme_selector_->setFixedWidth(qMax(168,
             theme_selector_->fontMetrics().horizontalAdvance("Classic Viper") + 62));
         titleRow->addWidget(theme_selector_);
-        auto* helpButton = new QPushButton("?", central);
-        helpButton->setToolTip("Effect descriptions and usage help");
-        helpButton->setAccessibleName("Effect help");
-        helpButton->setFixedWidth(34);
-        titleRow->addWidget(helpButton);
-        connect(helpButton, &QPushButton::clicked, this, [this] { showHelp(); });
+        // Single compact menu instead of separate Help and About buttons.
+        auto* menuButton = new QToolButton(central);
+        menuButton->setObjectName("viperApplicationMenuButton");
+        menuButton->setText(QString::fromUtf8("☰"));
+        menuButton->setAccessibleName("Application menu");
+        menuButton->setToolTip("Preferences, library, help, and quit");
+        menuButton->setFixedWidth(34);
+        menuButton->setPopupMode(QToolButton::InstantPopup);
+        menuButton->setMenu(makeApplicationMenu(menuButton));
+        titleRow->addWidget(menuButton);
         layout->addLayout(titleRow);
 
         // Master bypass lives outside both tabs, as in the previous working UI.
@@ -1562,16 +1575,8 @@ public:
         auto* footer = new QHBoxLayout();
         footer->setContentsMargins(0, 0, 0, 0);
         footer->addWidget(status_, 1);
-        auto* aboutButton = new QToolButton(central);
-        aboutButton->setObjectName("viperAboutButton");
-        aboutButton->setText(QString::fromUtf8("ⓘ"));
-        aboutButton->setToolTip("About Viper4Linux — version and commit information");
-        aboutButton->setAccessibleName("About Viper4Linux");
-        aboutButton->setAutoRaise(true);
-        aboutButton->setFixedSize(28, 28);
-        aboutButton->setFocusPolicy(Qt::StrongFocus);
-        footer->addWidget(aboutButton, 0, Qt::AlignRight);
-        connect(aboutButton, &QToolButton::clicked, this, [this] { showAbout(); });
+        // About is available from the application menu; the footer now only
+        // displays live backend connection status.
         layout->addLayout(footer);
         setCentralWidget(central);
 
@@ -2076,16 +2081,63 @@ public:
 #endif
         applyTheme(theme_selector_->currentIndex() == 1);
         restoreWindowSizes();
+        setupTray();
         pollBackend();
+    }
+    void showAtStartup() {
+        const QString choice = settings_.value("ui/startupBehavior", "show").toString();
+        if (choice == "tray") {
+            if (trayAvailable()) return; // Tray exists, so the window can stay hidden.
+            show(); // Never hide without a working tray.
+            statusMessage("System tray unavailable; showing the main window instead.");
+        } else if (choice == "minimized") {
+            // Explicit start-on-taskbar must override the independent
+            // minimize-to-tray preference.
+            force_taskbar_minimize_ = true;
+            showMinimized();
+            QTimer::singleShot(0, this, [this]{ force_taskbar_minimize_ = false; });
+        } else {
+            show();
+        }
     }
 protected:
     void closeEvent(QCloseEvent* event) override {
-        settings_.setValue("ui/mainWindowSize", isMaximized() ? normalGeometry().size() : size());
-        settings_.setValue("ui/mainWindowMaximized", isMaximized());
-        settings_.setValue("ui/graphicEqEditorSize", eq_editor_->size());
-        settings_.setValue("ui/dynamicEqEditorSize", deq_editor_->size());
-        settings_.sync();
-        QMainWindow::closeEvent(event);
+        saveUiGeometry();
+        const QString choice = settings_.value("ui/closeBehavior", "quit").toString();
+        if (choice == "tray") {
+            if (!trayAvailable()) {
+                event->ignore();
+                statusMessage("System tray unavailable; the window stays open.");
+                return;
+            }
+            event->ignore();
+            hide();
+            return;
+        }
+        if (choice == "minimized") {
+            event->ignore();
+            force_taskbar_minimize_ = true;
+            showMinimized();
+            QTimer::singleShot(0, this, [this]{ force_taskbar_minimize_ = false; });
+            return;
+        }
+        event->accept();
+        // quitOnLastWindowClosed is false to support tray-only startup;
+        // a genuine close/quit must therefore explicitly terminate the GUI.
+        QTimer::singleShot(0, qApp, [] { qApp->quit(); });
+    }
+    void changeEvent(QEvent* event) override {
+        QMainWindow::changeEvent(event);
+        if (event->type() != QEvent::WindowStateChange || !isMinimized()
+            || force_taskbar_minimize_
+            || !settings_.value("ui/minimizeToTray", false).toBool()) return;
+        if (!trayAvailable()) return; // Native taskbar fallback, not disappearance.
+        // Deferring prevents recursive Qt window-state notifications.
+        QTimer::singleShot(0, this, [this] {
+            if (!isMinimized() || !trayAvailable()) return;
+            hide();
+            setWindowState(windowState() & ~Qt::WindowMinimized);
+        });
     }
     bool eventFilter(QObject* watched, QEvent* event) override {
         if (event->type() == QEvent::Hide) {
@@ -2679,6 +2731,205 @@ private:
         requestIrsLoad();
         updateIrsName(path); // even if the popup is still open and frozen
         refreshIrsLibrary();
+    }
+    // Keep all window/tray policy separate from DSP parameter persistence.
+    void saveUiGeometry() {
+        if (isVisible() && !isMinimized()) {
+            settings_.setValue("ui/mainWindowSize", isMaximized() ? normalGeometry().size() : size());
+            settings_.setValue("ui/mainWindowMaximized", isMaximized());
+        }
+        settings_.setValue("ui/graphicEqEditorSize", eq_editor_->size());
+        settings_.setValue("ui/dynamicEqEditorSize", deq_editor_->size());
+        settings_.sync();
+    }
+    bool trayAvailable() const {
+        return tray_icon_ && QSystemTrayIcon::isSystemTrayAvailable();
+    }
+    void restoreFromTray() {
+        if (isMinimized()) showNormal();
+        else if (!isVisible()) show();
+        raise();
+        activateWindow();
+    }
+    void quitGui() {
+        saveUiGeometry();
+        qApp->quit(); // Does not touch the separate PipeWire backend.
+    }
+    void setupTray() {
+        tray_icon_ = new QSystemTrayIcon(QIcon(":/viper4linux/blue.png"), this);
+        tray_icon_->setToolTip("Viper4Linux — PipeWire effects");
+        auto* menu = new QMenu(this);
+        auto* showAction = menu->addAction("Show / Hide Window");
+        connect(showAction, &QAction::triggered, this, [this] {
+            if (isVisible() && !isMinimized()) { saveUiGeometry(); hide(); }
+            else restoreFromTray();
+        });
+        tray_processing_action_ = menu->addAction("Enable Processing");
+        tray_processing_action_->setCheckable(true);
+        connect(tray_processing_action_, &QAction::triggered, this, [this](bool enabled) {
+            global_->setChecked(enabled); // Existing master toggle handles DSP publishing.
+        });
+        connect(global_, &QCheckBox::toggled, this, [this](bool enabled) {
+            if (tray_processing_action_) tray_processing_action_->setChecked(enabled);
+        });
+        connect(menu, &QMenu::aboutToShow, this, [this] {
+            tray_processing_action_->setChecked(global_->isChecked());
+        });
+        menu->addSeparator();
+        auto* prefs = menu->addAction("Preferences…");
+        connect(prefs, &QAction::triggered, this, [this] { showPreferences(); });
+        menu->addSeparator();
+        auto* quit = menu->addAction("Quit GUI");
+        connect(quit, &QAction::triggered, this, [this] { quitGui(); });
+        tray_icon_->setContextMenu(menu);
+        connect(tray_icon_, &QSystemTrayIcon::activated, this,
+                [this](QSystemTrayIcon::ActivationReason reason) {
+            if (reason != QSystemTrayIcon::Trigger && reason != QSystemTrayIcon::DoubleClick)
+                return;
+            if (isVisible() && !isMinimized()) { saveUiGeometry(); hide(); }
+            else restoreFromTray();
+        });
+        tray_icon_->show();
+    }
+    QString autostartFile() const {
+        const QString config = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+        return config + "/autostart/viper4linux-re.desktop";
+    }
+    bool setAutostart(bool enabled) {
+        const QString target = autostartFile();
+        if (!enabled) {
+            if (!QFile::exists(target)) return true;
+            return QFile::remove(target);
+        }
+        if (!QDir().mkpath(QFileInfo(target).absolutePath())) return false;
+        QSaveFile file(target);
+        if (!file.open(QIODevice::WriteOnly)) return false;
+        const QByteArray desktop =
+            "[Desktop Entry]\nType=Application\nName=Viper4Linux\n"
+            "Comment=Start Viper4Linux at login\nExec=viper4linux\n"
+            "TryExec=viper4linux\nIcon=viper4linux\n"
+            "Terminal=false\nX-GNOME-Autostart-enabled=true\n";
+        if (file.write(desktop) != desktop.size()) { file.cancelWriting(); return false; }
+        return file.commit();
+    }
+    void showPreferences() {
+        QDialog dialog(this);
+        dialog.setWindowTitle("Viper4Linux — Window & Tray");
+        dialog.setMinimumWidth(395);
+        auto* body = new QVBoxLayout(&dialog);
+        auto* startup = new QGroupBox("When Viper4Linux starts", &dialog);
+        auto* startLayout = new QVBoxLayout(startup);
+        auto* startGroup = new QButtonGroup(&dialog);
+        auto* startNormal = new QRadioButton("Show main window", startup);
+        auto* startMin = new QRadioButton("Start minimized to taskbar", startup);
+        auto* startTray = new QRadioButton("Start hidden in system tray", startup);
+        startGroup->addButton(startNormal, 0);
+        startGroup->addButton(startMin, 1);
+        startGroup->addButton(startTray, 2);
+        for (auto* item : {startNormal, startMin, startTray}) startLayout->addWidget(item);
+        const QString initial = settings_.value("ui/startupBehavior", "show").toString();
+        if (initial == "minimized") startMin->setChecked(true);
+        else if (initial == "tray") startTray->setChecked(true);
+        else startNormal->setChecked(true);
+        body->addWidget(startup);
+
+        auto* minimize = new QCheckBox("Minimize to tray instead of taskbar", &dialog);
+        minimize->setChecked(settings_.value("ui/minimizeToTray", false).toBool());
+        body->addWidget(minimize);
+
+        auto* closeBox = new QGroupBox("When the close (X) button is clicked", &dialog);
+        auto* closeLayout = new QVBoxLayout(closeBox);
+        auto* closeGroup = new QButtonGroup(&dialog);
+        auto* closeQuit = new QRadioButton("Quit GUI (keep audio backend running)", closeBox);
+        auto* closeMin = new QRadioButton("Minimize to taskbar", closeBox);
+        auto* closeTray = new QRadioButton("Hide to system tray", closeBox);
+        closeGroup->addButton(closeQuit, 0);
+        closeGroup->addButton(closeMin, 1);
+        closeGroup->addButton(closeTray, 2);
+        for (auto* item : {closeQuit, closeMin, closeTray}) closeLayout->addWidget(item);
+        const QString ending = settings_.value("ui/closeBehavior", "quit").toString();
+        if (ending == "minimized") closeMin->setChecked(true);
+        else if (ending == "tray") closeTray->setChecked(true);
+        else closeQuit->setChecked(true);
+        body->addWidget(closeBox);
+
+        auto* autostart = new QCheckBox("Launch automatically when I log in", &dialog);
+        autostart->setChecked(QFile::exists(autostartFile()));
+        body->addWidget(autostart);
+        auto* notice = new QLabel(
+            "If the desktop tray is unavailable, Viper4Linux stays accessible\n"
+            "as an ordinary window or taskbar application.", &dialog);
+        notice->setWordWrap(true);
+        body->addWidget(notice);
+        auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        body->addWidget(buttons);
+        if (dialog.exec() != QDialog::Accepted) return;
+        settings_.setValue("ui/startupBehavior",
+            startGroup->checkedId() == 2 ? "tray" : startGroup->checkedId() == 1 ? "minimized" : "show");
+        settings_.setValue("ui/minimizeToTray", minimize->isChecked());
+        settings_.setValue("ui/closeBehavior",
+            closeGroup->checkedId() == 2 ? "tray" : closeGroup->checkedId() == 1 ? "minimized" : "quit");
+        settings_.sync();
+        if (!setAutostart(autostart->isChecked())) {
+            QMessageBox::warning(this, "Autostart",
+                "Could not update the XDG autostart entry:\n" + autostartFile());
+        }
+    }
+    QMenu* makeApplicationMenu(QWidget* parent) {
+        auto* menu = new QMenu(parent);
+        auto* preferences = menu->addAction("Preferences…");
+        connect(preferences, &QAction::triggered, this, [this] { showPreferences(); });
+        auto* libraries = menu->addMenu("Open Library");
+        auto openFolder = [this](const QString& path) {
+            if (!QDir().mkpath(path) ||
+                !QDesktopServices::openUrl(QUrl::fromLocalFile(path)))
+                QMessageBox::warning(this, "Open Library", "Could not open: " + path);
+        };
+        auto* irs = libraries->addAction("IRS impulse responses");
+        connect(irs, &QAction::triggered, this, [openFolder] {
+            openFolder(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                       + "/viper4linux/IRS");
+        });
+        auto* vdc = libraries->addAction("VDC correction profiles");
+        connect(vdc, &QAction::triggered, this, [openFolder] {
+            openFolder(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                       + "/viper4linux/VDC");
+        });
+        auto* logAction = menu->addAction("View Backend Log");
+        connect(logAction, &QAction::triggered, this, [this] {
+            const QString state = qEnvironmentVariable("XDG_STATE_HOME", QDir::homePath() + "/.local/state");
+            const QString path = state + "/viper4linux/backend.log";
+            QFile log(path);
+            if (!log.open(QIODevice::ReadOnly)) {
+                QMessageBox::information(this, "Backend Log", "No backend log found at:\n" + path);
+                return;
+            }
+            const qint64 start = std::max<qint64>(0, log.size() - 128 * 1024);
+            log.seek(start);
+            QDialog viewer(this);
+            viewer.setWindowTitle("Viper4Linux — Backend Log");
+            viewer.resize(750, 480);
+            auto* layout = new QVBoxLayout(&viewer);
+            auto* text = new QPlainTextEdit(&viewer);
+            text->setReadOnly(true);
+            text->setPlainText(QString::fromUtf8(log.readAll()));
+            layout->addWidget(text);
+            auto* close = new QDialogButtonBox(QDialogButtonBox::Close, &viewer);
+            connect(close, &QDialogButtonBox::rejected, &viewer, &QDialog::reject);
+            layout->addWidget(close);
+            viewer.exec();
+        });
+        menu->addSeparator();
+        auto* guide = menu->addAction("Effect Guide");
+        connect(guide, &QAction::triggered, this, [this] { showHelp(); });
+        auto* about = menu->addAction("About Viper4Linux");
+        connect(about, &QAction::triggered, this, [this] { showAbout(); });
+        menu->addSeparator();
+        auto* quit = menu->addAction("Quit GUI");
+        connect(quit, &QAction::triggered, this, [this] { quitGui(); });
+        return menu;
     }
     void showAbout() {
         // A minimal, non-intrusive About dialog, kept independent of the
@@ -4085,6 +4336,9 @@ private:
         status_->setStyleSheet("color: #209454;");
     }
     QSettings settings_;
+    QSystemTrayIcon* tray_icon_{};
+    QAction* tray_processing_action_{};
+    bool force_taskbar_minimize_ = false;
     QString theme_muted_color_ = "#536a74";
     QProcess* cinnamon_theme_query_{};
     bool cinnamon_theme_known_ = false;
@@ -4228,7 +4482,10 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("Viper4Linux");
     app.setWindowIcon(QIcon(":/viper4linux/blue.png"));
+    // A tray-only launch has no visible top-level window. Explicit Quit GUI
+    // and closeEvent remain the only reasons for the GUI to terminate.
+    app.setQuitOnLastWindowClosed(false);
     ViperWindow window;
-    window.show();
+    window.showAtStartup();
     return app.exec();
 }

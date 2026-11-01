@@ -13,9 +13,12 @@ assert 'ir_transition.store(true' not in method
 assert 'sleep_for' not in method
 assert 'wet.ApplyDynamicEq(p)' in s
 ui = (r / 'src/viper-gui.cpp').read_text()
-assert 'aboutButton->setObjectName("viperAboutButton")' in ui
-assert 'footer->addWidget(aboutButton, 0, Qt::AlignRight)' in ui
-assert 'connect(aboutButton, &QToolButton::clicked, this, [this] { showAbout(); });' in ui
+# About moved from the footer to the compact application menu.
+assert 'menuButton->setObjectName("viperApplicationMenuButton")' in ui
+assert 'menuButton->setMenu(makeApplicationMenu(menuButton));' in ui
+assert 'menu->addAction("About Viper4Linux")' in ui
+assert 'connect(about, &QAction::triggered, this, [this] { showAbout(); });' in ui
+assert 'viperAboutButton' not in ui
 assert 'VIPER4LINUX_DEV_VERSION' in ui
 assert 'VIPER4LINUX_DEV_REVISION' in ui
 assert 'VIPER4LINUX_VIPERDSP_REVISION' in ui
