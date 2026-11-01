@@ -18,6 +18,7 @@
 #include <QScreen>
 #include <QCloseEvent>
 #include <QEvent>
+#include <QWindowStateChangeEvent>
 #include <QIcon>
 #include <QPixmap>
 #include <QStyleHints>
@@ -2127,16 +2128,23 @@ protected:
         QTimer::singleShot(0, qApp, [] { qApp->quit(); });
     }
     void changeEvent(QEvent* event) override {
+        // The window manager has already iconified this native top-level window.
+        // On Cinnamon/X11, clearing Qt::WindowMinimized *after* hide() can
+        // recreate a black, taskbar-listed ghost window. Leave the minimized
+        // state alone while hidden; restoreFromTray() resolves it on demand.
+        const bool is_state_change = event->type() == QEvent::WindowStateChange;
+        const bool was_maximized = is_state_change &&
+            static_cast<QWindowStateChangeEvent*>(event)->oldState().testFlag(Qt::WindowMaximized);
         QMainWindow::changeEvent(event);
-        if (event->type() != QEvent::WindowStateChange || !isMinimized()
-            || force_taskbar_minimize_
+        if (!is_state_change || !isMinimized() || force_taskbar_minimize_
             || !settings_.value("ui/minimizeToTray", false).toBool()) return;
-        if (!trayAvailable()) return; // Native taskbar fallback, not disappearance.
-        // Deferring prevents recursive Qt window-state notifications.
-        QTimer::singleShot(0, this, [this] {
-            if (!isMinimized() || !trayAvailable()) return;
+        if (!trayAvailable()) return; // Keep native taskbar behavior without a tray.
+        // Deferring until after the WM's minimize event prevents reentrant
+        // state changes. Only withdraw the window from the WM; don't remap it.
+        QTimer::singleShot(0, this, [this, was_maximized] {
+            if (!isMinimized() || !isVisible() || !trayAvailable()) return;
+            tray_restore_maximized_ = was_maximized;
             hide();
-            setWindowState(windowState() & ~Qt::WindowMinimized);
         });
     }
     bool eventFilter(QObject* watched, QEvent* event) override {
@@ -2746,8 +2754,16 @@ private:
         return tray_icon_ && QSystemTrayIcon::isSystemTrayAvailable();
     }
     void restoreFromTray() {
-        if (isMinimized()) showNormal();
-        else if (!isVisible()) show();
+        // Restore the real GUI *before* asking Qt to clear its minimized state.
+        // When minimized-to-tray, we only hid the native window; we did not
+        // mutate its window state while hidden (which confused Cinnamon/X11).
+        if (isMinimized()) {
+            if (tray_restore_maximized_) showMaximized();
+            else showNormal();
+        } else if (!isVisible()) {
+            show();
+        }
+        tray_restore_maximized_ = false;
         raise();
         activateWindow();
     }
@@ -4339,6 +4355,7 @@ private:
     QSystemTrayIcon* tray_icon_{};
     QAction* tray_processing_action_{};
     bool force_taskbar_minimize_ = false;
+    bool tray_restore_maximized_ = false;
     QString theme_muted_color_ = "#536a74";
     QProcess* cinnamon_theme_query_{};
     bool cinnamon_theme_known_ = false;

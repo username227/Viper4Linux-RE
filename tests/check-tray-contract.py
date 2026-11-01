@@ -30,6 +30,21 @@ assert 'QSaveFile file(target);' in s
 assert 'Exec=viper4linux' in s
 assert 'TryExec=viper4linux' in s
 assert 'qApp->quit(); // Does not touch the separate PipeWire backend.' in s
+# Minimize-to-tray withdraws the window without clearing its state while
+# hidden (Qt/X11 could otherwise leave a blank ghost in Cinnamon's taskbar).
+minimize_handler = s[s.index('    void changeEvent(QEvent* event) override {'):
+                     s.index('    bool eventFilter(QObject* watched, QEvent* event) override {')]
+assert 'QWindowStateChangeEvent' in s
+assert 'tray_restore_maximized_ = was_maximized;' in minimize_handler
+assert 'hide();' in minimize_handler
+assert 'setWindowState(' not in minimize_handler
+assert 'showNormal();' in s[s.index('    void restoreFromTray() {'):
+                            s.index('    void quitGui() {')]
+assert 'showMaximized();' in s[s.index('    void restoreFromTray() {'):
+                               s.index('    void quitGui() {')]
+# Explicit taskbar minimization paths still bypass the tray preference.
+assert 'force_taskbar_minimize_ = true;' in s
+assert 'force_taskbar_minimize_' in minimize_handler
 # Tray/close GUI code cannot launch, stop, or fingerprint the backend.
 for begin, end in (('    void setupTray() {', '    QString autostartFile() const {'),
                    ('    void closeEvent(QCloseEvent* event) override {',

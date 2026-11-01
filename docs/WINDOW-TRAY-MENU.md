@@ -40,3 +40,19 @@ launcher still runs. Unchecking autostart removes only this managed file.
 4. Verify autostart entry appears in desktop Startup Applications settings,
    launches only on login, and removes cleanly when unchecked.
 5. Confirm that GUI-only upgrades do not restart the DSP backend.
+
+## Cinnamon minimize-to-tray regression (r35)
+
+The previous implementation called `setWindowState(... & ~Qt::WindowMinimized)`
+immediately after hiding the iconified window. Qt/X11 could briefly remap it
+as an unpainted, black taskbar-listed window. The minimize handler now simply
+withdraws the native window with `hide()` and leaves the minimized state
+untouched until the user requests **Show Window** from the tray. Restoring
+returns to maximized or normal state as appropriate. The backend is unchanged.
+
+Test the title-bar minimize button with *Minimize to tray* enabled. The GUI
+should be absent from both the desktop and Cinnamon taskbar, with just the
+tray icon remaining. Clicking the tray icon should restore the fully painted
+window. Repeat with *Minimize to tray* disabled to confirm a normal taskbar
+minimize, and test close-to-tray separately. This is an X11 regression test,
+not a verified fix until tested under a live Cinnamon session.
