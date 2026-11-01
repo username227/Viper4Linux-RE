@@ -20,6 +20,7 @@ fi
 # Before cloning, compile and run the INCLUDED isolated DSP regression suite.
 echo '== Isolated DSP and native Convolver regression tests =='
 bash ./tests/check-mock.sh
+python3 ./tests/check-launcher.py
 # Fetch the exact pinned upstream engine. The independent source tree contains
 # all OUR code, scripts, tests and configuration; ViPERDSP is a third-party dep.
 readonly revision=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
@@ -62,5 +63,26 @@ done
 echo '== Repeating regression tests after native build =='
 bash ./tests/check-mock.sh
 printf '\nCOMPLETE: isolated regression suite and fresh native build succeeded.\n'
-printf 'Now stop the OLD backend, ensure JamesDSP is closed, then run ./start.sh and ./gui.sh.\n'
+# Expose a plain `viper4linux` command when ~/.local/bin is available. Never
+# overwrite an unrelated program owned by the user. Fresh-tree installations
+# replace the symlink from an older Viper4Linux source checkout automatically.
+launcher_dir=${XDG_BIN_HOME:-$HOME/.local/bin}
+launcher_link=$launcher_dir/viper4linux
+mkdir -p -- "$launcher_dir"
+if [[ ! -e $launcher_link && ! -L $launcher_link ]]; then
+    ln -s -- "$PWD/viper4linux" "$launcher_link"
+elif [[ -L $launcher_link ]]; then
+    old_target=$(readlink -f -- "$launcher_link" 2>/dev/null || true)
+    if [[ $old_target == "$PWD/viper4linux" || $old_target == */viper-for-linux-*/viper4linux || $old_target == */viper4linux/viper4linux ]]; then
+        ln -sfn -- "$PWD/viper4linux" "$launcher_link"
+    else
+        echo "Launcher already exists at $launcher_link; not replacing an unrelated symlink." >&2
+    fi
+else
+    echo "Launcher already exists at $launcher_link; not replacing a user-owned command." >&2
+fi
+if [[ :$PATH: != *:$launcher_dir:* ]]; then
+    echo "Note: $launcher_dir is not on PATH; use ./viper4linux or add that directory to PATH." >&2
+fi
+printf 'Launch with viper4linux (or ./viper4linux from the source directory).\n'
 printf 'Use ./verify.sh while Rhythmbox is playing.\n'

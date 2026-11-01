@@ -23,10 +23,14 @@ printf 'Saved preferences are read from ~/.config/ViPERforLinux/ViPERClean.conf.
 printf 'Settings can be changed in the Qt6 GUI without restarting the filter.\n'
 printf 'Quit with your terminal interrupt shortcut (Ctrl+X on your system).\n\n'
 
+# Identify the actual compiled DSP/control/config so a future launcher can
+# safely replace an outdated backend, even when installed from another tree.
+backend_fingerprint=$(python3 src/viper_launcher.py --fingerprint)
 # Retain the unified instance marker so existing control tools remain compatible. Discard
 # PIPEWIRE_DAEMON; the client only connects to your existing PipeWire server.
 exec env -u PIPEWIRE_DAEMON \
   VIPER_CLEAN_INSTANCE=viperlinux-unified-v1 \
+  VIPER_BACKEND_FINGERPRINT="$backend_fingerprint" \
   LADSPA_PATH="$PWD/build${LADSPA_PATH:+:$LADSPA_PATH}" \
   PIPEWIRE_CONFIG_DIR="$PWD/routing-config" \
   pipewire -c filter-chain.conf
