@@ -50,8 +50,8 @@ an existing file. Select from the dropdown to load a new kernel **without restar
 PipeWire or the ViPER backend**. **Refresh / Reload** also rescans the directory and
 reloads the current choice. The list updates on filesystem changes only when the dropdown is closed, and remains stable while open. Different-rate IRs are resampled before live kernel replacement. **None** unloads the kernel.
 
-A `?` button opens the effect descriptions instead of placing prose under every
-effect heading. See `docs/CONVOLVER-PROOF-OF-CONCEPT.md` for input format limits, live
+The top-right ☰ application menu opens the Effect Guide, preferences, libraries,
+backend log and About without adding controls to the effect tabs. See `docs/CONVOLVER-PROOF-OF-CONCEPT.md` for input format limits, live
 processing handoff, and troubleshooting.
 
 ## GUI color themes
@@ -136,7 +136,7 @@ See [Arch packaging instructions](docs/ARCH-PACKAGING.md). The release tarball
 contains a real Git checkout and a `packaging/arch/PKGBUILD` that builds the
 current commit as `viper4linux-re-git` and installs the application under `/usr`.
 Copy the PKGBUILD to a separate directory and run `makepkg -si` there; the
-local source checkout defaults to `~/Desktop/viper4linux-compressors`. The upstream
+local source checkout defaults to `~/Desktop/viper4linux-tray`. The upstream
 ViPERDSP library is fetched at its pinned commit during package preparation.
 The first system-package build should be tested separately from source checkouts.
 
@@ -154,3 +154,14 @@ the GUI version. Thus a GUI-only upgrade should reuse an already-matching
 backend, as observed during the r26 test.
 
 ViPER-DDC profiles belong in `$XDG_DATA_HOME/viper4linux/VDC` (normally `~/.local/share/viper4linux/VDC`). This directory is separate from the IRS library.
+
+### Tray and application menu (development)
+
+The top-right ☰ holds Window & Tray Preferences, Open Library (IRS/VDC), View
+Backend Log, Effect Guide, About and Quit GUI. In preferences, startup can show
+the window, minimize to taskbar or start hidden in the tray. The minimize
+button can send the window to the tray, and close (X) can quit the GUI,
+minimize to taskbar or hide to tray. Optional login startup uses the standard
+XDG autostart location. If the desktop has no usable tray, the GUI stays
+reachable. None of these window controls stop the independent audio backend.
+See [WINDOW-TRAY-MENU.md](docs/WINDOW-TRAY-MENU.md).
