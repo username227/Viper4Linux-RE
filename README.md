@@ -2,11 +2,11 @@
 
 **Current distribution:** Complete Git history in a tar.gz release, with an Arch VCS PKGBUILD for local system installation. Includes the native ViPERDSP Convolver integration, updated six-tab GUI, CLI, shared-memory controls, PipeWire routing and regression tests. The prior non-native Gain / Headroom stage has been removed end-to-end. This remains an experimental proof of concept.
 
-**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Nineteen native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC and Speaker Correction are not yet implemented. See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
+**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Twenty native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC and Speaker Correction are not yet implemented. See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
 
 **Required external source:** This archive contains the entire ViPER for Linux application source, except for the upstream `ViPERDSP` dependency, which `./install.sh` retrieves at the pinned commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933` over the network. It does not reuse code from any previous local ViPER installation. A distribution-provided PipeWire filter-chain configuration is also copied at build time.
 
-**Compatibility:** The shared-memory protocol has changed to version 21 and uses the v10 production IPC name; the old and new backends must **not** run simultaneously, since they still use the same PipeWire smart-sink names. Existing effect settings and presets are preserved, but old input-gain values are deliberately ignored and removed on GUI startup. Input reaches native ViPERDSP at **100% (unity)**. The master bypass still leaves the native limiter active.
+**Compatibility:** The shared-memory protocol has changed to version 22 and uses the v10 production IPC name; the old and new backends must **not** run simultaneously, since they still use the same PipeWire smart-sink names. Existing effect settings and presets are preserved, but old input-gain values are deliberately ignored and removed on GUI startup. Input reaches native ViPERDSP at **100% (unity)**. The master bypass still leaves the native limiter active.
 
 ## Fresh Arch Linux build
 
@@ -88,6 +88,20 @@ of left/right audio for headphone spatial realism. The controls are kept
 independent of the Convolver cross-channel mix, which is a simpler linear
 stereo blend. Preset adjustments while Crossfeed is off are saved without
 changing the running DSP path.
+
+### Native Stereo Imager (experimental)
+
+The Spatial tab's final card is a three-band native ViPERDSP Stereo Imager.
+Each of the low, mid and high bands has its own width slider (0–200%; 100%
+is the normal side-channel gain). The two adjustable crossovers default to
+200 Hz and 4 kHz. The effect is **OFF** by default and does not override
+Headphone Surround+, Crossfeed, or Field Surround. Widths above 100% can
+reduce mono compatibility. Use modest values and compare at matched volume.
+
+Crossover updates are handed to the non-realtime worker. The pinned
+ViPERDSP copy is patched to preallocate the native Stereo Imager's 2048-frame
+scratch buffers before audio starts, preventing an initial callback allocation
+from this effect; this does not certify real-time safety of all other effects.
 
 ### Native Dynamic EQ (experimental)
 

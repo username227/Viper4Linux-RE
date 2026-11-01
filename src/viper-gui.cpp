@@ -182,6 +182,15 @@ protected:
             QPainterPath a(QPointF(6,5)); a.cubicTo(9,5,9,19,14,19);
             QPainterPath b(QPointF(18,19)); b.cubicTo(15,19,15,5,10,5);
             p.drawPath(a); p.drawPath(b);
+        } else if (kind_ == "imager") {
+            // Three distinct frequency bands spreading outward from center.
+            for (int y : {5, 12, 19}) {
+                line(11, y, 13, y);
+                line(8, y-2, 5, y);
+                line(8, y+2, 5, y);
+                line(16, y-2, 19, y);
+                line(16, y+2, 19, y);
+            }
         } else if (kind_ == "headphone") {
             p.drawArc(QRectF(3,3,18,18),0,180*16);
             p.drawRoundedRect(QRectF(2,12,5,9),1.5,1.5);
@@ -1233,8 +1242,22 @@ public:
         reverb_dry_ = addSlider(reverb_form, "Reverb dry level", 0, 100);
         reverb_dry_.slider->setToolTip("Original direct signal level in the reverberation model. Use 50% for unity dry gain (upstream scales dry by 2).");
         addEffectPanel(spatialLayout, reverb_group, "reverb", reverb_enabled_);
-        addTabNotice(spatialLayout, "Planned spatial effects",
-            "Stereo Imager remains planned. Crossfeed now uses native ViPERDSP Cure.");
+        // Native ViPERDSP Stereo Imager: independent low, mid and high width.
+        // Set 100% for neutral width and keep the entire effect off by default.
+        auto* imager_group = new QGroupBox("Stereo Imager", tabs_);
+        auto* imager_form = new QFormLayout(imager_group);
+        imager_enabled_ = new EffectSwitch(imager_group);
+        imager_form->addRow("Three-band stereo imaging", imager_enabled_);
+        imager_low_ = addSlider(imager_form, "Low-band width", 0, 200);
+        imager_mid_ = addSlider(imager_form, "Mid-band width", 0, 200);
+        imager_high_ = addSlider(imager_form, "High-band width", 0, 200);
+        for (const auto& r : {imager_low_, imager_mid_, imager_high_})
+            r.slider->setToolTip("100% = normal width; below narrows, above widens, up to 200%.");
+        imager_low_xover_ = addSlider(imager_form, "Low crossover", 80, 400);
+        imager_high_xover_ = addSlider(imager_form, "High crossover", 20, 80); // 100 Hz steps
+        imager_low_xover_.slider->setToolTip("Low/mid crossover: 80 to 400 Hz.");
+        imager_high_xover_.slider->setToolTip("Mid/high crossover: 2,000 to 8,000 Hz.");
+        addEffectPanel(spatialLayout, imager_group, "imager", imager_enabled_);
 
         // Tube Simulator is the native ViPERDSP TubeSimulator: no third-party DSP.
         auto* tube_group = new QGroupBox("Tube Simulator", tabs_);
@@ -1415,6 +1438,12 @@ public:
         analogx_mode_->setCurrentIndex(std::clamp(settings_.value("analogx_mode", 0).toInt(), 0, 2));
         crossfeed_enabled_->setChecked(settings_.value("crossfeed_enabled", false).toBool());
         crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("crossfeed_preset", 0).toInt(), 0, 2));
+        imager_enabled_->setChecked(settings_.value("imager_enabled", false).toBool());
+        imager_low_.slider->setValue(std::clamp(settings_.value("imager_low_width_percent", 100).toInt(), 0, 200));
+        imager_mid_.slider->setValue(std::clamp(settings_.value("imager_mid_width_percent", 100).toInt(), 0, 200));
+        imager_high_.slider->setValue(std::clamp(settings_.value("imager_high_width_percent", 100).toInt(), 0, 200));
+        imager_low_xover_.slider->setValue(std::clamp(settings_.value("imager_low_crossover_hz", 200).toInt(), 80, 400));
+        imager_high_xover_.slider->setValue(std::clamp(settings_.value("imager_high_crossover_hz", 4000).toInt()/100, 20, 80));
         loadDeqSettings();
         headphone_enabled_->setChecked(settings_.value("headphone_enabled", false).toBool());
         headphone_quality_->setCurrentIndex(std::clamp(settings_.value("headphone_quality", 0).toInt(), 0, 4));
@@ -1519,6 +1548,9 @@ public:
                 this, [this](int){ commitDeqEditorBand(); });
         connect(crossfeed_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(crossfeed_mode_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]{ push(); });
+        connect(imager_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
+        for (const auto& r : {imager_low_, imager_mid_, imager_high_, imager_low_xover_, imager_high_xover_})
+            connect(r.slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
         connect(headphone_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(headphone_quality_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
         connect(diff_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
@@ -1572,6 +1604,12 @@ public:
             settings_.setValue("preset/analogx_mode", analogx_mode_->currentIndex());
             settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked());
             settings_.setValue("preset/crossfeed_preset", crossfeed_mode_->currentIndex());
+            settings_.setValue("preset/imager_enabled", imager_enabled_->isChecked());
+            settings_.setValue("preset/imager_low_width_percent", imager_low_.slider->value());
+            settings_.setValue("preset/imager_mid_width_percent", imager_mid_.slider->value());
+            settings_.setValue("preset/imager_high_width_percent", imager_high_.slider->value());
+            settings_.setValue("preset/imager_low_crossover_hz", imager_low_xover_.slider->value());
+            settings_.setValue("preset/imager_high_crossover_hundreds", imager_high_xover_.slider->value());
             saveDeqPreset();
             settings_.setValue("preset/spectrum_enabled", spectrum_enabled_->isChecked());
             settings_.setValue("preset/spectrum_frequency_hundreds", spectrum_frequency_.slider->value());
@@ -1653,6 +1691,20 @@ public:
                 crossfeed_enabled_->setChecked(settings_.value("preset/crossfeed_enabled", false).toBool());
                 crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("preset/crossfeed_preset", 0).toInt(), 0, 2));
             }
+            {
+                const QSignalBlocker a(imager_enabled_);
+                imager_enabled_->setChecked(settings_.value("preset/imager_enabled", false).toBool());
+                for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
+                    {imager_low_, settings_.value("preset/imager_low_width_percent", 100).toInt()},
+                    {imager_mid_, settings_.value("preset/imager_mid_width_percent", 100).toInt()},
+                    {imager_high_, settings_.value("preset/imager_high_width_percent", 100).toInt()},
+                    {imager_low_xover_, settings_.value("preset/imager_low_crossover_hz", 200).toInt()},
+                    {imager_high_xover_, settings_.value("preset/imager_high_crossover_hundreds", 40).toInt()}}) {
+                    const QSignalBlocker block(item.first.slider);
+                    item.first.slider->setValue(item.second);
+                }
+                updateLabels();
+            }
             restoreDeqPreset();
             {
                 const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
@@ -1679,6 +1731,17 @@ public:
                 const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
                 crossfeed_enabled_->setChecked(false);
                 crossfeed_mode_->setCurrentIndex(0);
+            }
+            {
+                const QSignalBlocker a(imager_enabled_);
+                imager_enabled_->setChecked(false);
+                for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
+                    {imager_low_, 100}, {imager_mid_, 100}, {imager_high_, 100},
+                    {imager_low_xover_, 200}, {imager_high_xover_, 40}}) {
+                    const QSignalBlocker block(item.first.slider);
+                    item.first.slider->setValue(item.second);
+                }
+                updateLabels();
             }
             resetDeq();
             {
@@ -2152,6 +2215,10 @@ private:
         diff_mix_.value->setText(QString::number(diff_mix_.slider->value()) + "%");
         field_widen_.value->setText(QString::number(field_widen_.slider->value() / 10.0, 'f', 1));
         field_mid_.value->setText(QString::number(field_mid_.slider->value() / 100.0, 'f', 2));
+        for (const auto& row : {imager_low_, imager_mid_, imager_high_})
+            row.value->setText(QString::number(row.slider->value()) + "%");
+        imager_low_xover_.value->setText(QString::number(imager_low_xover_.slider->value()) + " Hz");
+        imager_high_xover_.value->setText(QString::number(imager_high_xover_.slider->value() * 100) + " Hz");
         field_depth_.value->setText(field_depth_.slider->value() == 0 ? "Off" :
             QString::number(150 + field_depth_.slider->value() * 50));
         limiter_threshold_.value->setText(QString::number(20.0 * std::log10(limiter_threshold_.slider->value() / 1000.0), 'f', 1) + " dBFS");
@@ -2287,6 +2354,7 @@ private:
 <p><b>Differential Surround:</b> Uses interchannel delay and filtering to alter stereo width.</p>
 <p><b>Field Surround:</b> Adjusts perceived width, center image and depth.</p>
 <p><b>Reverberation:</b> Adds simulated room reflections and ambience.</p>
+<p><b>Stereo Imager:</b> Native three-band stereo width processing. Low, mid and high widths each range from 0 to 200%; 100% is neutral. Separate low/mid (80–400 Hz) and mid/high (2–8 kHz) crossovers. It is off by default, and excessive widening may reduce mono compatibility.</p>
 <h3>Sound Correction</h3><p><b>Convolver:</b> Applies a WAV-encoded .irs or .wav impulse response. Select from the local IRS library, or use Import to copy a new file into it. Kernel changes apply live.</p>
 <p><b>IRS library:</b> ~/.local/share/viper4linux/IRS/ (or the XDG data home equivalent). Import multiple files at once; the dropdown updates when the directory changes, never while open. Different-rate IRs are resampled in the backend without restarting audio.</p>
 <h3>Planned</h3><p>DDC, Speaker Correction, FET and Multiband Compressors remain unimplemented.</p>)HTML");
@@ -2539,6 +2607,12 @@ private:
         settings_.setValue("analogx_mode", analogx_mode_->currentIndex());
         settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked());
         settings_.setValue("crossfeed_preset", crossfeed_mode_->currentIndex());
+        settings_.setValue("imager_enabled", imager_enabled_->isChecked());
+        settings_.setValue("imager_low_width_percent", imager_low_.slider->value());
+        settings_.setValue("imager_mid_width_percent", imager_mid_.slider->value());
+        settings_.setValue("imager_high_width_percent", imager_high_.slider->value());
+        settings_.setValue("imager_low_crossover_hz", imager_low_xover_.slider->value());
+        settings_.setValue("imager_high_crossover_hz", imager_high_xover_.slider->value() * 100);
         settings_.setValue("deq_enabled", deq_enabled_->isChecked());
         settings_.setValue("deq_band_count", deq_active_count_);
         for (int i=0; i<10; ++i) {
@@ -2678,6 +2752,20 @@ private:
         setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0);
         setCrossfeed(c->crossfeed_preset, crossfeed_mode_->currentIndex());
         if (crossfeed_changed) c->crossfeed_request_serial.fetch_add(1, std::memory_order_release);
+        bool imager_changed = false;
+        const auto setImager = [&imager_changed](std::atomic<std::int32_t>& dst, int value) {
+            if (dst.load(std::memory_order_relaxed) != value) {
+                dst.store(value, std::memory_order_relaxed);
+                imager_changed = true;
+            }
+        };
+        setImager(c->imager_enabled, imager_enabled_->isChecked() ? 1 : 0);
+        setImager(c->imager_low_width_percent, imager_low_.slider->value());
+        setImager(c->imager_mid_width_percent, imager_mid_.slider->value());
+        setImager(c->imager_high_width_percent, imager_high_.slider->value());
+        setImager(c->imager_low_crossover_hz, imager_low_xover_.slider->value());
+        setImager(c->imager_high_crossover_hz, imager_high_xover_.slider->value() * 100);
+        if (imager_changed) c->imager_request_serial.fetch_add(1, std::memory_order_release);
         bool deq_changed = false;
         const auto setDeq = [&deq_changed](std::atomic<std::int32_t>& dst, int value) {
             if (dst.load(std::memory_order_relaxed)!=value) {
@@ -3186,6 +3274,7 @@ private:
         const QSignalBlocker blockTube(tube_enabled_), blockTubeModel(tube_model_);
         const QSignalBlocker blockAnalogX(analogx_enabled_), blockAnalogMode(analogx_mode_);
         const QSignalBlocker blockCrossfeed(crossfeed_enabled_), blockCrossfeedMode(crossfeed_mode_);
+        const QSignalBlocker blockImager(imager_enabled_);
         const QSignalBlocker block5(headphone_enabled_);
         const QSignalBlocker block6(headphone_quality_);
         const QSignalBlocker block7(diff_enabled_);
@@ -3224,6 +3313,18 @@ private:
             const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
             crossfeed_enabled_->setChecked(c->crossfeed_enabled.load() != 0);
             crossfeed_mode_->setCurrentIndex(std::clamp(c->crossfeed_preset.load(), 0, 2));
+        }
+        imager_enabled_->setChecked(c->imager_enabled.load() != 0);
+        for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
+            {imager_low_, std::clamp(c->imager_low_width_percent.load(), 0, 200)},
+            {imager_mid_, std::clamp(c->imager_mid_width_percent.load(), 0, 200)},
+            {imager_high_, std::clamp(c->imager_high_width_percent.load(), 0, 200)},
+            {imager_low_xover_, std::clamp(c->imager_low_crossover_hz.load(), 80, 400)},
+            {imager_high_xover_, std::clamp(c->imager_high_crossover_hz.load()/100, 20, 80)}}) {
+            if (!item.first.slider->isSliderDown()) {
+                const QSignalBlocker block(item.first.slider);
+                item.first.slider->setValue(item.second);
+            }
         }
         tube_model_->setCurrentIndex(std::clamp(c->tube_model.load(), 0, 2));
         analogx_enabled_->setChecked(c->analogx_enabled.load() != 0);
@@ -3405,6 +3506,9 @@ private:
     std::array<QLabel*, 31> eq_frequencies_{};
     QCheckBox* crossfeed_enabled_{};
     QComboBox* crossfeed_mode_{};
+    QCheckBox* imager_enabled_{};
+    SliderRow imager_low_{}, imager_mid_{}, imager_high_{};
+    SliderRow imager_low_xover_{}, imager_high_xover_{};
     QCheckBox* deq_enabled_{};
     DynamicEqOverview* deq_overview_{};
     DynamicEqOverview* deq_editor_graph_{};

@@ -204,12 +204,19 @@ for token in (
 ):
     assert token in ((Path(__file__).resolve().parents[1] / 'src/viper-ladspa.cpp').read_text() if token.startswith(('wet.', 'analogx_request_serial', 'analogx_applied_serial')) else source), token
 print('PASS: Tube Simulator, native AnalogX and simplified Viper4Linux GUI controls')
+for token in ('imager_enabled_', 'imager_low_', 'imager_mid_', 'imager_high_',
+              'imager_low_xover_', 'imager_high_xover_', 'preset/imager_enabled',
+              'setImager(c->imager_enabled', 'addEffectPanel(spatialLayout, imager_group, "imager", imager_enabled_)'):
+    assert token in source, f'Stereo Imager missing {token}'
+assert 'wet.ApplyStereoImager(p);' in backend
+assert 'imager_request_serial' in backend
+print('PASS: Stereo Imager independent native three-band UI, presets and worker IPC')
 
 # Every active effect card has a distinct, font-independent vector glyph.
 import re as _re
 card_keys = _re.findall(r'addEffectPanel\([^;]+?,\s*"([a-z_]+)"\s*,', source)
 glyph_code = source.split('class EffectGlyph final : public QWidget {', 1)[1].split('class EffectSwitch final', 1)[0]
-assert len(card_keys) == 19, card_keys
+assert len(card_keys) == 20, card_keys
 assert len(card_keys) == len(set(card_keys)), card_keys
 for key in card_keys:
     assert f'kind_ == "{key}"' in glyph_code, 'Missing vector icon for ' + key
@@ -221,7 +228,7 @@ assert 'setAttribute(Qt::WA_TransparentForMouseEvents)' in glyph_code
 assert 'findChildren<EffectGlyph*>()' not in source
 assert 'for (auto* widget : findChildren<QWidget*>())' in source
 assert 'dynamic_cast<EffectGlyph*>(widget)' in source
-print('PASS: 19 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
+print('PASS: 20 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
 
 # Dynamic EQ: a separate editor and static preview, native 10-band backend.
 for token in [

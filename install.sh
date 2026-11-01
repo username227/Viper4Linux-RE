@@ -43,6 +43,7 @@ git -C third_party/ViPERDSP checkout --detach "$revision"
 # Correct the pinned library's LUFS speed-setting logic only in this local
 # dependency checkout; refuse any unexpected upstream source.
 python3 patches/fix_lufs_speed.py
+python3 patches/preallocate_stereo_imager.py
 # Use a private per-project copy of the distribution filter-chain config so
 # nothing gets added to /etc/pipewire or ~/.config/pipewire.
 cp -- /usr/share/pipewire/filter-chain.conf routing-config/filter-chain.conf

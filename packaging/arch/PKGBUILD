@@ -1,10 +1,13 @@
 # Maintainer: Viper4Linux development (local testing package)
 # This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
-# Build from this directory with `makepkg -si`.
+# Store this PKGBUILD OUTSIDE the source repository, e.g. ~/Desktop/viper4linux-package/
+# Run `makepkg -si` from that separate directory.
+# By default, the local Git source checkout is ~/Desktop/viper4linux-imager.
+# If you move it, override the path with VIPER4LINUX_REPO=/absolute/path makepkg -si.
 # Upstream ViPERDSP is intentionally pinned to the tested revision.
 
 pkgname=viper4linux-git
-pkgver=0.1.0.r1.g000000000000   # Recomputed from the actual source checkout by pkgver().
+pkgver=0.1.0.r18.gdfb86f8c5650 # pkgver() updates from the local Git checkout.
 pkgrel=1
 pkgdesc='Native ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
 arch=('x86_64')
@@ -14,9 +17,9 @@ depends=('glibc' 'gcc-libs' 'qt6-base' 'pipewire' 'ladspa' 'python')
 makedepends=('git' 'cmake' 'pkgconf')
 # Deliberately no conflicts=(), provides=() or replaces=() during local development.
 
-# makepkg's startdir is the directory containing this PKGBUILD.
-# In a tar.gz release this file lives under packaging/arch/.
-_local_repo="$(realpath "${startdir}/../..")"
+# This is independent of startdir: the PKGBUILD can live in any separate
+# directory; the source comes from the local Git checkout on the Desktop.
+_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-imager}"
 _viperdsp_commit=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
 source=("viper4linux::git+file://${_local_repo}"
         "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git#commit=${_viperdsp_commit}")
@@ -32,8 +35,9 @@ pkgver() {
 prepare() {
     mkdir -p "$srcdir/viper4linux/third_party"
     ln -sfn -- "$srcdir/ViPERDSP" "$srcdir/viper4linux/third_party/ViPERDSP"
-    # A verified fix to one LUFS setter only, in this private dependency checkout.
+    # Verified downstream fixes in this private, pinned ViPERDSP checkout.
     python3 "$srcdir/viper4linux/patches/fix_lufs_speed.py"
+    python3 "$srcdir/viper4linux/patches/preallocate_stereo_imager.py"
 }
 
 build() {

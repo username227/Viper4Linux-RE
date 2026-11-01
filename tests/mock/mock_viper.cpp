@@ -16,6 +16,7 @@ namespace {
     std::unordered_map<const ViPER*, viper::SpectrumExtensionParams> spectrum;
     std::unordered_map<const ViPER*, viper::TubeSimulatorParams> tube;
     std::unordered_map<const ViPER*, viper::AnalogXParams> analogx;
+    std::unordered_map<const ViPER*, viper::StereoImagerParams> imager;
     std::unordered_map<const ViPER*, viper::DynamicEqParams> deq;
     std::unordered_map<const ViPER*, viper::HeadphoneSurroundParams> headphone;
     std::unordered_map<const ViPER*, viper::DiffSurroundParams> diff;
@@ -40,6 +41,7 @@ void ViPER::ApplyTubeSimulator(const viper::TubeSimulatorParams& p) { tube[this]
 void ViPER::ApplyAnalogX(const viper::AnalogXParams& p) { analogx[this] = p; }
 static std::unordered_map<const ViPER*, viper::CureParams> crossfeed;
 void ViPER::ApplyCure(const viper::CureParams& p) { crossfeed[this] = p; }
+void ViPER::ApplyStereoImager(const viper::StereoImagerParams& p) { imager[this] = p; }
 void ViPER::ApplyDynamicEq(const viper::DynamicEqParams& p) { deq[this] = p; }
 void ViPER::ApplyHeadphoneSurround(const viper::HeadphoneSurroundParams& p) { headphone[this] = p; }
 void ViPER::ApplyDiffSurround(const viper::DiffSurroundParams& p) { diff[this] = p; }
@@ -108,6 +110,15 @@ void ViPER::Process(std::vector<float>& values, uint32_t frames) {
     if (cf.enable) {
         const float factor = 1.03f + cf.crossfeed_preset * .01f; // mock only, not ViPERDSP
         for (uint32_t i=0;i<2*frames;++i) values[i] *= factor;
+    }
+    const auto si = imager[this];
+    if (si.enable) {
+        // Mock ONLY: param-dependent factor to test worker/IPC delivery.
+        const float factor = 1.f + .01f*(si.low_width - 1.f) +
+            .02f*(si.mid_width - 1.f) + .03f*(si.high_width - 1.f) +
+            .00001f*(si.low_crossover - 200.f) +
+            .000001f*(si.high_crossover - 4000.f);
+        for (uint32_t i=0; i<2*frames; ++i) values[i] *= factor;
     }
     const auto dq = deq[this];
     if (dq.enable) {

@@ -141,6 +141,12 @@ void load_saved_settings(viperbass::Controls& state) {
             }
             else if (key == "crossfeed_enabled") state.crossfeed_enabled.store(value == "true" || value == "1");
             else if (key == "crossfeed_preset") state.crossfeed_preset.store(std::clamp(std::stoi(value), 0, 2));
+            else if (key == "imager_enabled") state.imager_enabled.store(value == "true" || value == "1");
+            else if (key == "imager_low_width_percent") state.imager_low_width_percent.store(std::clamp(std::stoi(value), 0, 200));
+            else if (key == "imager_mid_width_percent") state.imager_mid_width_percent.store(std::clamp(std::stoi(value), 0, 200));
+            else if (key == "imager_high_width_percent") state.imager_high_width_percent.store(std::clamp(std::stoi(value), 0, 200));
+            else if (key == "imager_low_crossover_hz") state.imager_low_crossover_hz.store(std::clamp(std::stoi(value), 80, 400));
+            else if (key == "imager_high_crossover_hz") state.imager_high_crossover_hz.store(std::clamp(std::stoi(value), 2000, 8000));
             else if (key == "headphone_enabled") state.headphone_enabled.store(value == "true" || value == "1");
             else if (key == "headphone_quality") state.headphone_quality.store(
                 std::clamp(std::stoi(value), 0, 4));
@@ -267,6 +273,7 @@ struct Processor {
         configure_tube(false, 0, 0.5f, 0.3f);
         configure_analogx(false, 0);
         configure_crossfeed(false, 0);
+        configure_imager(false, 100, 100, 100, 200, 4000);
         configure_dynamic_eq(false, 0, {});
         configure_headphone(false, 0);
         configure_diff(false, 8, false, 0.5f, 0);
@@ -284,6 +291,7 @@ struct Processor {
             apply_tube_from_controls();
             apply_analogx_from_controls();
             apply_crossfeed_from_controls();
+            apply_imager_from_controls();
             apply_dynamic_eq_from_controls();
             const auto path = saved_ir_path();
             if (!path.empty()) {
@@ -324,6 +332,7 @@ struct Processor {
         auto observed_tube = controls->tube_request_serial.load(std::memory_order_acquire);
         auto observed_analogx = controls->analogx_request_serial.load(std::memory_order_acquire);
         auto observed_crossfeed = controls->crossfeed_request_serial.load(std::memory_order_acquire);
+        auto observed_imager = controls->imager_request_serial.load(std::memory_order_acquire);
         auto observed_deq = controls->deq_request_serial.load(std::memory_order_acquire);
         while (!ir_worker_stop.load(std::memory_order_acquire)) {
             const auto requested = controls->convolver_request_serial.load(std::memory_order_acquire);
@@ -398,6 +407,12 @@ struct Processor {
                 observed_crossfeed = crossfeed_request;
                 apply_crossfeed_from_controls();
                 controls->crossfeed_applied_serial.store(observed_crossfeed, std::memory_order_release);
+            }
+            const auto imager_request = controls->imager_request_serial.load(std::memory_order_acquire);
+            if (imager_request != observed_imager) {
+                observed_imager = imager_request;
+                apply_imager_from_controls();
+                controls->imager_applied_serial.store(observed_imager, std::memory_order_release);
             }
             const auto deq_request = controls->deq_request_serial.load(std::memory_order_acquire);
             if (deq_request != observed_deq) {
@@ -522,6 +537,43 @@ struct Processor {
         // Native Crossfeed presets/reset are updated outside the real-time callback.
         std::lock_guard<std::mutex> lock(wet_mutex);
         configure_crossfeed(enabled, preset);
+    }
+
+    void configure_imager(bool enabled, int low_width, int mid_width, int high_width,
+                          int low_crossover, int high_crossover) {
+        viper::StereoImagerParams p{};
+        p.enable = enabled;
+        p.low_width = std::clamp(low_width, 0, 200) * 0.01f;
+        p.mid_width = std::clamp(mid_width, 0, 200) * 0.01f;
+        p.high_width = std::clamp(high_width, 0, 200) * 0.01f;
+        p.low_crossover = static_cast<float>(std::clamp(low_crossover, 80, 400));
+        p.high_crossover = static_cast<float>(std::clamp(high_crossover, 2000, 8000));
+        wet.ApplyStereoImager(p);
+        last_imager_enabled = enabled;
+        last_imager_low = low_width;
+        last_imager_mid = mid_width;
+        last_imager_high = high_width;
+        last_imager_low_xover = low_crossover;
+        last_imager_high_xover = high_crossover;
+    }
+    void apply_imager_from_controls() {
+        if (!controls) return;
+        const auto serial = controls->imager_request_serial.load(std::memory_order_acquire);
+        const bool enabled = controls->imager_enabled.load(std::memory_order_relaxed) != 0;
+        const int low = std::clamp(controls->imager_low_width_percent.load(std::memory_order_relaxed), 0, 200);
+        const int mid = std::clamp(controls->imager_mid_width_percent.load(std::memory_order_relaxed), 0, 200);
+        const int high = std::clamp(controls->imager_high_width_percent.load(std::memory_order_relaxed), 0, 200);
+        const int low_xover = std::clamp(controls->imager_low_crossover_hz.load(std::memory_order_relaxed), 80, 400);
+        const int high_xover = std::clamp(controls->imager_high_crossover_hz.load(std::memory_order_relaxed), 2000, 8000);
+        if (serial != controls->imager_request_serial.load(std::memory_order_acquire)) return;
+        if (!enabled && !last_imager_enabled) return; // a disabled slider shouldn't interrupt music
+        if (enabled == last_imager_enabled && low == last_imager_low && mid == last_imager_mid &&
+            high == last_imager_high && low_xover == last_imager_low_xover &&
+            high_xover == last_imager_high_xover) return;
+        // Upstream crossover filters are reconstructed by these setters; never call
+        // from the audio callback. This mutex is acquired with try_lock there.
+        std::lock_guard<std::mutex> lock(wet_mutex);
+        configure_imager(enabled, low, mid, high, low_xover, high_xover);
     }
 
     void configure_dynamic_eq(bool enabled, int band_count,
@@ -832,6 +884,8 @@ struct Processor {
             controls->tube_enabled.load(std::memory_order_relaxed) != 0;
         const bool analogx_enabled = controls &&
             controls->analogx_enabled.load(std::memory_order_relaxed) != 0;
+        const bool imager_enabled = controls &&
+            controls->imager_enabled.load(std::memory_order_relaxed) != 0;
         const bool crossfeed_enabled = controls &&
             controls->crossfeed_enabled.load(std::memory_order_relaxed) != 0;
         const bool requested_headphone = controls &&
@@ -901,7 +955,7 @@ struct Processor {
             controls->convolver_enabled.load(std::memory_order_relaxed) != 0;
         const float convolver_cross = controls ?
             std::clamp(controls->convolver_cross_percent.load(std::memory_order_relaxed), 0, 100) * 0.01f : 0.0f;
-        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
+        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
         const float safe_strength = std::clamp(strength, 0.5f, 10.0f);
         const float safe_frequency = std::clamp(frequency, 15.0f, 150.0f);
         // Apply only changed parameters. Avoid resetting an effect on every
@@ -1038,6 +1092,9 @@ struct Processor {
     bool last_analogx_enabled = false;
     bool last_crossfeed_enabled = false;
     int last_crossfeed_preset = 0;
+    bool last_imager_enabled = false;
+    int last_imager_low = 100, last_imager_mid = 100, last_imager_high = 100;
+    int last_imager_low_xover = 200, last_imager_high_xover = 4000;
     bool last_deq_enabled = false;
     int last_analogx_mode = 0;
     bool last_spectrum_enabled = false;

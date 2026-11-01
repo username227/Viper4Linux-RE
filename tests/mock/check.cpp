@@ -634,8 +634,54 @@ int main(int argc, char** argv) {
     assert(p->crossfeed_applied_serial.load() == cure_serial);
     d->run(h, 2048);
     near(ol[2047], cure_baseline);
+    // Native Stereo Imager: default bypass, neutral widths/crossovers, and
+    // serialized worker updates while processing. Mock factor is NOT real DSP.
+    assert(p->imager_enabled.load() == 0);
+    assert(p->imager_low_width_percent.load() == 100);
+    assert(p->imager_mid_width_percent.load() == 100);
+    assert(p->imager_high_width_percent.load() == 100);
+    assert(p->imager_low_crossover_hz.load() == 200);
+    assert(p->imager_high_crossover_hz.load() == 4000);
+    d->run(h, 2048);
+    const float imager_baseline = ol[2047];
+    // Editing disabled settings cannot affect the wet path.
+    p->imager_mid_width_percent.store(180);
+    auto image_serial = p->imager_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for(int i=0; i<200 && p->imager_applied_serial.load()!=image_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->imager_applied_serial.load() == image_serial);
+    d->run(h, 2048);
+    near(ol[2047], imager_baseline);
+    p->imager_enabled.store(1);
+    image_serial = p->imager_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for(int i=0; i<200 && p->imager_applied_serial.load()!=image_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->imager_applied_serial.load() == image_serial);
+    d->run(h, 2048);
+    near(ol[2047], imager_baseline * (1.f + .02f * .8f));
+    p->imager_low_width_percent.store(120);
+    p->imager_high_width_percent.store(150);
+    p->imager_low_crossover_hz.store(350);
+    p->imager_high_crossover_hz.store(6000);
+    image_serial = p->imager_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for(int i=0; i<200 && p->imager_applied_serial.load()!=image_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->imager_applied_serial.load() == image_serial);
+    d->run(h, 2048);
+    near(ol[2047], imager_baseline * (1.f + .01f*.2f + .02f*.8f + .03f*.5f + .00001f*150.f + .000001f*2000.f));
+    p->master_enabled.store(0);
+    d->run(h, 2048);
+    near(ol[2047], .2f);
+    p->master_enabled.store(1);
+    p->imager_enabled.store(0);
+    image_serial = p->imager_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for(int i=0; i<200 && p->imager_applied_serial.load()!=image_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->imager_applied_serial.load() == image_serial);
+    d->run(h, 2048);
+    near(ol[2047], imager_baseline);
     d->cleanup(h);
     page.close();
     dlclose(lib);
-    std::puts("PASS: mock LADSPA, native Dynamic EQ/AnalogX/Tube Simulator/Graphic EQ/Convolver forwarding, limiter/AGC/LUFS, bypass, IPC isolation, rates, cleanup");
+    std::puts("PASS: mock LADSPA, native Stereo Imager/Dynamic EQ/AnalogX/Tube Simulator/Graphic EQ/Convolver forwarding, limiter/AGC/LUFS, bypass, IPC isolation, rates, cleanup");
 }

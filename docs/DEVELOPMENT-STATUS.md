@@ -4,7 +4,7 @@
 
 This is a **proof of concept**, not a finished release. The app consists of a native Qt6 Widgets GUI (`src/viper-gui.cpp`), shared-memory control contract (`src/viper-control.h`), CLI (`src/viper-ctl.cpp`), and LADSPA processor (`src/viper-ladspa.cpp`) hosted by a PipeWire filter-chain sink. The DSP library comes from a **pinned external ViPERDSP revision**, retrieved by `install.sh`, not bundled. PipeWire smart routing is configured in `routing-config/` and controlled by `start.sh`, `stop.sh`, `status.sh`, and `verify.sh`.
 
-The six-tab GUI retains the original independent effect switches, collapsible panels and saved-effect keys. This revision also integrates native Convolver loading and **removes adapter input attenuation completely**. The shared-memory protocol has changed (version 16, IPC channel v9), so all three native binaries must come from this source tree. Existing effect presets remain supported, but legacy `input_percent` values are ignored and cleaned up by the GUI.
+The six-tab GUI retains the original independent effect switches, collapsible panels and saved-effect keys. This revision also integrates native Convolver loading and **removes adapter input attenuation completely**. The shared-memory protocol has changed (version 22, production IPC channel v10), so all three native binaries must come from this source tree. Existing effect presets remain supported, but legacy `input_percent` values are ignored and cleaned up by the GUI.
 
 ## Six-tab effect matrix
 
@@ -13,11 +13,11 @@ The six-tab GUI retains the original independent effect switches, collapsible pa
 | Output | Master Limiter (always on), Playback Gain Control (AGC), LUFS Targeting | — |
 | Bass | ViPER Bass, ViPER Bass Mono, Psychoacoustic Bass, Dynamic System | — |
 | EQ & Tone | Graphic Equalizer (10/15/25/31 bands), native Dynamic EQ (1–10 bands), ViPER Clarity, Spectrum Extension, Tube Simulator, AnalogX | — |
-| Spatial | Headphone Surround+, Differential Surround, Field Surround, Reverberation | Stereo Imager, Cure / Crossfeed |
+| Spatial | Headphone Surround+, Differential Surround, Field Surround, Reverberation, native Cure / Crossfeed, native Stereo Imager | — |
 | Dynamics | **No functional effects yet** | FET Compressor, Multiband Compressor |
 | IR & Correction | Native Convolver (WAV-encoded `.irs` / `.wav`, live kernel switching, IRS library/import) | ViPER-DDC, Speaker Correction |
 
-**Count:** 15 currently visible processing cards: four Bass, three Tone, four Spatial, three Output (Limiter, AGC, LUFS), and one Convolver. The limiter is always present; other processors can be enabled independently. Gain / Headroom was not a native ViPER effect and is removed in both GUI and backend.
+**Count (current):** 20 processing cards: four Bass, six EQ & Tone, six Spatial, three Output (Limiter, AGC, LUFS), and one Convolver. The limiter is always present; other processors can be enabled independently. Gain / Headroom was not a native ViPER effect and is removed in both GUI and backend.
 
 ## Before working on new effects
 
@@ -95,3 +95,17 @@ Native Convolver IR loader added to IR & Correction, disabled by default. Reader
 Historical Markdown notes live in `docs/`; `README.md` is the sole top-level
 Markdown introduction. Development releases display `0.1.0-<short commit>`
 in the About dialog, and the complete master carries the `.git` history.
+
+## Stereo Imager addition (November 1, 2026)
+
+- Native `ApplyStereoImager` controls added at the bottom of Spatial: independent
+  enable and low, mid and high width (0–200%), 80–400 Hz low crossover,
+  2000–8000 Hz high crossover. Default OFF, width=100%, crossovers 200/4000 Hz.
+- Slider settings survive GUI restarts and one-slot presets. New control requests
+  are applied by the off-RT worker under the wet-engine mutex; audio try-locks
+  and never blocks waiting for crossover coefficients.
+- Private, pinned ViPERDSP source has its native three-band scratch buffers
+  preallocated at the application's 2048-frame block cap before audio starts.
+- Protocol version bumped to 22. Mock audio, control/worker forwarding, GUI
+  source-contract and launcher/packaging checks pass. Actual Qt6 build and
+  listening tests remain to be run on the user's Arch Linux system.
