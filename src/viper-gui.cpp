@@ -2076,17 +2076,18 @@ private:
                 color:%2; background-color:%3;
                 border:1px solid %4; border-radius:7px; padding:5px 8px; }
             QPushButton:hover, QComboBox:hover { border-color:%5; }
-            /* PROTOTYPE: only the Theme combo is customized until visually
-               verified on Cinnamon. Qt requires styling BOTH subcontrols:
-               styling drop-down alone suppressed the native down-arrow. */
-            QComboBox#viperThemeSelector { padding-right:26px; }
-            QComboBox#viperThemeSelector::drop-down {
+            /* The Theme selector was visually verified under Cinnamon in r26.
+               Apply its complete rounded cap AND explicit chevron to every
+               combo so Qt cannot fall back to a square native arrow button.
+               The text reserve belongs on the combo, not the dropdown cap. */
+            QComboBox { padding-right:26px; }
+            QComboBox::drop-down {
                 subcontrol-origin:border; subcontrol-position:top right;
                 width:24px; border:0;
                 border-top-right-radius:7px; border-bottom-right-radius:7px;
                 background-color:transparent;
             }
-            QComboBox#viperThemeSelector::down-arrow {
+            QComboBox::down-arrow {
                 image:url(%8); width:12px; height:8px;
             }
             QPushButton:pressed { background-color:%6; }

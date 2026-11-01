@@ -5,7 +5,7 @@ import re
 source = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
 checks = (
     'theme_selector_->setObjectName("viperThemeSelector")',
-    'QComboBox#viperThemeSelector::drop-down',
+    'QComboBox::drop-down',
     'border-top-right-radius:7px; border-bottom-right-radius:7px;',
     'background-color:transparent;',
     'theme_selector_->addItem("Modern teal", "modern")',
@@ -75,18 +75,18 @@ for name, fg, card_bg, accent, selected_fg in palettes:
 
 print('PASS: theme switching source contract, Cinnamon GTK light fallback, no DSP writes, four contrast pairings')
 
-# The first pass intentionally repairs ONLY the Theme selector.  Qt requires
-# an explicit ::down-arrow after customizing ::drop-down, and extra padding at
-# fixed 140px clipped the theme name on the real Cinnamon desktop.
+# The Theme-only fix was visually verified on Cinnamon in r26. Apply the
+# exact same cap and explicit arrow to ALL QComboBox descendants, while keeping
+# the validated wider Theme label and preserving dialog/IRS selection behavior.
 from xml.etree import ElementTree
 assert 'theme_selector_->setFixedWidth(140)' not in source
 assert 'theme_selector_->fontMetrics().horizontalAdvance("Classic Viper") + 62' in source
-assert 'QComboBox#viperThemeSelector { padding-right:26px; }' in source
-assert 'QComboBox#viperThemeSelector::down-arrow' in source
+assert 'QComboBox { padding-right:26px; }' in source
+assert 'QComboBox::down-arrow' in source
 assert 'image:url(%8); width:12px; height:8px;' in source
 assert 'subcontrol-origin:border; subcontrol-position:top right;' in source
-assert source.count('::drop-down') == 1, 'Only Theme should be changed in this trial'
-assert source.count('::down-arrow') == 1, 'Only Theme arrow should be changed in this trial'
+assert source.count('::drop-down') == 1, 'A single common dropdown rule should style all combo boxes'
+assert source.count('::down-arrow') == 1, 'A single common chevron rule should style all combo boxes'
 assert ':/viper4linux/combo-chevron-light.png' in source
 assert ':/viper4linux/combo-chevron-dark.png' in source
 qrc = ElementTree.parse(Path(__file__).resolve().parents[1] / 'resources/viper4linux-icons.qrc')
@@ -95,4 +95,11 @@ for name in ('combo-chevron-light.png', 'combo-chevron-dark.png'):
     assert name in icons
     img = Path(__file__).resolve().parents[1] / 'resources' / icons[name]
     assert img.read_bytes().startswith(b'\x89PNG\r\n\x1a\n'), img
-print('PASS: Theme-only combo prototype includes explicit arrow, readable width, rounded cap and both palette icons')
+print('PASS: all combo boxes use the r26 Cinnamon-approved rounded cap, explicit chevron, both palette icons')
+
+assert 'QComboBox#viperThemeSelector::' not in source, 'No Theme-only cap: all combos should share rounded arrows'
+# All application combo instances are created in the main window, including
+# the special IRS library combo with its own popup update logic.
+assert 'class IrsComboBox final : public QComboBox' in source
+assert 'convolver_library_ = new IrsComboBox(' in source
+assert source.count('new QComboBox(') >= 12

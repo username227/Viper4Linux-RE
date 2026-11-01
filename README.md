@@ -139,3 +139,16 @@ Copy the PKGBUILD to a separate directory and run `makepkg -si` there; the
 local source checkout defaults to `~/Desktop/viper4linux-compressors`. The upstream
 ViPERDSP library is fetched at its pinned commit during package preparation.
 The first system-package build should be tested separately from source checkouts.
+
+
+### 2026-11-01: Unified rounded dropdown styling
+
+The r26 Theme dropdown chevron/cap was visually approved on Cinnamon. All GUI
+QComboBox instances now share the same 24-pixel right end cap with 7-pixel
+rounded corners, 26-pixel text reserve, and palette-sensitive QRC chevron.
+Existing lists, selection bindings, and audio/DSP backend are unchanged.
+
+The unified launcher determines whether a backend restart is needed using its
+backend fingerprint (DSP library, controller, and PipeWire configuration), not
+the GUI version. Thus a GUI-only upgrade should reuse an already-matching
+backend, as observed during the r26 test.
