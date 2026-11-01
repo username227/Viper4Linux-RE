@@ -1,12 +1,12 @@
 # Viper4Linux — six-tab native DSP prototype
 
-**Current distribution:** Complete application source tree, not an incremental patch. Includes the native ViPERDSP Convolver integration, updated six-tab GUI, CLI, shared-memory controls, PipeWire routing and regression tests. The prior non-native Gain / Headroom stage has been removed end-to-end. This remains an experimental proof of concept.
+**Current distribution:** Complete Git history in a tar.gz release, with an Arch VCS PKGBUILD for local system installation. Includes the native ViPERDSP Convolver integration, updated six-tab GUI, CLI, shared-memory controls, PipeWire routing and regression tests. The prior non-native Gain / Headroom stage has been removed end-to-end. This remains an experimental proof of concept.
 
-**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Eighteen native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC and Speaker Correction are not yet implemented. See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
+**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Nineteen native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC and Speaker Correction are not yet implemented. See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
 
 **Required external source:** This archive contains the entire ViPER for Linux application source, except for the upstream `ViPERDSP` dependency, which `./install.sh` retrieves at the pinned commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933` over the network. It does not reuse code from any previous local ViPER installation. A distribution-provided PipeWire filter-chain configuration is also copied at build time.
 
-**Compatibility:** The shared-memory protocol has changed to version 20 and uses the v10 production IPC name; the old and new backends must **not** run simultaneously, since they still use the same PipeWire smart-sink names. Existing effect settings and presets are preserved, but old input-gain values are deliberately ignored and removed on GUI startup. Input reaches native ViPERDSP at **100% (unity)**. The master bypass still leaves the native limiter active.
+**Compatibility:** The shared-memory protocol has changed to version 21 and uses the v10 production IPC name; the old and new backends must **not** run simultaneously, since they still use the same PipeWire smart-sink names. Existing effect settings and presets are preserved, but old input-gain values are deliberately ignored and removed on GUI startup. Input reaches native ViPERDSP at **100% (unity)**. The master bypass still leaves the native limiter active.
 
 ## Fresh Arch Linux build
 
@@ -80,6 +80,15 @@ Separate 10/15/25/31 manual layouts are retained. Settings are preserved in
 0.01 dB steps; EQ defaults OFF. Band-count coefficient updates run on a
 non-audio worker, and the audio callback does not wait on the wet mutex.
 
+### Native Crossfeed (ViPER Cure)
+
+The Spatial tab includes ViPERDSP Cure Crossfeed, disabled by default. Its
+three native modes are Mild, Medium and Strong. It blends a filtered amount
+of left/right audio for headphone spatial realism. The controls are kept
+independent of the Convolver cross-channel mix, which is a simpler linear
+stereo blend. Preset adjustments while Crossfeed is off are saved without
+changing the running DSP path.
+
 ### Native Dynamic EQ (experimental)
 
 **Dynamic EQ is immediately below the Graphic EQ** in the EQ & Tone tab. It
@@ -106,3 +115,12 @@ The IPC layout has changed (v20). Stop the previous backend, then start the new
 backend built from this same master. Native Qt6 compilation and PipeWire playback
 must be checked on Arch; mock tests validate control forwarding only and do not
 prove real ViPERDSP frequency response or flawless live playback.
+
+## Arch Linux system package (development)
+
+See [Arch packaging instructions](docs/ARCH-PACKAGING.md). The release tarball
+contains a real Git checkout and a `packaging/arch/PKGBUILD` that builds the
+current commit as `viper4linux-git` and installs the application under `/usr`.
+Run `cd packaging/arch && makepkg -si` from the extracted project. The upstream
+ViPERDSP library is fetched at its pinned commit during package preparation.
+The first system-package build should be tested separately from source checkouts.
