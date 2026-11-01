@@ -1536,10 +1536,10 @@ public:
         auto* actions = new QHBoxLayout();
         auto* save = new QPushButton("Save preset", central);
         auto* restore = new QPushButton("Restore preset", central);
-        auto* reset = new QPushButton("Reset to test defaults", central);
+        auto* reset = new QPushButton("Reset Effects to Defaults…", central);
         save->setToolTip("Store one manual restore point for the current effect settings.");
         restore->setToolTip("Restore your manually saved preset. Normal settings are auto-saved separately.");
-        reset->setToolTip("Restore test defaults: Natural Bass on, other effects off; input is always unity.");
+        reset->setToolTip("Reset effect settings to their original defaults. Your saved preset is preserved.");
         actions->addWidget(save);
         actions->addWidget(restore);
         actions->addWidget(reset);
@@ -1976,6 +1976,20 @@ public:
             statusMessage("Saved preset restored.");
         });
         connect(reset, &QPushButton::clicked, this, [this]{
+            QMessageBox confirm(this);
+            confirm.setIcon(QMessageBox::Warning);
+            confirm.setWindowTitle("Reset Effect Settings");
+            confirm.setText("Reset all effect settings?");
+            confirm.setInformativeText(
+                "This will replace your current effect settings with the application's defaults "
+                "(Natural Bass on; other effects off).\n\n"
+                "Your saved preset will not be deleted.");
+            auto* resetButton = confirm.addButton("Reset Effects", QMessageBox::DestructiveRole);
+            auto* cancelButton = confirm.addButton(QMessageBox::Cancel);
+            confirm.setDefaultButton(qobject_cast<QPushButton*>(cancelButton));
+            confirm.exec();
+            if (confirm.clickedButton() != resetButton) return;
+
             applySettings(true, true, 0, 100, 65, false, 0, 15, false, 76, 10,
                           false, 0, false, 8, false, 50, 0,
                           false, 10, 100, 3,
@@ -2028,7 +2042,7 @@ public:
                 convolver_cross_.slider->setValue(0);
             }
             push();
-            statusMessage("Restored test defaults: ViPER Bass on; other effects off.");
+            statusMessage("Effect settings reset to defaults; saved preset preserved.");
         });
         auto* timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, [this]{ pollBackend(); });
