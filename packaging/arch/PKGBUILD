@@ -2,12 +2,12 @@
 # This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
 # Store this PKGBUILD OUTSIDE the source repository, e.g. ~/Desktop/viper4linux-package/
 # Run `makepkg -si` from that separate directory.
-# By default, the local Git source checkout is ~/Desktop/viper4linux-tray.
+# By default, the local Git source checkout is ~/Desktop/viper4linux-tray-fix.
 # If you move it, override the path with VIPER4LINUX_REPO=/absolute/path makepkg -si.
 # Upstream ViPERDSP is intentionally pinned to the tested revision.
 
 pkgname=viper4linux-re-git
-pkgver=0.1.0.r31.gc5504981e6db # pkgver() updates from the local Git checkout.
+pkgver=0.1.0.r36.g000000000000 # pkgver() updates from the local Git checkout.
 pkgrel=1
 pkgdesc='Reverse-engineered ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
 arch=('x86_64')
