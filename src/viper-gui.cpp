@@ -31,6 +31,8 @@
 #include <QProcess>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QListWidget>
+#include <QUuid>
 #include <QAbstractItemView>
 #include <QFileDialog>
 #include <QFileSystemWatcher>
@@ -1533,21 +1535,17 @@ public:
         outputLayout->insertWidget(outputLayout->count() - 1, output_warning_);
 
 
+        // Keep the primary interface small; all named-preset operations and
+        // the guarded defaults reset live together in one manager dialog.
         auto* actions = new QHBoxLayout();
-        auto* save = new QPushButton("Save preset", central);
-        auto* restore = new QPushButton("Restore preset", central);
-        auto* reset = new QPushButton("Reset Effects to Defaults…", central);
-        save->setToolTip("Store one manual restore point for the current effect settings.");
-        restore->setToolTip("Restore your manually saved preset. Normal settings are auto-saved separately.");
-        reset->setToolTip("Reset effect settings to their original defaults. Your saved preset is preserved.");
-        actions->addWidget(save);
-        actions->addWidget(restore);
-        actions->addWidget(reset);
-        // Preset actions and status remain visible regardless of active tab.
+        auto* presetsButton = new QPushButton("Presets…", central);
+        presetsButton->setObjectName("viperNamedPresetsButton");
+        presetsButton->setToolTip("Save, load, rename or delete complete effect configurations.");
+        actions->addStretch();
+        actions->addWidget(presetsButton);
         layout->addWidget(tabs_, 1);
         layout->addLayout(actions);
-        restore_ = restore;
-        restore_->setEnabled(settings_.value("preset/valid", false).toBool());
+        connect(presetsButton, &QPushButton::clicked, this, [this]{ showPresetManager(); });
 
         // New stable name key deliberately ignores the former numeric index
         // (Enhancements=0, Surround=1, Output=2). On first launch show Output.
@@ -1808,242 +1806,6 @@ public:
         connect(agc_enabled_, &QCheckBox::toggled, this, [this]{ updateLabels(); push(); });
         connect(lufs_enabled_, &QCheckBox::toggled, this, [this]{ updateLabels(); push(); });
         connect(lufs_speed_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
-        connect(save, &QPushButton::clicked, this, [this]{
-            settings_.setValue("preset/valid", true);
-            settings_.setValue("preset/master_enabled", global_->isChecked());
-            settings_.setValue("preset/enabled", enabled_->isChecked());
-            settings_.setValue("preset/bass_mode", bass_mode_->currentIndex());
-            settings_.setValue("preset/strength_tenths", strength_.slider->value());
-            settings_.setValue("preset/frequency", frequency_.slider->value());
-            saveEqLayout();
-            settings_.setValue("preset/eq_enabled", eq_enabled_->isChecked());
-            settings_.setValue("preset/eq_band_count", eq_active_bands_);
-            for (int n : {10, 15, 25, 31})
-                settings_.setValue("preset/eq_levels_" + QString::number(n),
-                    settings_.value("eq_levels_" + QString::number(n), flatEqCsv(n)));
-            settings_.setValue("preset/ddc_enabled", ddc_enabled_->isChecked());
-            settings_.setValue("preset/ddc_profile", settings_.value("ddc_profile", ""));
-            settings_.setValue("preset/speaker_enabled", speaker_enabled_->isChecked());
-            settings_.setValue("preset/convolver_enabled", convolver_enabled_->isChecked());
-            settings_.setValue("preset/convolver_cross_percent", convolver_cross_.slider->value());
-            settings_.setValue("preset/convolver_kernel", settings_.value("convolver_kernel"));
-            saveBassPreset();
-            settings_.setValue("preset/clarity_enabled", clarity_enabled_->isChecked());
-            settings_.setValue("preset/clarity_mode", clarity_mode_->currentIndex());
-            settings_.setValue("preset/clarity_gain_tenths", clarity_gain_.slider->value());
-            settings_.setValue("preset/tube_enabled", tube_enabled_->isChecked());
-            settings_.setValue("preset/tube_model", tube_model_->currentIndex());
-            settings_.setValue("preset/tube_drive_percent", tube_drive_.slider->value());
-            settings_.setValue("preset/tube_mix_percent", tube_mix_.slider->value());
-            settings_.setValue("preset/analogx_enabled", analogx_enabled_->isChecked());
-            settings_.setValue("preset/analogx_mode", analogx_mode_->currentIndex());
-            settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked());
-            settings_.setValue("preset/crossfeed_preset", crossfeed_mode_->currentIndex());
-            saveMultibandSettings("preset/");
-            settings_.setValue("preset/fet_enabled", fet_enabled_->isChecked());
-            settings_.setValue("preset/fet_threshold_db", fet_threshold_.slider->value());
-            settings_.setValue("preset/fet_ratio_tenths", fet_ratio_.slider->value());
-            settings_.setValue("preset/fet_knee_db", fet_knee_.slider->value());
-            settings_.setValue("preset/fet_makeup_db", fet_gain_.slider->value());
-            settings_.setValue("preset/fet_attack_ms", fet_attack_.slider->value());
-            settings_.setValue("preset/fet_release_ms", fet_release_.slider->value());
-            settings_.setValue("preset/imager_enabled", imager_enabled_->isChecked());
-            settings_.setValue("preset/imager_low_width_percent", imager_low_.slider->value());
-            settings_.setValue("preset/imager_mid_width_percent", imager_mid_.slider->value());
-            settings_.setValue("preset/imager_high_width_percent", imager_high_.slider->value());
-            settings_.setValue("preset/imager_low_crossover_hz", imager_low_xover_.slider->value());
-            settings_.setValue("preset/imager_high_crossover_hundreds", imager_high_xover_.slider->value());
-            saveDeqPreset();
-            settings_.setValue("preset/spectrum_enabled", spectrum_enabled_->isChecked());
-            settings_.setValue("preset/spectrum_frequency_hundreds", spectrum_frequency_.slider->value());
-            settings_.setValue("preset/spectrum_exciter_tenths", spectrum_exciter_.slider->value());
-            settings_.setValue("preset/headphone_enabled", headphone_enabled_->isChecked());
-            settings_.setValue("preset/headphone_quality", headphone_quality_->currentIndex());
-            settings_.setValue("preset/diff_enabled", diff_enabled_->isChecked());
-            settings_.setValue("preset/diff_delay_ms", diff_delay_.slider->value());
-            settings_.setValue("preset/diff_reverse", diff_reverse_->isChecked());
-            settings_.setValue("preset/diff_mix_percent", diff_mix_.slider->value());
-            settings_.setValue("preset/diff_lp_hundreds", diff_lowpass_.slider->value());
-            settings_.setValue("preset/field_enabled", field_enabled_->isChecked());
-            settings_.setValue("preset/field_widen_tenths", field_widen_.slider->value());
-            settings_.setValue("preset/field_mid_hundredths", field_mid_.slider->value());
-            settings_.setValue("preset/field_depth_step", field_depth_.slider->value());
-            settings_.setValue("preset/reverb_enabled", reverb_enabled_->isChecked());
-            settings_.setValue("preset/reverb_room_percent", reverb_room_.slider->value());
-            settings_.setValue("preset/reverb_width_percent", reverb_width_.slider->value());
-            settings_.setValue("preset/reverb_damp_percent", reverb_damp_.slider->value());
-            settings_.setValue("preset/reverb_wet_percent", reverb_wet_.slider->value());
-            settings_.setValue("preset/reverb_dry_percent", reverb_dry_.slider->value());
-            saveOutputPreset();
-            settings_.sync();
-            restore_->setEnabled(true);
-            statusMessage("Preset saved (startup settings are auto-saved).");
-        });
-        connect(restore, &QPushButton::clicked, this, [this]{
-            if (!settings_.value("preset/valid", false).toBool()) return;
-            applySettings(settings_.value("preset/master_enabled", true).toBool(),
-                          settings_.value("preset/enabled", true).toBool(),
-                          settings_.value("preset/bass_mode", 0).toInt(),
-                          settings_.value("preset/strength_tenths", 100).toInt(),
-                          settings_.value("preset/frequency", 65).toInt(),
-                          settings_.value("preset/clarity_enabled", false).toBool(),
-                          settings_.value("preset/clarity_mode", 0).toInt(),
-                          settings_.value("preset/clarity_gain_tenths", 15).toInt(),
-                          settings_.value("preset/spectrum_enabled", false).toBool(),
-                          settings_.value("preset/spectrum_frequency_hundreds", 76).toInt(),
-                          settings_.value("preset/spectrum_exciter_tenths", 10).toInt(),
-                          settings_.value("preset/headphone_enabled", false).toBool(),
-                          settings_.value("preset/headphone_quality", 0).toInt(),
-                          settings_.value("preset/diff_enabled", false).toBool(),
-                          settings_.value("preset/diff_delay_ms", 8).toInt(),
-                          settings_.value("preset/diff_reverse", false).toBool(),
-                          settings_.value("preset/diff_mix_percent", 50).toInt(),
-                          settings_.value("preset/diff_lp_hundreds", 0).toInt(),
-                          settings_.value("preset/field_enabled", false).toBool(),
-                          settings_.value("preset/field_widen_tenths", 10).toInt(),
-                          settings_.value("preset/field_mid_hundredths", 100).toInt(),
-                          settings_.value("preset/field_depth_step", 3).toInt(),
-                          settings_.value("preset/reverb_enabled", false).toBool(),
-                          settings_.value("preset/reverb_room_percent", 50).toInt(),
-                          settings_.value("preset/reverb_width_percent", 50).toInt(),
-                          settings_.value("preset/reverb_damp_percent", 50).toInt(),
-                          settings_.value("preset/reverb_wet_percent", 20).toInt(),
-                          settings_.value("preset/reverb_dry_percent", 50).toInt());
-            for (int n : {10, 15, 25, 31})
-                settings_.setValue("eq_levels_" + QString::number(n),
-                    settings_.value("preset/eq_levels_" + QString::number(n),
-                        flatEqCsv(n)));
-            {
-                const QSignalBlocker blockEq(eq_enabled_), blockMode(eq_mode_);
-                eq_enabled_->setChecked(settings_.value("preset/eq_enabled", false).toBool());
-                eq_active_bands_ = validEqBands(settings_.value("preset/eq_band_count", 10).toInt());
-                eq_mode_->setCurrentIndex(eq_mode_->findData(eq_active_bands_));
-                loadEqLayout();
-                selectEqPreset("custom");  // snapshot represents explicit curve values
-            }
-            restoreOutputPreset();
-            restoreBassPreset();
-            applyTubeSettings(settings_.value("preset/tube_enabled", false).toBool(),
-                settings_.value("preset/tube_model", 0).toInt(),
-                settings_.value("preset/tube_drive_percent", 50).toInt(),
-                settings_.value("preset/tube_mix_percent", 30).toInt());
-            applyAnalogXSettings(settings_.value("preset/analogx_enabled", false).toBool(),
-                settings_.value("preset/analogx_mode", 0).toInt());
-            {
-                const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
-                crossfeed_enabled_->setChecked(settings_.value("preset/crossfeed_enabled", false).toBool());
-                crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("preset/crossfeed_preset", 0).toInt(), 0, 2));
-            }
-            {
-                const QSignalBlocker a(imager_enabled_);
-                imager_enabled_->setChecked(settings_.value("preset/imager_enabled", false).toBool());
-                for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
-                    {imager_low_, settings_.value("preset/imager_low_width_percent", 100).toInt()},
-                    {imager_mid_, settings_.value("preset/imager_mid_width_percent", 100).toInt()},
-                    {imager_high_, settings_.value("preset/imager_high_width_percent", 100).toInt()},
-                    {imager_low_xover_, settings_.value("preset/imager_low_crossover_hz", 200).toInt()},
-                    {imager_high_xover_, settings_.value("preset/imager_high_crossover_hundreds", 40).toInt()}}) {
-                    const QSignalBlocker block(item.first.slider);
-                    item.first.slider->setValue(item.second);
-                }
-                updateLabels();
-            }
-            {
-                const QSignalBlocker b(ddc_enabled_);
-                ddc_enabled_->setChecked(settings_.value("preset/ddc_enabled", false).toBool());
-                settings_.setValue("ddc_profile", settings_.value("preset/ddc_profile", ""));
-                updateDdcFileName(settings_.value("ddc_profile", "").toString());
-                settings_.sync();
-                requestDdcReload();
-            }
-            {
-                const QSignalBlocker b(speaker_enabled_);
-                speaker_enabled_->setChecked(settings_.value("preset/speaker_enabled", false).toBool());
-            }
-            restoreFetSettings("preset/");
-            loadMultibandSettings("preset/");
-            restoreDeqPreset();
-            {
-                const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
-                convolver_enabled_->setChecked(settings_.value("preset/convolver_enabled", false).toBool());
-                convolver_cross_.slider->setValue(settings_.value("preset/convolver_cross_percent", 0).toInt());
-                settings_.setValue("convolver_kernel", settings_.value("preset/convolver_kernel", ""));
-                settings_.sync();
-                refreshIrsLibrary();
-                requestIrsLoad();
-            }
-            push();
-            statusMessage("Saved preset restored.");
-        });
-        connect(reset, &QPushButton::clicked, this, [this]{
-            QMessageBox confirm(this);
-            confirm.setIcon(QMessageBox::Warning);
-            confirm.setWindowTitle("Reset Effect Settings");
-            confirm.setText("Reset all effect settings?");
-            confirm.setInformativeText(
-                "This will replace your current effect settings with the application's defaults "
-                "(Natural Bass on; other effects off).\n\n"
-                "Your saved preset will not be deleted.");
-            auto* resetButton = confirm.addButton("Reset Effects", QMessageBox::DestructiveRole);
-            auto* cancelButton = confirm.addButton(QMessageBox::Cancel);
-            confirm.setDefaultButton(qobject_cast<QPushButton*>(cancelButton));
-            confirm.exec();
-            if (confirm.clickedButton() != resetButton) return;
-
-            applySettings(true, true, 0, 100, 65, false, 0, 15, false, 76, 10,
-                          false, 0, false, 8, false, 50, 0,
-                          false, 10, 100, 3,
-                          false, 50, 50, 50, 20, 50);
-            resetOutputControls();
-            resetNewBassControls();
-            applyTubeSettings(false, 0, 50, 30);
-            applyAnalogXSettings(false, 0);
-            {
-                const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
-                crossfeed_enabled_->setChecked(false);
-                crossfeed_mode_->setCurrentIndex(0);
-            }
-            {
-                const QSignalBlocker a(imager_enabled_);
-                imager_enabled_->setChecked(false);
-                for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
-                    {imager_low_, 100}, {imager_mid_, 100}, {imager_high_, 100},
-                    {imager_low_xover_, 200}, {imager_high_xover_, 40}}) {
-                    const QSignalBlocker block(item.first.slider);
-                    item.first.slider->setValue(item.second);
-                }
-                updateLabels();
-            }
-            {
-                const QSignalBlocker b(ddc_enabled_);
-                ddc_enabled_->setChecked(false);
-            }
-            {
-                const QSignalBlocker b(speaker_enabled_);
-                speaker_enabled_->setChecked(false);
-            }
-            resetFetSettings();
-            resetMultibandSettings();
-            resetDeq();
-            {
-                const QSignalBlocker blockEq(eq_enabled_), blockMode(eq_mode_);
-                eq_enabled_->setChecked(false);
-                for (int n : {10, 15, 25, 31})
-                    settings_.setValue("eq_levels_" + QString::number(n),
-                        flatEqCsv(n));
-                eq_active_bands_ = 10;
-                eq_mode_->setCurrentIndex(eq_mode_->findData(10));
-                loadEqLayout();
-            }
-
-            {
-                const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
-                convolver_enabled_->setChecked(false);
-                convolver_cross_.slider->setValue(0);
-            }
-            push();
-            statusMessage("Effect settings reset to defaults; saved preset preserved.");
-        });
         auto* timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, [this]{ pollBackend(); });
         timer->start(500);
@@ -2168,6 +1930,486 @@ protected:
         return QMainWindow::eventFilter(watched, event);
     }
 private:
+    // Stable per-user location for portable, named effect snapshots. We keep
+    // QSettings's existing org/app config store intact for preferences and
+    // automatic session state, including older one-slot presets.
+    QString presetLibraryDirectory() const {
+        return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+               + "/viper4linux/presets";
+    }
+    struct NamedPreset {
+        QString path;
+        QString name;
+    };
+    QList<NamedPreset> namedPresets() const {
+        QList<NamedPreset> found;
+        QDir dir(presetLibraryDirectory());
+        for (const QFileInfo& file : dir.entryInfoList({"*.ini"}, QDir::Files | QDir::NoSymLinks)) {
+            QSettings preset(file.absoluteFilePath(), QSettings::IniFormat);
+            if (preset.value("format/version").toInt() != 1) continue;
+            const QString name = preset.value("format/name").toString().trimmed();
+            if (!name.isEmpty()) found.append({file.absoluteFilePath(), name});
+        }
+        std::sort(found.begin(), found.end(), [](const auto& a, const auto& b) {
+            return a.name.compare(b.name, Qt::CaseInsensitive) < 0;
+        });
+        return found;
+    }
+    static bool acceptablePresetName(const QString& name) {
+        if (name.isEmpty() || name.size() > 70) return false;
+        for (QChar c : name)
+            if (c == '/' || c == '\\' || c.isNull() || !c.isPrint()) return false;
+        return true;
+    }
+    // Writes a complete snapshot with atomic QSettings/INI replacement.
+    // Existing file identifiers are UUIDs, never derived from user input.
+    bool writeNamedPreset(const QString& name, const QString& path, QString* error) {
+        if (!QDir().mkpath(presetLibraryDirectory())) {
+            *error = "Could not create the preset library directory.";
+            return false;
+        }
+        QSettings preset(path, QSettings::IniFormat);
+        preset.clear();
+        preset.setValue("format/version", 1);
+        preset.setValue("format/name", name);
+        const auto keys = settings_.allKeys();
+        for (const QString& key : keys) {
+            if (key.startsWith("preset/") && key != "preset/valid")
+                preset.setValue("effects/" + key.mid(7), settings_.value(key));
+        }
+        preset.sync();
+        if (preset.status() != QSettings::NoError) {
+            *error = "Could not write preset file: " + path;
+            return false;
+        }
+        return true;
+    }
+    // Older versions stored exactly one snapshot in QSettings. Preserve it as
+    // a standalone named preset before using that area as the staging buffer.
+    bool migrateLegacyPreset(QString* error) {
+        if (settings_.value("presets/legacy_migrated", false).toBool()) return true;
+        // Mark even a first-run, empty one-slot store as migrated. Otherwise
+        // the next named Save would populate the staging keys and a future
+        // dialog open would incorrectly import that save as a legacy preset.
+        if (settings_.value("preset/valid", false).toBool()) {
+            const QString name = "Previously Saved Preset";
+            const QString path = QDir(presetLibraryDirectory()).filePath(
+                QUuid::createUuid().toString(QUuid::WithoutBraces) + ".ini");
+            if (!writeNamedPreset(name, path, error)) return false;
+        }
+        settings_.setValue("presets/legacy_migrated", true);
+        settings_.sync();
+        if (settings_.status() != QSettings::NoError) {
+            *error = "Could not record completion of the preset migration.";
+            return false;
+        }
+        return true;
+    }
+    bool stageNamedPreset(const QString& path, QString* error) {
+        QSettings preset(path, QSettings::IniFormat);
+        if (preset.status() != QSettings::NoError ||
+            preset.value("format/version").toInt() != 1 ||
+            !preset.contains("effects/master_enabled") ||
+            !preset.contains("effects/enabled") ||
+            !preset.contains("effects/limiter_output_percent")) {
+            *error = "This file is not a valid ViPER for Linux effect preset.";
+            return false;
+        }
+        const QStringList keys = preset.allKeys();
+        // Do not change the active configuration until the file is validated.
+        settings_.remove("preset");
+        for (const QString& key : keys)
+            if (key.startsWith("effects/"))
+                settings_.setValue("preset/" + key.mid(8), preset.value(key));
+        settings_.setValue("preset/valid", true);
+        settings_.sync();
+        return true;
+    }
+    void snapshotToPresetStaging() {
+            settings_.setValue("preset/valid", true);
+            settings_.setValue("preset/master_enabled", global_->isChecked());
+            settings_.setValue("preset/enabled", enabled_->isChecked());
+            settings_.setValue("preset/bass_mode", bass_mode_->currentIndex());
+            settings_.setValue("preset/strength_tenths", strength_.slider->value());
+            settings_.setValue("preset/frequency", frequency_.slider->value());
+            saveEqLayout();
+            settings_.setValue("preset/eq_enabled", eq_enabled_->isChecked());
+            settings_.setValue("preset/eq_band_count", eq_active_bands_);
+            for (int n : {10, 15, 25, 31})
+                settings_.setValue("preset/eq_levels_" + QString::number(n),
+                    settings_.value("eq_levels_" + QString::number(n), flatEqCsv(n)));
+            settings_.setValue("preset/ddc_enabled", ddc_enabled_->isChecked());
+            settings_.setValue("preset/ddc_profile", settings_.value("ddc_profile", ""));
+            settings_.setValue("preset/speaker_enabled", speaker_enabled_->isChecked());
+            settings_.setValue("preset/convolver_enabled", convolver_enabled_->isChecked());
+            settings_.setValue("preset/convolver_cross_percent", convolver_cross_.slider->value());
+            settings_.setValue("preset/convolver_kernel", settings_.value("convolver_kernel"));
+            saveBassPreset();
+            settings_.setValue("preset/clarity_enabled", clarity_enabled_->isChecked());
+            settings_.setValue("preset/clarity_mode", clarity_mode_->currentIndex());
+            settings_.setValue("preset/clarity_gain_tenths", clarity_gain_.slider->value());
+            settings_.setValue("preset/tube_enabled", tube_enabled_->isChecked());
+            settings_.setValue("preset/tube_model", tube_model_->currentIndex());
+            settings_.setValue("preset/tube_drive_percent", tube_drive_.slider->value());
+            settings_.setValue("preset/tube_mix_percent", tube_mix_.slider->value());
+            settings_.setValue("preset/analogx_enabled", analogx_enabled_->isChecked());
+            settings_.setValue("preset/analogx_mode", analogx_mode_->currentIndex());
+            settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked());
+            settings_.setValue("preset/crossfeed_preset", crossfeed_mode_->currentIndex());
+            saveMultibandSettings("preset/");
+            settings_.setValue("preset/fet_enabled", fet_enabled_->isChecked());
+            settings_.setValue("preset/fet_threshold_db", fet_threshold_.slider->value());
+            settings_.setValue("preset/fet_ratio_tenths", fet_ratio_.slider->value());
+            settings_.setValue("preset/fet_knee_db", fet_knee_.slider->value());
+            settings_.setValue("preset/fet_makeup_db", fet_gain_.slider->value());
+            settings_.setValue("preset/fet_attack_ms", fet_attack_.slider->value());
+            settings_.setValue("preset/fet_release_ms", fet_release_.slider->value());
+            settings_.setValue("preset/imager_enabled", imager_enabled_->isChecked());
+            settings_.setValue("preset/imager_low_width_percent", imager_low_.slider->value());
+            settings_.setValue("preset/imager_mid_width_percent", imager_mid_.slider->value());
+            settings_.setValue("preset/imager_high_width_percent", imager_high_.slider->value());
+            settings_.setValue("preset/imager_low_crossover_hz", imager_low_xover_.slider->value());
+            settings_.setValue("preset/imager_high_crossover_hundreds", imager_high_xover_.slider->value());
+            saveDeqPreset();
+            settings_.setValue("preset/spectrum_enabled", spectrum_enabled_->isChecked());
+            settings_.setValue("preset/spectrum_frequency_hundreds", spectrum_frequency_.slider->value());
+            settings_.setValue("preset/spectrum_exciter_tenths", spectrum_exciter_.slider->value());
+            settings_.setValue("preset/headphone_enabled", headphone_enabled_->isChecked());
+            settings_.setValue("preset/headphone_quality", headphone_quality_->currentIndex());
+            settings_.setValue("preset/diff_enabled", diff_enabled_->isChecked());
+            settings_.setValue("preset/diff_delay_ms", diff_delay_.slider->value());
+            settings_.setValue("preset/diff_reverse", diff_reverse_->isChecked());
+            settings_.setValue("preset/diff_mix_percent", diff_mix_.slider->value());
+            settings_.setValue("preset/diff_lp_hundreds", diff_lowpass_.slider->value());
+            settings_.setValue("preset/field_enabled", field_enabled_->isChecked());
+            settings_.setValue("preset/field_widen_tenths", field_widen_.slider->value());
+            settings_.setValue("preset/field_mid_hundredths", field_mid_.slider->value());
+            settings_.setValue("preset/field_depth_step", field_depth_.slider->value());
+            settings_.setValue("preset/reverb_enabled", reverb_enabled_->isChecked());
+            settings_.setValue("preset/reverb_room_percent", reverb_room_.slider->value());
+            settings_.setValue("preset/reverb_width_percent", reverb_width_.slider->value());
+            settings_.setValue("preset/reverb_damp_percent", reverb_damp_.slider->value());
+            settings_.setValue("preset/reverb_wet_percent", reverb_wet_.slider->value());
+            settings_.setValue("preset/reverb_dry_percent", reverb_dry_.slider->value());
+            saveOutputPreset();
+            settings_.sync();
+    }
+    void restoreFromPresetStaging() {
+            if (!settings_.value("preset/valid", false).toBool()) return;
+            applySettings(settings_.value("preset/master_enabled", true).toBool(),
+                          settings_.value("preset/enabled", true).toBool(),
+                          settings_.value("preset/bass_mode", 0).toInt(),
+                          settings_.value("preset/strength_tenths", 100).toInt(),
+                          settings_.value("preset/frequency", 65).toInt(),
+                          settings_.value("preset/clarity_enabled", false).toBool(),
+                          settings_.value("preset/clarity_mode", 0).toInt(),
+                          settings_.value("preset/clarity_gain_tenths", 15).toInt(),
+                          settings_.value("preset/spectrum_enabled", false).toBool(),
+                          settings_.value("preset/spectrum_frequency_hundreds", 76).toInt(),
+                          settings_.value("preset/spectrum_exciter_tenths", 10).toInt(),
+                          settings_.value("preset/headphone_enabled", false).toBool(),
+                          settings_.value("preset/headphone_quality", 0).toInt(),
+                          settings_.value("preset/diff_enabled", false).toBool(),
+                          settings_.value("preset/diff_delay_ms", 8).toInt(),
+                          settings_.value("preset/diff_reverse", false).toBool(),
+                          settings_.value("preset/diff_mix_percent", 50).toInt(),
+                          settings_.value("preset/diff_lp_hundreds", 0).toInt(),
+                          settings_.value("preset/field_enabled", false).toBool(),
+                          settings_.value("preset/field_widen_tenths", 10).toInt(),
+                          settings_.value("preset/field_mid_hundredths", 100).toInt(),
+                          settings_.value("preset/field_depth_step", 3).toInt(),
+                          settings_.value("preset/reverb_enabled", false).toBool(),
+                          settings_.value("preset/reverb_room_percent", 50).toInt(),
+                          settings_.value("preset/reverb_width_percent", 50).toInt(),
+                          settings_.value("preset/reverb_damp_percent", 50).toInt(),
+                          settings_.value("preset/reverb_wet_percent", 20).toInt(),
+                          settings_.value("preset/reverb_dry_percent", 50).toInt());
+            for (int n : {10, 15, 25, 31})
+                settings_.setValue("eq_levels_" + QString::number(n),
+                    settings_.value("preset/eq_levels_" + QString::number(n),
+                        flatEqCsv(n)));
+            {
+                const QSignalBlocker blockEq(eq_enabled_), blockMode(eq_mode_);
+                eq_enabled_->setChecked(settings_.value("preset/eq_enabled", false).toBool());
+                eq_active_bands_ = validEqBands(settings_.value("preset/eq_band_count", 10).toInt());
+                eq_mode_->setCurrentIndex(eq_mode_->findData(eq_active_bands_));
+                loadEqLayout();
+                selectEqPreset("custom");  // snapshot represents explicit curve values
+            }
+            restoreOutputPreset();
+            restoreBassPreset();
+            applyTubeSettings(settings_.value("preset/tube_enabled", false).toBool(),
+                settings_.value("preset/tube_model", 0).toInt(),
+                settings_.value("preset/tube_drive_percent", 50).toInt(),
+                settings_.value("preset/tube_mix_percent", 30).toInt());
+            applyAnalogXSettings(settings_.value("preset/analogx_enabled", false).toBool(),
+                settings_.value("preset/analogx_mode", 0).toInt());
+            {
+                const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
+                crossfeed_enabled_->setChecked(settings_.value("preset/crossfeed_enabled", false).toBool());
+                crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("preset/crossfeed_preset", 0).toInt(), 0, 2));
+            }
+            {
+                const QSignalBlocker a(imager_enabled_);
+                imager_enabled_->setChecked(settings_.value("preset/imager_enabled", false).toBool());
+                for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
+                    {imager_low_, settings_.value("preset/imager_low_width_percent", 100).toInt()},
+                    {imager_mid_, settings_.value("preset/imager_mid_width_percent", 100).toInt()},
+                    {imager_high_, settings_.value("preset/imager_high_width_percent", 100).toInt()},
+                    {imager_low_xover_, settings_.value("preset/imager_low_crossover_hz", 200).toInt()},
+                    {imager_high_xover_, settings_.value("preset/imager_high_crossover_hundreds", 40).toInt()}}) {
+                    const QSignalBlocker block(item.first.slider);
+                    item.first.slider->setValue(item.second);
+                }
+                updateLabels();
+            }
+            {
+                const QSignalBlocker b(ddc_enabled_);
+                ddc_enabled_->setChecked(settings_.value("preset/ddc_enabled", false).toBool());
+                settings_.setValue("ddc_profile", settings_.value("preset/ddc_profile", ""));
+                updateDdcFileName(settings_.value("ddc_profile", "").toString());
+                settings_.sync();
+                requestDdcReload();
+            }
+            {
+                const QSignalBlocker b(speaker_enabled_);
+                speaker_enabled_->setChecked(settings_.value("preset/speaker_enabled", false).toBool());
+            }
+            restoreFetSettings("preset/");
+            loadMultibandSettings("preset/");
+            restoreDeqPreset();
+            {
+                const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
+                convolver_enabled_->setChecked(settings_.value("preset/convolver_enabled", false).toBool());
+                convolver_cross_.slider->setValue(settings_.value("preset/convolver_cross_percent", 0).toInt());
+                settings_.setValue("convolver_kernel", settings_.value("preset/convolver_kernel", ""));
+                settings_.sync();
+                refreshIrsLibrary();
+                requestIrsLoad();
+            }
+            push();
+    }
+    void resetEffectsWithConfirmation() {
+            QMessageBox confirm(this);
+            confirm.setIcon(QMessageBox::Warning);
+            confirm.setWindowTitle("Reset Effect Settings");
+            confirm.setText("Reset all effect settings?");
+            confirm.setInformativeText(
+                "This will replace your current effect settings with the application's defaults "
+                "(Natural Bass on; other effects off).\n\n"
+                "Your named presets will not be deleted.");
+            auto* resetButton = confirm.addButton("Reset Effects", QMessageBox::DestructiveRole);
+            auto* cancelButton = confirm.addButton(QMessageBox::Cancel);
+            confirm.setDefaultButton(qobject_cast<QPushButton*>(cancelButton));
+            confirm.exec();
+            if (confirm.clickedButton() != resetButton) return;
+
+            applySettings(true, true, 0, 100, 65, false, 0, 15, false, 76, 10,
+                          false, 0, false, 8, false, 50, 0,
+                          false, 10, 100, 3,
+                          false, 50, 50, 50, 20, 50);
+            resetOutputControls();
+            resetNewBassControls();
+            applyTubeSettings(false, 0, 50, 30);
+            applyAnalogXSettings(false, 0);
+            {
+                const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
+                crossfeed_enabled_->setChecked(false);
+                crossfeed_mode_->setCurrentIndex(0);
+            }
+            {
+                const QSignalBlocker a(imager_enabled_);
+                imager_enabled_->setChecked(false);
+                for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
+                    {imager_low_, 100}, {imager_mid_, 100}, {imager_high_, 100},
+                    {imager_low_xover_, 200}, {imager_high_xover_, 40}}) {
+                    const QSignalBlocker block(item.first.slider);
+                    item.first.slider->setValue(item.second);
+                }
+                updateLabels();
+            }
+            {
+                const QSignalBlocker b(ddc_enabled_);
+                ddc_enabled_->setChecked(false);
+            }
+            {
+                const QSignalBlocker b(speaker_enabled_);
+                speaker_enabled_->setChecked(false);
+            }
+            resetFetSettings();
+            resetMultibandSettings();
+            resetDeq();
+            {
+                const QSignalBlocker blockEq(eq_enabled_), blockMode(eq_mode_);
+                eq_enabled_->setChecked(false);
+                for (int n : {10, 15, 25, 31})
+                    settings_.setValue("eq_levels_" + QString::number(n),
+                        flatEqCsv(n));
+                eq_active_bands_ = 10;
+                eq_mode_->setCurrentIndex(eq_mode_->findData(10));
+                loadEqLayout();
+            }
+
+            {
+                const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
+                convolver_enabled_->setChecked(false);
+                convolver_cross_.slider->setValue(0);
+            }
+            push();
+            statusMessage("Effect settings reset to defaults; named presets preserved.");
+    }
+    void showPresetManager() {
+        QString error;
+        if (!migrateLegacyPreset(&error)) {
+            QMessageBox::warning(this, "Preset Migration", error +
+                "\nYour original saved preset has not been modified.");
+            return;
+        }
+        QDialog dialog(this);
+        dialog.setWindowTitle("Effect Presets");
+        dialog.setMinimumSize(450, 355);
+        auto* column = new QVBoxLayout(&dialog);
+        auto* description = new QLabel(
+            "Save complete effect settings under different names. "
+            "Loading a preset replaces the current effect settings, not your GUI preferences.", &dialog);
+        description->setWordWrap(true);
+        column->addWidget(description);
+        auto* list = new QListWidget(&dialog);
+        list->setObjectName("viperNamedPresetList");
+        column->addWidget(list, 1);
+        auto* buttons = new QHBoxLayout();
+        auto* save = new QPushButton("Save Preset…", &dialog);
+        auto* load = new QPushButton("Load", &dialog);
+        auto* rename = new QPushButton("Rename", &dialog);
+        auto* remove = new QPushButton("Delete", &dialog);
+        buttons->addWidget(save);
+        buttons->addWidget(load);
+        buttons->addWidget(rename);
+        buttons->addWidget(remove);
+        column->addLayout(buttons);
+        auto* bottom = new QHBoxLayout();
+        auto* reset = new QPushButton("Reset Effects to Defaults…", &dialog);
+        auto* close = new QPushButton("Close", &dialog);
+        bottom->addWidget(reset);
+        bottom->addStretch();
+        bottom->addWidget(close);
+        column->addLayout(bottom);
+        auto selectedPath = [list] {
+            auto* selected = list->currentItem();
+            return selected ? selected->data(Qt::UserRole).toString() : QString();
+        };
+        auto refresh = [this, list](const QString& prefer = QString()) {
+            list->clear();
+            for (const auto& preset : namedPresets()) {
+                auto* item = new QListWidgetItem(preset.name, list);
+                item->setData(Qt::UserRole, preset.path);
+                if (preset.path == prefer) list->setCurrentItem(item);
+            }
+            if (!list->currentItem() && list->count()) list->setCurrentRow(0);
+        };
+        auto updateSelection = [list, load, rename, remove] {
+            const bool selected = list->currentItem() != nullptr;
+            load->setEnabled(selected);
+            rename->setEnabled(selected);
+            remove->setEnabled(selected);
+        };
+        QObject::connect(list, &QListWidget::itemSelectionChanged, &dialog, updateSelection);
+        refresh(); updateSelection();
+        QObject::connect(save, &QPushButton::clicked, &dialog, [&, this] {
+            bool accepted = false;
+            const QString name = QInputDialog::getText(&dialog, "Save Effect Preset",
+                "Preset name:", QLineEdit::Normal, "", &accepted).trimmed();
+            if (!accepted) return;
+            if (!acceptablePresetName(name)) {
+                QMessageBox::warning(&dialog, "Invalid Name",
+                    "Enter 1–70 characters without slashes or control characters.");
+                return;
+            }
+            QString path;
+            for (const auto& preset : namedPresets()) {
+                if (preset.name.compare(name, Qt::CaseInsensitive) == 0) {
+                    path = preset.path;
+                    if (QMessageBox::question(&dialog, "Replace Preset",
+                        "Replace the saved preset '" + preset.name + "' with the current settings?",
+                        QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)
+                        != QMessageBox::Yes) return;
+                    break;
+                }
+            }
+            if (path.isEmpty()) path = QDir(presetLibraryDirectory()).filePath(
+                QUuid::createUuid().toString(QUuid::WithoutBraces) + ".ini");
+            snapshotToPresetStaging();
+            QString error;
+            if (!writeNamedPreset(name, path, &error)) {
+                QMessageBox::warning(&dialog, "Save Failed", error);
+                return;
+            }
+            refresh(path);
+            statusMessage("Effect preset saved: " + name);
+        });
+        QObject::connect(load, &QPushButton::clicked, &dialog, [&, this] {
+            const QString path = selectedPath();
+            if (path.isEmpty()) return;
+            if (QMessageBox::question(&dialog, "Load Effect Preset",
+                "Load '" + list->currentItem()->text() + "'?\n\n"
+                "This replaces the current effect settings. Unsaved changes will be lost. "
+                "Your other saved presets will remain untouched.",
+                QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)
+                != QMessageBox::Yes) return;
+            QString error;
+            if (!stageNamedPreset(path, &error)) {
+                QMessageBox::warning(&dialog, "Load Failed", error);
+                return;
+            }
+            restoreFromPresetStaging();
+            statusMessage("Effect preset loaded: " + list->currentItem()->text());
+        });
+        QObject::connect(list, &QListWidget::itemDoubleClicked, &dialog, [load](QListWidgetItem*) {
+            load->click();
+        });
+        QObject::connect(rename, &QPushButton::clicked, &dialog, [&, this] {
+            const QString path = selectedPath();
+            if (path.isEmpty()) return;
+            bool accepted = false;
+            const QString oldName = list->currentItem()->text();
+            const QString name = QInputDialog::getText(&dialog, "Rename Preset",
+                "New name:", QLineEdit::Normal, oldName, &accepted).trimmed();
+            if (!accepted || name == oldName) return;
+            if (!acceptablePresetName(name)) {
+                QMessageBox::warning(&dialog, "Invalid Name", "Use 1–70 characters without slashes.");
+                return;
+            }
+            for (const auto& preset : namedPresets()) {
+                if (preset.path != path && preset.name.compare(name, Qt::CaseInsensitive) == 0) {
+                    QMessageBox::warning(&dialog, "Duplicate Name", "A preset already has that name.");
+                    return;
+                }
+            }
+            QSettings file(path, QSettings::IniFormat);
+            file.setValue("format/name", name);
+            file.sync();
+            if (file.status() != QSettings::NoError)
+                QMessageBox::warning(&dialog, "Rename Failed", "Could not update the preset file.");
+            else refresh(path);
+        });
+        QObject::connect(remove, &QPushButton::clicked, &dialog, [&, this] {
+            const QString path = selectedPath();
+            if (path.isEmpty()) return;
+            if (QMessageBox::question(&dialog, "Delete Preset",
+                "Permanently delete the saved preset '" + list->currentItem()->text() + "'? "
+                "Your currently active effect settings will not change.",
+                QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)
+                != QMessageBox::Yes) return;
+            if (!QFile::remove(path))
+                QMessageBox::warning(&dialog, "Delete Failed", "Could not delete preset file.");
+            else refresh();
+        });
+        QObject::connect(reset, &QPushButton::clicked, &dialog, [this] {
+            resetEffectsWithConfirmation();
+        });
+        QObject::connect(close, &QPushButton::clicked, &dialog, &QDialog::accept);
+        dialog.exec();
+    }
     QSize savedWindowSize(const QString& key, const QSize& fallback, const QSize& minimum) const {
         QSize requested = settings_.value(key, fallback).toSize();
         if (!requested.isValid() || requested.isEmpty()) requested = fallback;
@@ -2908,6 +3150,8 @@ private:
         auto* menu = new QMenu(parent);
         auto* preferences = menu->addAction("Preferences…");
         connect(preferences, &QAction::triggered, this, [this] { showPreferences(); });
+        auto* presets = menu->addAction("Presets…");
+        connect(presets, &QAction::triggered, this, [this] { showPresetManager(); });
         auto* libraries = menu->addMenu("Open Library");
         auto openFolder = [this](const QString& path) {
             if (!QDir().mkpath(path) ||
@@ -4502,7 +4746,6 @@ private:
     SliderRow spectrum_exciter_{};
     SliderRow strength_{};
     SliderRow frequency_{};
-    QPushButton* restore_{};
     QLabel* status_{};
 };
 
