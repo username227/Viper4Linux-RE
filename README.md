@@ -54,13 +54,30 @@ The top-right ☰ application menu opens the Effect Guide, preferences, librarie
 backend log and About without adding controls to the effect tabs. See `docs/CONVOLVER-PROOF-OF-CONCEPT.md` for input format limits, live
 processing handoff, and troubleshooting.
 
-## Resetting effect settings
+## Named effect presets and defaults
 
-**Save preset** and **Restore preset** continue to operate on a separate,
-single manually saved configuration. **Reset Effects to Defaults…** restores
-the original application settings (Natural Bass on; other effects off) only
-after a confirmation dialog. Cancel is the default, and resetting does not
-delete the manually saved preset. See `docs/PRESET-RESET-UI.md`.
+Open **Presets…** from the compact button beneath the six effects tabs or
+from the ☰ application menu. **Save Preset…** prompts for a name and saves a
+complete snapshot of the current audio-effect configuration. Existing names
+are matched case-insensitively and require an explicit confirmation before
+replacement. Select any saved preset to **Load**, **Rename**, or **Delete** it;
+loading and deleting both require confirmation. Preset files are stored as
+individual `.ini` files under `~/.local/share/viper4linux/presets/` (or
+`$XDG_DATA_HOME/viper4linux/presets/`), separately from theme, tray and window
+preferences in QSettings.
+
+The first opening of the Presets dialog preserves any earlier single-slot
+manual preset under **Previously Saved Preset**. First-time users with no old
+snapshot will not get a spurious migrated preset. Active effect settings keep
+their existing automatic save/restore behavior; creating a named preset is
+explicit and does not change the active configuration. The separate named EQ
+curve presets remain available inside the graphic EQ editor.
+
+**Reset Effects to Defaults…** restores the built-in starting configuration
+(Natural Bass on, other effects off), after a warning with **Cancel** as the
+default button. Resetting never removes named preset files or UI preferences.
+Presets save references to externally loaded IRS/VDC files; they do not embed
+those audio or correction files. See `docs/PRESET-RESET-UI.md`.
 
 ## GUI color themes
 
