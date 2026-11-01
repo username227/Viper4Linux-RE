@@ -209,7 +209,7 @@ print('PASS: Tube Simulator, native AnalogX and simplified Viper4Linux GUI contr
 import re as _re
 card_keys = _re.findall(r'addEffectPanel\([^;]+?,\s*"([a-z_]+)"\s*,', source)
 glyph_code = source.split('class EffectGlyph final : public QWidget {', 1)[1].split('class EffectSwitch final', 1)[0]
-assert len(card_keys) == 18, card_keys
+assert len(card_keys) == 19, card_keys
 assert len(card_keys) == len(set(card_keys)), card_keys
 for key in card_keys:
     assert f'kind_ == "{key}"' in glyph_code, 'Missing vector icon for ' + key
@@ -221,7 +221,7 @@ assert 'setAttribute(Qt::WA_TransparentForMouseEvents)' in glyph_code
 assert 'findChildren<EffectGlyph*>()' not in source
 assert 'for (auto* widget : findChildren<QWidget*>())' in source
 assert 'dynamic_cast<EffectGlyph*>(widget)' in source
-print('PASS: 18 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
+print('PASS: 19 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
 
 # Dynamic EQ: a separate editor and static preview, native 10-band backend.
 for token in [
@@ -279,3 +279,19 @@ assert 'deq_table_->setFixedHeight(36 + deq_active_count_ * 25)' in brand_gui
 backend = (brand_root / 'src/viper-ladspa.cpp').read_text()
 assert 'if (!enabled && !last_deq_enabled) return;' in backend
 print('PASS: transparent Qt-branded logos, stable blue X11 icon, selected-theme header, compact Dynamic EQ editor, disabled-edit bypass fix')
+
+# Native Cure Crossfeed: independent switch, three presets, saved state and IPC.
+for token in (
+    'crossfeed_enabled_ = new EffectSwitch(',
+    'crossfeed_mode_->addItems({"Mild", "Medium", "Strong"})',
+    'addEffectPanel(spatialLayout, crossfeed_group, "crossfeed", crossfeed_enabled_)',
+    'settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked())',
+    'settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked())',
+    'setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0)',
+    'crossfeed_request_serial.fetch_add(',
+    'crossfeed_applied_serial.store(',
+    'wet.ApplyCure(p);',
+):
+    if token in source: continue
+    assert token in (Path(__file__).resolve().parents[1] / 'src/viper-ladspa.cpp').read_text(), token
+print('PASS: native Crossfeed UI and presets, no substitute DSP')
