@@ -522,15 +522,17 @@ struct Processor {
         // effects. The latest controls remain in shared memory and are applied
         // on the next enable request. Neither reset filters nor fade to dry.
         if (!enabled && !last_deq_enabled) return;
-        // SetBandFrequency/Q/FilterType rebuild native biquads, and applying
-        // DynamicEQ calls all setters; only invoke it under the worker lock.
-        ir_transition.store(true, std::memory_order_release);
-        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+        // The worker owns native Dynamic EQ filter updates. The callback
+        // already uses wet_mutex::try_lock and never waits for these setters.
+        // Do NOT invoke the global transition-to-dry here: that would bypass
+        // *all* other active effects for ~25 ms on every band adjustment,
+        // causing an audible warble. This short synchronized update only
+        // excludes the callback for the duration of the native setters.
+        // Expensive IRS kernel swaps retain their separate dry handoff.
         {
             std::lock_guard<std::mutex> guard(wet_mutex);
             configure_dynamic_eq(enabled, count, bands);
         }
-        ir_transition.store(false, std::memory_order_release);
     }
 
     void run_dry_while_loading(unsigned long frames) {
