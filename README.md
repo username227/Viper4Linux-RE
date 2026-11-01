@@ -24,11 +24,13 @@ cd /path/to/viper-for-linux-live-irs
 
 ## Run and test
 
-1. Stop your old ViPER backend with its own `./stop.sh` and quit the old GUI. Do not run multiple copies simultaneously; they share PipeWire names and IPC paths. Fully close JamesDSP.
-2. In the new folder, run `./start.sh`. In another terminal, run `./gui.sh`.
+1. Fully close JamesDSP and quit any older Viper4Linux GUI (do not run multiple control windows).
+2. Run **`viper4linux`** from a terminal (or `./viper4linux` inside the project folder). `install.sh` creates a safe symlink at `~/.local/bin/viper4linux` when possible. The command reuses a matching running backend, or stops the previous Viper4Linux filter-chain client and starts the freshly built backend before opening the GUI.
 3. Keep headphone output low initially. With audio playing, run `./verify.sh`. Confirm its audio-block count increments and check the PipeWire routing.
 4. Confirm switches work independently of expanding panels, presets survive GUI restarts, tabs restore correctly, and the planned Dynamics tab has no effect controls.
 5. Re-test Bluetooth device reconnects and application stream changes before switching over permanently.
+
+The launcher identifies the backend by SHA-256 of the *built* LADSPA module, controller and PipeWire filter-chain config. An older backend that lacks the fingerprint will be restarted. It never stops system PipeWire or unrelated clients; if an old marked client cannot stop, the launcher refuses to create a duplicate. Backend startup logs go to `~/.local/state/viper4linux/backend.log` (or `$XDG_STATE_HOME/viper4linux/backend.log`). The original `./start.sh`, `./gui.sh`, `./stop.sh`, and `./status.sh` remain available for debugging.
 
 The existing `status.sh`, `stop.sh`, `verify.sh` and `viper-ctl` remain available for troubleshooting. Do not delete the prior working directory before live tests pass.
 
