@@ -6,13 +6,13 @@ not a reconstruction of all earlier ZIP development steps. Each subsequent
 change is a normal Git commit with a real object ID. No commit IDs have been
 invented for earlier archives.
 
-- During development, the About dialog shows `dev-<12-character Git hash>`.
+- During development, the About dialog shows `0.1.0-<12-character Git hash>`.
 - A clone determines this at CMake configure time from `git rev-parse`.
-- The complete release ZIP has no `.git` directory but ships a
-  `RELEASE-REVISION` manifest with the exact commit hash for version display.
+- Complete development ZIPs include `.git` and the genuine commit history.
+  A source-only ZIP without `.git` may use a `RELEASE-REVISION` manifest.
 - To refresh a GUI built from an existing Git checkout after another commit,
   rerun `cmake -S . -B build` before `cmake --build build --target viper-gui`.
-- The Git bundle accompanying this ZIP contains all genuine commits since
+- A separate Git bundle, when provided, contains all genuine commits since
   Git tracking began, plus tags. It can be cloned/imported locally and pushed
   to GitHub later. Prior ZIP-only releases are not individual historical commits.
 

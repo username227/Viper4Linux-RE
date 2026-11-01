@@ -88,3 +88,10 @@ Native Convolver IR loader added to IR & Correction, disabled by default. Reader
   selected preset on startup. Band switching interpolates log-frequency.
 - Independent C++17 preset regression test and GUI source checks added.
   Qt6 compilation and live audio must still be verified on Arch.
+
+
+## Development packaging
+
+Historical Markdown notes live in `docs/`; `README.md` is the sole top-level
+Markdown introduction. Development releases display `0.1.0-<short commit>`
+in the About dialog, and the complete master carries the `.git` history.

@@ -2,7 +2,7 @@
 
 **Current distribution:** Complete application source tree, not an incremental patch. Includes the native ViPERDSP Convolver integration, updated six-tab GUI, CLI, shared-memory controls, PipeWire routing and regression tests. The prior non-native Gain / Headroom stage has been removed end-to-end. This remains an experimental proof of concept.
 
-**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Eighteen native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC and Speaker Correction are not yet implemented. See `DEVELOPMENT-STATUS.md` and `CONVOLVER-PROOF-OF-CONCEPT.md`.
+**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Eighteen native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC and Speaker Correction are not yet implemented. See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
 
 **Required external source:** This archive contains the entire ViPER for Linux application source, except for the upstream `ViPERDSP` dependency, which `./install.sh` retrieves at the pinned commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933` over the network. It does not reuse code from any previous local ViPER installation. A distribution-provided PipeWire filter-chain configuration is also copied at build time.
 
@@ -35,7 +35,7 @@ The existing `status.sh`, `stop.sh`, `verify.sh` and `viper-ctl` remain availabl
 ## Notes
 
 - ViPERDSP is third-party code. Review its licensing and transitive rights before redistribution.
-- All other release notes in this tree are historical and may describe earlier four-tab versions. See `DEVELOPMENT-STATUS.md` for the current source-of-truth about tab names, implemented groups and absent effects.
+- Documentation and historical release notes in `docs/` are preserved for possible GitHub wiki publication. Earlier notes may describe earlier four-tab versions. See `docs/DEVELOPMENT-STATUS.md` for the current source-of-truth about tab names, implemented groups and absent effects.
 - **Turn your headphone volume down before first playback.** Removing the old 25% input scaling can increase the amplitude reaching ViPER fourfold (approximately +12 dB) before effects and limiting.
 - AGC and LUFS can interact; enable one at a time while testing. The output limiter runs even when master effects are bypassed. Do not assume a software limiter provides a safe listening-level guarantee.
 
@@ -49,7 +49,7 @@ PipeWire or the ViPER backend**. **Refresh / Reload** also rescans the directory
 reloads the current choice. The list updates on filesystem changes only when the dropdown is closed, and remains stable while open. Different-rate IRs are resampled before live kernel replacement. **None** unloads the kernel.
 
 A `?` button opens the effect descriptions instead of placing prose under every
-effect heading. See `CONVOLVER-PROOF-OF-CONCEPT.md` for input format limits, live
+effect heading. See `docs/CONVOLVER-PROOF-OF-CONCEPT.md` for input format limits, live
 processing handoff, and troubleshooting.
 
 ## GUI color themes
@@ -57,7 +57,7 @@ processing handoff, and troubleshooting.
 The title bar has a **Theme** selector: **Modern teal** (default) or **Classic Viper**
 (cyan-blue accents, with light/dark following the desktop when detectable, and light as fallback). The selection applies immediately
 and is saved separately from DSP settings and audio presets. See
-[CLASSIC-V4A-THEME.md](CLASSIC-V4A-THEME.md).
+[CLASSIC-V4A-THEME.md](docs/CLASSIC-V4A-THEME.md).
 
 ### Native graphic equalizer (experimental)
 
@@ -82,7 +82,7 @@ non-audio worker, and the audio callback does not wait on the wet mutex.
 
 **Dynamic EQ is immediately below the Graphic EQ** in the EQ & Tone tab. It
 has an independent enable switch and a compact *static*, read-only, illustrative
-target-response graphic. Click this graphic to open the separate editor.
+target-response graphic. Click a numbered marker to open the separate editor with that band selected; click elsewhere on the graphic to reopen the previous selection.
 There you can configure 1–10 bands independently (frequency, peak/low/high
 shelf, Q, maximum gain, threshold, attack, release). This is native ViPERDSP's
 `ApplyDynamicEq`, with no substitute processing algorithm. The preview is not
@@ -91,8 +91,7 @@ new polling timer is used.
 
 Dynamic EQ defaults OFF, with three flat bands at 100/1000/8000 Hz. Settings
 are saved across GUI restarts and with Save/Restore preset. Frequency and other
-filter updates are handled by the non-RT worker. A brief transition toward dry
-processing can occur after modifying the filters.
+filter updates are handled by the non-RT worker. Edits no longer deliberately trigger a global transition to dry audio.
 
 ### Application labels and compatibility
 
