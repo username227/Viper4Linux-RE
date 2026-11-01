@@ -1,0 +1,7 @@
+# Local build output and upstream checkout (fetched by install.sh)
+/build/
+/third_party/
+__pycache__/
+*.pyc
+*.o
+*.so

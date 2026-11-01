@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/viper4linux">
+    <file alias="teal.png">viper4linux-teal.png</file>
+    <file alias="blue.png">viper4linux-blue.png</file>
+  </qresource>
+</RCC>
