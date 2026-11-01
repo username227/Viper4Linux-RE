@@ -174,6 +174,7 @@ void load_saved_settings(viperbass::Controls& state) {
             else if (key == "fet_release_ms") state.fet_release_ms.store(std::clamp(std::stoi(value), 5, 500));
             else if (key == "crossfeed_enabled") state.crossfeed_enabled.store(value == "true" || value == "1");
             else if (key == "crossfeed_preset") state.crossfeed_preset.store(std::clamp(std::stoi(value), 0, 2));
+            else if (key == "speaker_enabled") state.speaker_enabled.store(value == "true" || value == "1");
             else if (key == "imager_enabled") state.imager_enabled.store(value == "true" || value == "1");
             else if (key == "imager_low_width_percent") state.imager_low_width_percent.store(std::clamp(std::stoi(value), 0, 200));
             else if (key == "imager_mid_width_percent") state.imager_mid_width_percent.store(std::clamp(std::stoi(value), 0, 200));
@@ -309,6 +310,7 @@ struct Processor {
         configure_fet(false, -18, 20, 6, 0, 10, 100);
         configure_multiband(false, 3, {200, 4000, 5000, 8000}, {});
         configure_imager(false, 100, 100, 100, 200, 4000);
+        configure_speaker(false);
         configure_dynamic_eq(false, 0, {});
         configure_headphone(false, 0);
         configure_diff(false, 8, false, 0.5f, 0);
@@ -329,6 +331,7 @@ struct Processor {
             apply_fet_from_controls();
             apply_multiband_from_controls();
             apply_imager_from_controls();
+            apply_speaker_from_controls();
             apply_dynamic_eq_from_controls();
             const auto path = saved_ir_path();
             if (!path.empty()) {
@@ -370,6 +373,7 @@ struct Processor {
         auto observed_analogx = controls->analogx_request_serial.load(std::memory_order_acquire);
         auto observed_crossfeed = controls->crossfeed_request_serial.load(std::memory_order_acquire);
         auto observed_imager = controls->imager_request_serial.load(std::memory_order_acquire);
+        auto observed_speaker = controls->speaker_request_serial.load(std::memory_order_acquire);
         auto observed_fet = controls->fet_request_serial.load(std::memory_order_acquire);
         auto observed_multiband = controls->mb_request_serial.load(std::memory_order_acquire);
         auto observed_deq = controls->deq_request_serial.load(std::memory_order_acquire);
@@ -465,6 +469,12 @@ struct Processor {
                 apply_imager_from_controls();
                 controls->imager_applied_serial.store(observed_imager, std::memory_order_release);
             }
+            const auto speaker_request = controls->speaker_request_serial.load(std::memory_order_acquire);
+            if (speaker_request != observed_speaker) {
+                observed_speaker = speaker_request;
+                apply_speaker_from_controls();
+                controls->speaker_applied_serial.store(observed_speaker, std::memory_order_release);
+            }
             const auto deq_request = controls->deq_request_serial.load(std::memory_order_acquire);
             if (deq_request != observed_deq) {
                 observed_deq = deq_request;
@@ -473,6 +483,22 @@ struct Processor {
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(35));
         }
+    }
+
+    void configure_speaker(bool enabled) {
+        viper::SpeakerCorrectionParams p{};
+        p.enable = enabled;
+        wet.ApplySpeakerCorrection(p);
+        last_speaker_enabled = enabled;
+    }
+    void apply_speaker_from_controls() {
+        if (!controls) return;
+        const auto request = controls->speaker_request_serial.load(std::memory_order_acquire);
+        const bool enabled = controls->speaker_enabled.load(std::memory_order_relaxed) != 0;
+        if (request != controls->speaker_request_serial.load(std::memory_order_acquire)) return;
+        if (enabled == last_speaker_enabled) return;
+        std::lock_guard<std::mutex> lock(wet_mutex);
+        configure_speaker(enabled); // Native Reset runs on the worker, not audio callback.
     }
 
     static int valid_eq_bands(int n) {
@@ -1060,6 +1086,7 @@ struct Processor {
             controls->analogx_enabled.load(std::memory_order_relaxed) != 0;
         const bool mb_enabled = controls && controls->mb_enabled.load(std::memory_order_relaxed) != 0;
         const bool fet_enabled = controls && controls->fet_enabled.load(std::memory_order_relaxed) != 0;
+        const bool speaker_enabled = controls && controls->speaker_enabled.load(std::memory_order_relaxed) != 0;
         const bool imager_enabled = controls &&
             controls->imager_enabled.load(std::memory_order_relaxed) != 0;
         const bool crossfeed_enabled = controls &&
@@ -1131,7 +1158,7 @@ struct Processor {
             controls->convolver_enabled.load(std::memory_order_relaxed) != 0;
         const float convolver_cross = controls ?
             std::clamp(controls->convolver_cross_percent.load(std::memory_order_relaxed), 0, 100) * 0.01f : 0.0f;
-        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || fet_enabled || mb_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
+        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || speaker_enabled || fet_enabled || mb_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
         const float safe_strength = std::clamp(strength, 0.5f, 10.0f);
         const float safe_frequency = std::clamp(frequency, 15.0f, 150.0f);
         // Apply only changed parameters. Avoid resetting an effect on every
@@ -1271,6 +1298,7 @@ struct Processor {
     bool last_fet_enabled = false;
     bool last_mb_enabled = false;
     bool last_imager_enabled = false;
+    bool last_speaker_enabled = false;
     int last_imager_low = 100, last_imager_mid = 100, last_imager_high = 100;
     int last_imager_low_xover = 200, last_imager_high_xover = 4000;
     bool last_deq_enabled = false;

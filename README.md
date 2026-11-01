@@ -2,7 +2,7 @@
 
 **Current distribution:** Complete Git history in a tar.gz release, with an Arch VCS PKGBUILD for local system installation. Includes the native ViPERDSP Convolver integration, updated six-tab GUI, CLI, shared-memory controls, PipeWire routing and regression tests. The prior non-native Gain / Headroom stage has been removed end-to-end. This remains an experimental proof of concept.
 
-**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Twenty native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC and Speaker Correction are not yet implemented. See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
+**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Twenty-three native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC remains planned; native Speaker Correction is now implemented with fixed filters (off by default). See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
 
 **Required external source:** This archive contains the entire ViPER for Linux application source, except for the upstream `ViPERDSP` dependency, which `./install.sh` retrieves at the pinned commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933` over the network. It does not reuse code from any previous local ViPER installation. A distribution-provided PipeWire filter-chain configuration is also copied at build time.
 

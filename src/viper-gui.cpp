@@ -223,6 +223,11 @@ protected:
             line(11,17,13,9); line(13,9,15,17);
             line(16,17,18,12); line(18,12,20,17);
             line(21,17,22,15); line(22,15,23,17);
+        } else if (kind_ == "speaker_correction") {
+            // Speaker cone plus acoustic waves.
+            p.drawRoundedRect(QRectF(3,4,10,17),1.4,1.4);
+            p.drawEllipse(QPointF(8,9),2,2); p.drawEllipse(QPointF(8,16),3,3);
+            p.drawArc(QRectF(14,5,7,14),-80*16,160*16);
         } else if (kind_ == "convolver") {
             // A single impulse becomes a longer, decaying response.
             line(1,18,4,18); line(4,18,5,4); line(5,4,6,18); line(6,18,9,18);
@@ -1087,9 +1092,19 @@ public:
         mb_note->setWordWrap(true);
         mb_form->addRow(mb_note);
         addEffectPanel(dynamicsLayout, mb_group, "multiband", mb_enabled_);
-        addTabNotice(correctionLayout, "Planned correction effects",
-            "ViPER-DDC and Speaker Correction are not implemented. "
-            "Native Convolver supports standard WAV-encoded .irs/.wav files.");
+        addTabNotice(correctionLayout, "Device correction",
+            "ViPER-DDC will be added next. Native Convolver accepts WAV-encoded .irs/.wav files.");
+        auto* speaker_group = new QGroupBox("Speaker Correction", tabs_);
+        auto* speaker_form = new QFormLayout(speaker_group);
+        speaker_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        speaker_enabled_ = new EffectSwitch(speaker_group);
+        speaker_form->addRow("Enable native speaker correction", speaker_enabled_);
+        auto* speaker_note = new QLabel(
+            "For loudspeakers only, not headphones. Uses ViPERDSP's built-in high-pass, "
+            "low-pass and band-pass filters; no correction file required. Default: off.", speaker_group);
+        speaker_note->setWordWrap(true);
+        speaker_form->addRow(speaker_note);
+        addEffectPanel(correctionLayout, speaker_group, "speaker_correction", speaker_enabled_);
         auto* conv_group = new QGroupBox("Convolver", tabs_);
         auto* conv_form = new QFormLayout(conv_group);
         // On a narrow screen, put the controls on a new line rather than
@@ -1499,6 +1514,7 @@ public:
         loadEqLayout();
         eq_selected_preset_ = settings_.value("eq/selected_preset", "custom").toString();
         selectEqPreset(eq_selected_preset_);
+        speaker_enabled_->setChecked(settings_.value("speaker_enabled", false).toBool());
         convolver_enabled_->setChecked(settings_.value("convolver_enabled", false).toBool());
         convolver_cross_.slider->setValue(std::clamp(settings_.value("convolver_cross_percent", 0).toInt(), 0, 100));
         refreshIrsLibrary();
@@ -1607,6 +1623,7 @@ public:
             applyEqPreset("builtin:Flat");
             selectEqPreset("builtin:Flat");
         });
+        connect(speaker_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(convolver_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(convolver_cross_.slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
         connect(mono_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
@@ -1716,6 +1733,7 @@ public:
             for (int n : {10, 15, 25, 31})
                 settings_.setValue("preset/eq_levels_" + QString::number(n),
                     settings_.value("eq_levels_" + QString::number(n), flatEqCsv(n)));
+            settings_.setValue("preset/speaker_enabled", speaker_enabled_->isChecked());
             settings_.setValue("preset/convolver_enabled", convolver_enabled_->isChecked());
             settings_.setValue("preset/convolver_cross_percent", convolver_cross_.slider->value());
             settings_.setValue("preset/convolver_kernel", settings_.value("convolver_kernel"));
@@ -1840,6 +1858,10 @@ public:
                 }
                 updateLabels();
             }
+            {
+                const QSignalBlocker b(speaker_enabled_);
+                speaker_enabled_->setChecked(settings_.value("preset/speaker_enabled", false).toBool());
+            }
             restoreFetSettings("preset/");
             loadMultibandSettings("preset/");
             restoreDeqPreset();
@@ -1879,6 +1901,10 @@ public:
                     item.first.slider->setValue(item.second);
                 }
                 updateLabels();
+            }
+            {
+                const QSignalBlocker b(speaker_enabled_);
+                speaker_enabled_->setChecked(false);
             }
             resetFetSettings();
             resetMultibandSettings();
@@ -2533,7 +2559,7 @@ private:
 <p><b>Stereo Imager:</b> Native three-band stereo width processing. Low, mid and high widths each range from 0 to 200%; 100% is neutral. Separate low/mid (80–400 Hz) and mid/high (2–8 kHz) crossovers. It is off by default, and excessive widening may reduce mono compatibility.</p>
 <h3>Sound Correction</h3><p><b>Convolver:</b> Applies a WAV-encoded .irs or .wav impulse response. Select from the local IRS library, or use Import to copy a new file into it. Kernel changes apply live.</p>
 <p><b>IRS library:</b> ~/.local/share/viper4linux/IRS/ (or the XDG data home equivalent). Import multiple files at once; the dropdown updates when the directory changes, never while open. Different-rate IRs are resampled in the backend without restarting audio.</p>
-<h3>Planned</h3><p>ViPER-DDC and Speaker Correction are not yet implemented.</p>)HTML");
+<h3>Device correction</h3><p>Native Speaker Correction uses built-in fixed filters for loudspeakers. ViPER-DDC is planned.</p>)HTML");
         layout->addWidget(text);
         auto* close = new QPushButton("Close", &help);
         connect(close, &QPushButton::clicked, &help, &QDialog::accept);
@@ -2750,6 +2776,7 @@ private:
         settings_.setValue("eq_enabled", eq_enabled_->isChecked());
         settings_.setValue("eq_band_count", eq_active_bands_);
         settings_.setValue("eq/selected_preset", eq_selected_preset_);
+        settings_.setValue("speaker_enabled", speaker_enabled_->isChecked());
         settings_.setValue("convolver_enabled", convolver_enabled_->isChecked());
         settings_.setValue("convolver_cross_percent", convolver_cross_.slider->value());
         settings_.setValue("bass_mono_enabled", mono_enabled_->isChecked());
@@ -2879,6 +2906,9 @@ private:
         for (int i = 0; i < eq_active_bands_; ++i)
             setEqValue(c->eq_levels_hundredths[i], eq_faders_[i]->value());
         if (eq_changed) c->eq_request_serial.fetch_add(1, std::memory_order_release);
+        const int speaker_request = speaker_enabled_->isChecked() ? 1 : 0;
+        if (c->speaker_enabled.exchange(speaker_request) != speaker_request)
+            c->speaker_request_serial.fetch_add(1, std::memory_order_release);
         c->convolver_enabled.store(convolver_enabled_->isChecked() ? 1 : 0);
         c->convolver_cross_percent.store(convolver_cross_.slider->value());
         c->bass_mono_enabled.store(mono_enabled_->isChecked() ? 1 : 0);
@@ -3740,6 +3770,7 @@ private:
         dyn_enabled_->setChecked(c->dynamic_enabled.load() != 0);
         agc_enabled_->setChecked(c->agc_enabled.load() != 0);
         lufs_enabled_->setChecked(c->lufs_enabled.load() != 0);
+        speaker_enabled_->setChecked(c->speaker_enabled.load() != 0);
         convolver_enabled_->setChecked(c->convolver_enabled.load() != 0);
         const int convstatus = c->convolver_status.load();
         const bool pendingIr = c->convolver_request_serial.load() != c->convolver_applied_serial.load();
@@ -3926,6 +3957,7 @@ private:
     std::array<DeqBand,10> deq_bands_{};
     std::array<bool,10> deq_user_modified_{};
     int deq_active_count_=3;
+    QCheckBox* speaker_enabled_{};
     QCheckBox* convolver_enabled_{};
     IrsComboBox* convolver_library_{};
     QFileSystemWatcher* irs_watcher_{};

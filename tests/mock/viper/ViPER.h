@@ -48,6 +48,7 @@ struct DynamicEqParams {
 struct HeadphoneSurroundParams { bool enable; int quality; };
 struct EqualizerParams { bool enable=false; uint32_t band_count=0; std::array<float, 31> band_levels{}; };
 struct ConvolverParams { bool enable; float cross_channel; };
+struct SpeakerCorrectionParams { bool enable=false; };
 struct ReverbParams { bool enable; float room_size; float width; float damp; float wet; float dry; };
 struct FieldSurroundParams { bool enable; float widening; float mid_image; short depth; };
 struct DiffSurroundParams { bool enable; float delay; bool reverse; float wet_dry_mix; float lp_cutoff; };
@@ -77,6 +78,7 @@ void ApplyDiffSurround(const viper::DiffSurroundParams&);
 void ApplyFieldSurround(const viper::FieldSurroundParams&);
 void ApplyReverb(const viper::ReverbParams&);
 void ApplyConvolver(const viper::ConvolverParams&);
+void ApplySpeakerCorrection(const viper::SpeakerCorrectionParams&);
 void ApplyEqualizer(const viper::EqualizerParams&);
 std::optional<uint32_t> LoadConvolverKernel(const float*, uint32_t, uint32_t, uint32_t);
 void UnloadConvolverKernel();

@@ -52,6 +52,7 @@ void ViPER::ApplyDiffSurround(const viper::DiffSurroundParams& p) { diff[this] =
 void ViPER::ApplyFieldSurround(const viper::FieldSurroundParams& p) { field[this] = p; }
 void ViPER::ApplyReverb(const viper::ReverbParams& p) { reverb[this] = p; }
 void ViPER::ApplyConvolver(const viper::ConvolverParams& p) { convolver[this] = p; }
+void ViPER::ApplySpeakerCorrection(const viper::SpeakerCorrectionParams&) {}
 void ViPER::ApplyEqualizer(const viper::EqualizerParams& p) { eq[this] = p; }
 std::optional<uint32_t> ViPER::LoadConvolverKernel(const float* samples, uint32_t frames, uint32_t channels, uint32_t id) {
     if (id >= 2) std::this_thread::sleep_for(std::chrono::milliseconds(95)); // Simulate expensive FFT kernel rebuild.

@@ -217,7 +217,7 @@ print('PASS: Stereo Imager independent native three-band UI, presets and worker 
 import re as _re
 card_keys = _re.findall(r'addEffectPanel\([^;]+?,\s*"([a-z_]+)"\s*,', source)
 glyph_code = source.split('class EffectGlyph final : public QWidget {', 1)[1].split('class EffectSwitch final', 1)[0]
-assert len(card_keys) == 22, card_keys
+assert len(card_keys) == 23, card_keys
 assert len(card_keys) == len(set(card_keys)), card_keys
 for key in card_keys:
     assert f'kind_ == "{key}"' in glyph_code, 'Missing vector icon for ' + key
@@ -229,7 +229,7 @@ assert 'setAttribute(Qt::WA_TransparentForMouseEvents)' in glyph_code
 assert 'findChildren<EffectGlyph*>()' not in source
 assert 'for (auto* widget : findChildren<QWidget*>())' in source
 assert 'dynamic_cast<EffectGlyph*>(widget)' in source
-print('PASS: 22 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
+print('PASS: 23 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
 
 # Dynamic EQ: a separate editor and static preview, native 10-band backend.
 for token in [
