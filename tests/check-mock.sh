@@ -93,6 +93,7 @@ eq_levels_15="500,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
 INI
 printf 'convolver_kernel=%s/impulse.irs\n' "$config" >> "$config/ViPERforLinux/ViPERClean.conf"
 python3 tests/check-dynamic-eq-ui-contract.py
+python3 tests/check-about-and-deq-handoff.py
 python3 tests/check-native-effect-routing.py
 g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-eq-presets.cpp -o "$work/check-eq-presets"
 "$work/check-eq-presets"
