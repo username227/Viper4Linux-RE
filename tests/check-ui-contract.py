@@ -271,7 +271,9 @@ for palette in ('teal','blue'):
 normal = brand_gui.split('class EqOverview final')[1].split('class DynamicEqOverview final')[0]
 dynamic = brand_gui.split('class DynamicEqOverview final')[1].split('class ViperWindow final')[0]
 assert 'if (editor_mode_ && selectBand)' not in normal
-assert 'if (editor_mode_ && selectBand)' in dynamic
+assert 'if (nearest >= 0 && (editor_mode_ || distance <= 19.0))' in dynamic
+assert 'if (selectBand) selectBand(nearest);' in dynamic
+assert 'if (!editor_mode_ && openEditor) openEditor();' in dynamic
 assert 'selectBand(nearest)' in dynamic
 assert 'deq_table_->setFixedHeight(36 + deq_active_count_ * 25)' in brand_gui
 backend = (brand_root / 'src/viper-ladspa.cpp').read_text()
