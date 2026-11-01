@@ -2,12 +2,12 @@
 # This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
 # Store this PKGBUILD OUTSIDE the source repository, e.g. ~/Desktop/viper4linux-package/
 # Run `makepkg -si` from that separate directory.
-# By default, the local Git source checkout is ~/Desktop/viper4linux-corrections.
+# By default, the local Git source checkout is ~/Desktop/viper4linux-tray.
 # If you move it, override the path with VIPER4LINUX_REPO=/absolute/path makepkg -si.
 # Upstream ViPERDSP is intentionally pinned to the tested revision.
 
 pkgname=viper4linux-re-git
-pkgver=0.1.0.r30.g630267b79202 # pkgver() updates from the local Git checkout.
+pkgver=0.1.0.r31.gc5504981e6db # pkgver() updates from the local Git checkout.
 pkgrel=1
 pkgdesc='Reverse-engineered ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
 arch=('x86_64')
@@ -25,7 +25,7 @@ provides=('viper4linux-re')
 
 # This is independent of startdir: the PKGBUILD can live in any separate
 # directory; the source comes from the local Git checkout on the Desktop.
-_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-corrections}"
+_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-tray}"
 _viperdsp_commit=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
 source=("viper4linux::git+file://${_local_repo}"
         "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git#commit=${_viperdsp_commit}")
@@ -59,6 +59,7 @@ check() {
     python3 tests/check-launcher.py
     python3 tests/check-theme-contract.py
     python3 tests/check-ui-contract.py
+    python3 tests/check-tray-contract.py
     python3 tests/check-packaging-contract.py
     nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
 }
