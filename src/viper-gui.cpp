@@ -641,7 +641,10 @@ public:
         theme_selector_->addItem("Classic Viper", "classic-v4a");
         theme_selector_->setCurrentIndex(
             settings_.value("ui/theme", "modern").toString() == "classic-v4a" ? 1 : 0);
-        theme_selector_->setFixedWidth(140);
+        // Allow room for the longest label plus the custom arrow at different
+        // font scales; the old 140px width clipped "Classic Viper" on Cinnamon.
+        theme_selector_->setFixedWidth(qMax(168,
+            theme_selector_->fontMetrics().horizontalAdvance("Classic Viper") + 62));
         titleRow->addWidget(theme_selector_);
         auto* helpButton = new QPushButton("?", central);
         helpButton->setToolTip("Effect descriptions and usage help");
@@ -2073,14 +2076,18 @@ private:
                 color:%2; background-color:%3;
                 border:1px solid %4; border-radius:7px; padding:5px 8px; }
             QPushButton:hover, QComboBox:hover { border-color:%5; }
-            /* Qt otherwise paints the native combo arrow-button as a square
-               subcontrol, despite the rounded outline of the combo itself. */
-            QComboBox#viperThemeSelector { padding-right:28px; }
+            /* PROTOTYPE: only the Theme combo is customized until visually
+               verified on Cinnamon. Qt requires styling BOTH subcontrols:
+               styling drop-down alone suppressed the native down-arrow. */
+            QComboBox#viperThemeSelector { padding-right:26px; }
             QComboBox#viperThemeSelector::drop-down {
-                subcontrol-origin:padding; subcontrol-position:top right;
+                subcontrol-origin:border; subcontrol-position:top right;
                 width:24px; border:0;
                 border-top-right-radius:7px; border-bottom-right-radius:7px;
                 background-color:transparent;
+            }
+            QComboBox#viperThemeSelector::down-arrow {
+                image:url(%8); width:12px; height:8px;
             }
             QPushButton:pressed { background-color:%6; }
             QPushButton:disabled, QComboBox:disabled { color:%7; }
@@ -2089,7 +2096,9 @@ private:
                 selection-color:%2; selection-background-color:%6; }
             QToolTip { color:%2; background-color:%3; border:1px solid %4; }
         )THEME").arg(windowBg, textColor, inputBg, inputBorder, accent,
-                       inputSel, disabledText));
+                       inputSel, disabledText,
+                       dark ? QStringLiteral(":/viper4linux/combo-chevron-light.png")
+                            : QStringLiteral(":/viper4linux/combo-chevron-dark.png")));
 
         for (auto* frame : findChildren<QFrame*>()) {
             if (frame->objectName() == "viperMasterCard" ||

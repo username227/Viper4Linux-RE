@@ -2,7 +2,7 @@
 # This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
 # Store this PKGBUILD OUTSIDE the source repository, e.g. ~/Desktop/viper4linux-package/
 # Run `makepkg -si` from that separate directory.
-# By default, the local Git source checkout is ~/Desktop/viper4linux-compact.
+# By default, the local Git source checkout is ~/Desktop/viper4linux-theme-test.
 # If you move it, override the path with VIPER4LINUX_REPO=/absolute/path makepkg -si.
 # Upstream ViPERDSP is intentionally pinned to the tested revision.
 
@@ -25,7 +25,7 @@ provides=('viper4linux-re')
 
 # This is independent of startdir: the PKGBUILD can live in any separate
 # directory; the source comes from the local Git checkout on the Desktop.
-_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-compact}"
+_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-theme-test}"
 _viperdsp_commit=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
 source=("viper4linux::git+file://${_local_repo}"
         "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git#commit=${_viperdsp_commit}")

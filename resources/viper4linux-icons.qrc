@@ -2,5 +2,7 @@
   <qresource prefix="/viper4linux">
     <file alias="teal.png">viper4linux-teal.png</file>
     <file alias="blue.png">viper4linux-blue.png</file>
+    <file alias="combo-chevron-dark.png">combo-chevron-dark.png</file>
+    <file alias="combo-chevron-light.png">combo-chevron-light.png</file>
   </qresource>
 </RCC>
