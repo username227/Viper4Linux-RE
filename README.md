@@ -125,7 +125,7 @@ The EQ tab uses Qt's escaped `&&` mnemonic syntax to display a literal
 to use the human-readable label. The tab formerly named `IR & Correction` is
 **Sound Correction**.
 
-The IPC layout has changed (v20). Stop the previous backend, then start the new
+The IPC layout has changed (v24). Stop the previous backend, then start the new
 backend built from this same master. Native Qt6 compilation and PipeWire playback
 must be checked on Arch; mock tests validate control forwarding only and do not
 prove real ViPERDSP frequency response or flawless live playback.
@@ -134,7 +134,8 @@ prove real ViPERDSP frequency response or flawless live playback.
 
 See [Arch packaging instructions](docs/ARCH-PACKAGING.md). The release tarball
 contains a real Git checkout and a `packaging/arch/PKGBUILD` that builds the
-current commit as `viper4linux-git` and installs the application under `/usr`.
-Run `cd packaging/arch && makepkg -si` from the extracted project. The upstream
+current commit as `viper4linux-re-git` and installs the application under `/usr`.
+Copy the PKGBUILD to a separate directory and run `makepkg -si` there; the
+local source checkout defaults to `~/Desktop/viper4linux-compressors`. The upstream
 ViPERDSP library is fetched at its pinned commit during package preparation.
 The first system-package build should be tested separately from source checkouts.

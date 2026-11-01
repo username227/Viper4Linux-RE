@@ -2,24 +2,30 @@
 # This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
 # Store this PKGBUILD OUTSIDE the source repository, e.g. ~/Desktop/viper4linux-package/
 # Run `makepkg -si` from that separate directory.
-# By default, the local Git source checkout is ~/Desktop/viper4linux-imager.
+# By default, the local Git source checkout is ~/Desktop/viper4linux-compressors.
 # If you move it, override the path with VIPER4LINUX_REPO=/absolute/path makepkg -si.
 # Upstream ViPERDSP is intentionally pinned to the tested revision.
 
-pkgname=viper4linux-git
+pkgname=viper4linux-re-git
 pkgver=0.1.0.r18.gdfb86f8c5650 # pkgver() updates from the local Git checkout.
 pkgrel=1
-pkgdesc='Native ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
+pkgdesc='Reverse-engineered ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
 arch=('x86_64')
 url='https://github.com/likelikeslike/ViPERDSP'
 license=('custom') # Project redistribution license not yet finalized; local testing only.
 depends=('glibc' 'gcc-libs' 'qt6-base' 'pipewire' 'ladspa' 'python')
 makedepends=('git' 'cmake' 'pkgconf')
-# Deliberately no conflicts=(), provides=() or replaces=() during local development.
+# This package is an alternative to the earlier test package and Noah's
+# original ViPER4Linux packages. pacman will offer to remove the installed
+# conflicting package during installation, before any files are replaced.
+conflicts=('viper4linux-re' 'viper4linux' 'viper4linux-git')
+provides=('viper4linux-re')
+# Deliberately no replaces=(); do not force migration during sync updates.
+# JamesDSP is not listed: it may coexist when the PipeWire routing is isolated.
 
 # This is independent of startdir: the PKGBUILD can live in any separate
 # directory; the source comes from the local Git checkout on the Desktop.
-_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-imager}"
+_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-compressors}"
 _viperdsp_commit=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
 source=("viper4linux::git+file://${_local_repo}"
         "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git#commit=${_viperdsp_commit}")

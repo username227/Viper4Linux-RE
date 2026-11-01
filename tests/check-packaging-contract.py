@@ -6,13 +6,16 @@ root = Path(__file__).resolve().parents[1]
 pkg = (root / 'packaging/arch/PKGBUILD').read_text()
 launcher = (root / 'src/viper_launcher.py').read_text()
 backend = (root / 'packaging/arch/start-backend').read_text()
-for required in ("pkgname=viper4linux-git", 'pkgver() {',
+for required in ("pkgname=viper4linux-re-git", 'pkgver() {',
                  'git rev-list --count HEAD', 'git rev-parse --short=12 HEAD',
-                 'git+file://', 'ViPERDSP::git+https://',
+                 'git+file://', 'Desktop/viper4linux-compressors', 'ViPERDSP::git+https://',
                  'sha256sums=(\'SKIP\' \'SKIP\')', 'package() {',
                  'check() {', 'install -Dm755', 'usr/lib/ladspa/viper_dsp_ladspa.so'):
     assert required in pkg, required
-assert not re.search(r'^\s*(conflicts|replaces)=', pkg, flags=re.M)
+assert "conflicts=('viper4linux-re' 'viper4linux' 'viper4linux-git')" in pkg
+assert "provides=('viper4linux-re')" in pkg
+assert not re.search(r'^\s*replaces=', pkg, flags=re.M)
+assert 'jamesdsp' not in re.findall(r'^\s*conflicts=.*', pkg, flags=re.M)[0].lower()
 assert 'SYSTEM_MODE' in launcher and "Path('/usr/bin/viper4linux-gui')" in launcher
 assert 'SYSTEM_BACKEND' in launcher and 'SYSTEM_ROUTING' in launcher
 assert 'VIPER_BACKEND_FINGERPRINT' in backend
