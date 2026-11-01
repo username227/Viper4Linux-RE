@@ -2,7 +2,7 @@
 
 **Current distribution:** Complete Git history in a tar.gz release, with an Arch VCS PKGBUILD for local system installation. Includes the native ViPERDSP Convolver integration, updated six-tab GUI, CLI, shared-memory controls, PipeWire routing and regression tests. The prior non-native Gain / Headroom stage has been removed end-to-end. This remains an experimental proof of concept.
 
-**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Twenty-three native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC remains planned; native Speaker Correction is now implemented with fixed filters (off by default). See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
+**Six tabs:** Output · Bass · EQ & Tone · Spatial · Dynamics · Sound Correction. Twenty-four native-processing cards are currently implemented, including Graphic EQ, Dynamic EQ, Tube Simulator, AnalogX and Convolver. The separate Dynamics tab remains partly planned; ViPER-DDC supports validated .vdc filter profiles at 44.1/48 kHz. Native Speaker Correction uses fixed filters; both are off by default. See `docs/DEVELOPMENT-STATUS.md` and `docs/CONVOLVER-PROOF-OF-CONCEPT.md`.
 
 **Required external source:** This archive contains the entire ViPER for Linux application source, except for the upstream `ViPERDSP` dependency, which `./install.sh` retrieves at the pinned commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933` over the network. It does not reuse code from any previous local ViPER installation. A distribution-provided PipeWire filter-chain configuration is also copied at build time.
 
@@ -152,3 +152,5 @@ The unified launcher determines whether a backend restart is needed using its
 backend fingerprint (DSP library, controller, and PipeWire configuration), not
 the GUI version. Thus a GUI-only upgrade should reuse an already-matching
 backend, as observed during the r26 test.
+
+ViPER-DDC profiles belong in `$XDG_DATA_HOME/viper4linux/VDC` (normally `~/.local/share/viper4linux/VDC`). This directory is separate from the IRS library.

@@ -223,6 +223,10 @@ protected:
             line(11,17,13,9); line(13,9,15,17);
             line(16,17,18,12); line(18,12,20,17);
             line(21,17,22,15); line(22,15,23,17);
+        } else if (kind_ == "ddc") {
+            // Two curves — corrected response relative to source response.
+            line(2,18,5,18); line(5,18,8,8); line(8,8,12,13);
+            line(12,13,15,6); line(15,6,19,10); line(19,10,22,5);
         } else if (kind_ == "speaker_correction") {
             // Speaker cone plus acoustic waves.
             p.drawRoundedRect(QRectF(3,4,10,17),1.4,1.4);
@@ -1093,7 +1097,85 @@ public:
         mb_form->addRow(mb_note);
         addEffectPanel(dynamicsLayout, mb_group, "multiband", mb_enabled_);
         addTabNotice(correctionLayout, "Device correction",
-            "ViPER-DDC will be added next. Native Convolver accepts WAV-encoded .irs/.wav files.");
+            "ViPER-DDC accepts VDC headset profiles (44.1/48 kHz only). "
+            "Speaker Correction has fixed filters; Convolver accepts WAV-encoded .irs/.wav files.");
+        auto* ddc_group = new QGroupBox("ViPER-DDC", tabs_);
+        auto* ddc_form = new QFormLayout(ddc_group);
+        ddc_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        ddc_enabled_ = new EffectSwitch(ddc_group);
+        ddc_form->addRow("Enable device correction", ddc_enabled_);
+        auto* ddc_file_row = new QWidget(ddc_group);
+        auto* ddc_buttons = new QHBoxLayout(ddc_file_row);
+        ddc_buttons->setContentsMargins(0,0,0,0);
+        ddc_file_row->setMinimumWidth(0);
+        ddc_file_row->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+        ddc_library_ = new IrsComboBox(ddc_file_row);
+        ddc_library_->setMinimumWidth(0);
+        ddc_library_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        ddc_library_->setToolTip("Select a .vdc profile from your local VDC library");
+        ddc_library_->beforeOpen = [this] {
+            if (ddc_library_dirty_) refreshDdcLibrary();
+        };
+        auto* importDdc = new QPushButton("Import…", ddc_file_row);
+        auto* refreshDdc = new QPushButton("Refresh", ddc_file_row);
+        ddc_buttons->addWidget(ddc_library_, 1);
+        ddc_buttons->addWidget(importDdc);
+        ddc_buttons->addWidget(refreshDdc);
+        ddc_form->addRow("Correction profile", ddc_file_row);
+        ddc_file_name_ = new QLabel(ddc_group);
+        ddc_file_name_->setWordWrap(true);
+        ddc_file_name_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        ddc_form->addRow(ddc_file_name_);
+        ddc_status_ = new QLabel("No DDC profile loaded.", ddc_group);
+        ddc_status_->setWordWrap(true);
+        ddc_form->addRow(ddc_status_);
+        auto* ddc_note = new QLabel(
+            "Use a profile designed for your actual headphone model. "
+            "The neutral test profile verifies loading but does not correct the sound. "
+            "Unsupported sample rates bypass DDC. Default: off.", ddc_group);
+        ddc_note->setWordWrap(true);
+        ddc_form->addRow(ddc_note);
+        addEffectPanel(correctionLayout, ddc_group, "ddc", ddc_enabled_);
+        refreshDdcLibrary();
+        ddc_watcher_ = new QFileSystemWatcher(this);
+        ddc_watcher_->addPath(ddcDirectory());
+        connect(ddc_watcher_, &QFileSystemWatcher::directoryChanged, this,
+                [this](const QString&) {
+            ddc_library_dirty_ = true;
+            if (!ddc_library_->popupIsOpen()) refreshDdcLibrary();
+        });
+        connect(ddc_library_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, [this](int index) {
+            if (index >= 0) selectDdcProfile(ddc_library_->currentData().toString());
+        });
+        connect(refreshDdc, &QPushButton::clicked, this, [this] { refreshDdcLibrary(); });
+        connect(importDdc, &QPushButton::clicked, this, [this] {
+            const QString selected = QFileDialog::getOpenFileName(this, "Import ViPER-DDC profile",
+                ddcDirectory(), "ViPER correction (*.vdc *.VDC)");
+            if (selected.isEmpty()) return;
+            const QFileInfo file(selected);
+            if (!file.isFile() || !file.isReadable() ||
+                file.suffix().compare("vdc", Qt::CaseInsensitive) != 0) {
+                QMessageBox::warning(this, "VDC import", "Select a readable .vdc profile.");
+                return;
+            }
+            if (!QDir().mkpath(ddcDirectory())) {
+                QMessageBox::warning(this, "VDC import", "Could not create VDC library directory.");
+                return;
+            }
+            QString destination = QDir(ddcDirectory()).filePath(file.fileName());
+            if (QFileInfo(destination).canonicalFilePath() != file.canonicalFilePath()) {
+                unsigned serial = 2;
+                while (QFile::exists(destination))
+                    destination = QDir(ddcDirectory()).filePath(file.completeBaseName() +
+                        " (" + QString::number(serial++) + ")." + file.suffix());
+                if (!QFile::copy(selected, destination)) {
+                    QMessageBox::warning(this, "VDC import", "Could not copy the selected profile.");
+                    return;
+                }
+            }
+            selectDdcProfile(destination);
+        });
         auto* speaker_group = new QGroupBox("Speaker Correction", tabs_);
         auto* speaker_form = new QFormLayout(speaker_group);
         speaker_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
@@ -1514,6 +1596,8 @@ public:
         loadEqLayout();
         eq_selected_preset_ = settings_.value("eq/selected_preset", "custom").toString();
         selectEqPreset(eq_selected_preset_);
+        ddc_enabled_->setChecked(settings_.value("ddc_enabled", false).toBool());
+        updateDdcFileName(settings_.value("ddc_profile").toString());
         speaker_enabled_->setChecked(settings_.value("speaker_enabled", false).toBool());
         convolver_enabled_->setChecked(settings_.value("convolver_enabled", false).toBool());
         convolver_cross_.slider->setValue(std::clamp(settings_.value("convolver_cross_percent", 0).toInt(), 0, 100));
@@ -1623,6 +1707,7 @@ public:
             applyEqPreset("builtin:Flat");
             selectEqPreset("builtin:Flat");
         });
+        connect(ddc_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(speaker_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(convolver_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(convolver_cross_.slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
@@ -1733,6 +1818,8 @@ public:
             for (int n : {10, 15, 25, 31})
                 settings_.setValue("preset/eq_levels_" + QString::number(n),
                     settings_.value("eq_levels_" + QString::number(n), flatEqCsv(n)));
+            settings_.setValue("preset/ddc_enabled", ddc_enabled_->isChecked());
+            settings_.setValue("preset/ddc_profile", settings_.value("ddc_profile", ""));
             settings_.setValue("preset/speaker_enabled", speaker_enabled_->isChecked());
             settings_.setValue("preset/convolver_enabled", convolver_enabled_->isChecked());
             settings_.setValue("preset/convolver_cross_percent", convolver_cross_.slider->value());
@@ -1859,6 +1946,14 @@ public:
                 updateLabels();
             }
             {
+                const QSignalBlocker b(ddc_enabled_);
+                ddc_enabled_->setChecked(settings_.value("preset/ddc_enabled", false).toBool());
+                settings_.setValue("ddc_profile", settings_.value("preset/ddc_profile", ""));
+                updateDdcFileName(settings_.value("ddc_profile", "").toString());
+                settings_.sync();
+                requestDdcReload();
+            }
+            {
                 const QSignalBlocker b(speaker_enabled_);
                 speaker_enabled_->setChecked(settings_.value("preset/speaker_enabled", false).toBool());
             }
@@ -1901,6 +1996,10 @@ public:
                     item.first.slider->setValue(item.second);
                 }
                 updateLabels();
+            }
+            {
+                const QSignalBlocker b(ddc_enabled_);
+                ddc_enabled_->setChecked(false);
             }
             {
                 const QSignalBlocker b(speaker_enabled_);
@@ -2437,6 +2536,54 @@ private:
         diff_lowpass_.value->setText(diff_lowpass_.slider->value() == 0
             ? "Off" : QString::number(diff_lowpass_.slider->value() * 100) + " Hz");
     }
+    QString ddcDirectory() const {
+        return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/viper4linux/VDC";
+    }
+    void refreshDdcLibrary() {
+        if (!ddc_library_ || ddc_library_->popupIsOpen()) {
+            ddc_library_dirty_ = true;
+            return;
+        }
+        QDir().mkpath(ddcDirectory());
+        if (ddc_watcher_ && !ddc_watcher_->directories().contains(ddcDirectory()))
+            ddc_watcher_->addPath(ddcDirectory());
+        const QString selected = settings_.value("ddc_profile", "").toString();
+        const QDir dir(ddcDirectory());
+        QList<QPair<QString, QString>> entries;
+        entries.append({"None", QString()});
+        for (const QString& name : dir.entryList({"*.vdc", "*.VDC"},
+                QDir::Files | QDir::Readable, QDir::Name | QDir::IgnoreCase))
+            entries.append({name, dir.absoluteFilePath(name)});
+        bool selectedFound = selected.isEmpty();
+        for (const auto& entry : entries) {
+            if (entry.second == selected) { selectedFound = true; break; }
+        }
+        // Preserve older settings pointing outside the VDC directory.
+        if (!selectedFound)
+            entries.append({"External: " + QFileInfo(selected).fileName(), selected});
+        bool identical = entries.size() == ddc_library_->count();
+        if (identical) {
+            for (int i = 0; i < entries.size(); ++i) {
+                if (ddc_library_->itemText(i) != entries[i].first ||
+                    ddc_library_->itemData(i).toString() != entries[i].second) {
+                    identical = false;
+                    break;
+                }
+            }
+        }
+        const QSignalBlocker block(ddc_library_);
+        if (!identical) {
+            ddc_library_->clear();
+            for (const auto& entry : entries) {
+                const int index = ddc_library_->count();
+                ddc_library_->addItem(entry.first, entry.second);
+                ddc_library_->setItemData(index, entry.first, Qt::ToolTipRole);
+            }
+        }
+        ddc_library_->setCurrentIndex(std::max(0, ddc_library_->findData(selected)));
+        updateDdcFileName(selected);
+        ddc_library_dirty_ = false;
+    }
     QString irsDirectory() const {
         return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/viper4linux/IRS";
     }
@@ -2494,6 +2641,27 @@ private:
         // The native dropdown's text may be elided. Tooltips and this
         // wrapping, selectable line always retain the full original name.
         convolver_library_->setToolTip(path.isEmpty() ? QString("No impulse response") : path);
+    }
+    void updateDdcFileName(const QString& path) {
+        ddc_file_name_->setText(path.isEmpty() ? "Selected profile: None" :
+            "Selected profile: " + QFileInfo(path).fileName());
+        ddc_file_name_->setToolTip(path);
+    }
+    void requestDdcReload() {
+        if (ensureBackend()) {
+            mapping_.get()->ddc_request_serial.fetch_add(1, std::memory_order_release);
+            ddc_status_->setText("Loading DDC profile…");
+        } else {
+            ddc_status_->setText("DDC selection saved; will load at backend startup.");
+        }
+    }
+    void selectDdcProfile(const QString& path) {
+        if (path.isEmpty()) settings_.remove("ddc_profile");
+        else settings_.setValue("ddc_profile", path);
+        settings_.sync();
+        updateDdcFileName(path);
+        requestDdcReload();
+        refreshDdcLibrary();
     }
     void requestIrsLoad() {
         if (ensureBackend()) {
@@ -2559,7 +2727,7 @@ private:
 <p><b>Stereo Imager:</b> Native three-band stereo width processing. Low, mid and high widths each range from 0 to 200%; 100% is neutral. Separate low/mid (80–400 Hz) and mid/high (2–8 kHz) crossovers. It is off by default, and excessive widening may reduce mono compatibility.</p>
 <h3>Sound Correction</h3><p><b>Convolver:</b> Applies a WAV-encoded .irs or .wav impulse response. Select from the local IRS library, or use Import to copy a new file into it. Kernel changes apply live.</p>
 <p><b>IRS library:</b> ~/.local/share/viper4linux/IRS/ (or the XDG data home equivalent). Import multiple files at once; the dropdown updates when the directory changes, never while open. Different-rate IRs are resampled in the backend without restarting audio.</p>
-<h3>Device correction</h3><p>Native Speaker Correction uses built-in fixed filters for loudspeakers. ViPER-DDC is planned.</p>)HTML");
+<h3>Device correction</h3><p>Native ViPER-DDC reads standard .vdc correction profiles at 44.1/48 kHz; native Speaker Correction uses built-in fixed filters for loudspeakers.</p>)HTML");
         layout->addWidget(text);
         auto* close = new QPushButton("Close", &help);
         connect(close, &QPushButton::clicked, &help, &QDialog::accept);
@@ -2776,6 +2944,7 @@ private:
         settings_.setValue("eq_enabled", eq_enabled_->isChecked());
         settings_.setValue("eq_band_count", eq_active_bands_);
         settings_.setValue("eq/selected_preset", eq_selected_preset_);
+        settings_.setValue("ddc_enabled", ddc_enabled_->isChecked());
         settings_.setValue("speaker_enabled", speaker_enabled_->isChecked());
         settings_.setValue("convolver_enabled", convolver_enabled_->isChecked());
         settings_.setValue("convolver_cross_percent", convolver_cross_.slider->value());
@@ -2906,6 +3075,9 @@ private:
         for (int i = 0; i < eq_active_bands_; ++i)
             setEqValue(c->eq_levels_hundredths[i], eq_faders_[i]->value());
         if (eq_changed) c->eq_request_serial.fetch_add(1, std::memory_order_release);
+        const int ddc_request = ddc_enabled_->isChecked() ? 1 : 0;
+        if (c->ddc_enabled.exchange(ddc_request) != ddc_request)
+            c->ddc_request_serial.fetch_add(1, std::memory_order_release);
         const int speaker_request = speaker_enabled_->isChecked() ? 1 : 0;
         if (c->speaker_enabled.exchange(speaker_request) != speaker_request)
             c->speaker_request_serial.fetch_add(1, std::memory_order_release);
@@ -3770,8 +3942,16 @@ private:
         dyn_enabled_->setChecked(c->dynamic_enabled.load() != 0);
         agc_enabled_->setChecked(c->agc_enabled.load() != 0);
         lufs_enabled_->setChecked(c->lufs_enabled.load() != 0);
+        ddc_enabled_->setChecked(c->ddc_enabled.load() != 0);
         speaker_enabled_->setChecked(c->speaker_enabled.load() != 0);
         convolver_enabled_->setChecked(c->convolver_enabled.load() != 0);
+        const int ddcStatus = c->ddc_status.load();
+        const bool pendingDdc = c->ddc_request_serial.load() != c->ddc_applied_serial.load();
+        ddc_status_->setText(pendingDdc || ddcStatus == 2 ? "Loading DDC profile…" :
+            ddcStatus == 1 ? (ddc_enabled_->isChecked() ? "Native DDC correction active" : "DDC profile loaded (disabled)") :
+            ddcStatus == -2 ? "DDC unavailable at this audio rate (requires 44.1 or 48 kHz)" :
+            ddcStatus == -1 ? "Invalid/unsupported DDC profile; correction bypassed" :
+            "No DDC profile loaded; correction bypassed");
         const int convstatus = c->convolver_status.load();
         const bool pendingIr = c->convolver_request_serial.load() != c->convolver_applied_serial.load();
         convolver_status_->setText(pendingIr || convstatus == 2 ? "Loading IRS in the running backend…" :
@@ -3957,6 +4137,12 @@ private:
     std::array<DeqBand,10> deq_bands_{};
     std::array<bool,10> deq_user_modified_{};
     int deq_active_count_=3;
+    QCheckBox* ddc_enabled_{};
+    IrsComboBox* ddc_library_{};
+    QFileSystemWatcher* ddc_watcher_{};
+    bool ddc_library_dirty_ = false;
+    QLabel* ddc_file_name_{};
+    QLabel* ddc_status_{};
     QCheckBox* speaker_enabled_{};
     QCheckBox* convolver_enabled_{};
     IrsComboBox* convolver_library_{};

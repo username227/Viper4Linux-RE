@@ -14,10 +14,10 @@ The six-tab GUI retains the original independent effect switches, collapsible pa
 | Bass | ViPER Bass, ViPER Bass Mono, Psychoacoustic Bass, Dynamic System | — |
 | EQ & Tone | Graphic Equalizer (10/15/25/31 bands), native Dynamic EQ (1–10 bands), ViPER Clarity, Spectrum Extension, Tube Simulator, AnalogX | — |
 | Spatial | Headphone Surround+, Differential Surround, Field Surround, Reverberation, native Cure / Crossfeed, native Stereo Imager | — |
-| Dynamics | **No functional effects yet** | FET Compressor, Multiband Compressor |
-| IR & Correction | Native Convolver (WAV-encoded `.irs` / `.wav`, live kernel switching, IRS library/import) | ViPER-DDC (Speaker Correction implemented; built-in filters, off by default) |
+| Dynamics | Native FET Compressor, Multiband Compressor (3/5 bands, compact single-band editor) | — |
+| Sound Correction | Native Convolver (IRS library/import), ViPER-DDC (`.vdc` profiles in dedicated VDC library, 44.1/48 kHz), Speaker Correction (fixed filters). DDC and Speaker Correction default off. | — |
 
-**Count (current):** 20 processing cards: four Bass, six EQ & Tone, six Spatial, three Output (Limiter, AGC, LUFS), and one Convolver. The limiter is always present; other processors can be enabled independently. Gain / Headroom was not a native ViPER effect and is removed in both GUI and backend.
+**Count (current):** 24 processing cards: four Bass, six EQ & Tone, six Spatial, two Dynamics, three Output (Limiter, AGC, LUFS), and three Sound Correction. The limiter is always present; other processors can be enabled independently. Gain / Headroom was not a native ViPER effect and is removed in both GUI and backend.
 
 ## Before working on new effects
 
