@@ -1,0 +1,75 @@
+# Maintainer: Viper4Linux development (local testing package)
+# This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
+# Build from this directory with `makepkg -si`.
+# Upstream ViPERDSP is intentionally pinned to the tested revision.
+
+pkgname=viper4linux-git
+pkgver=0.1.0.r1.g000000000000   # Recomputed from the actual source checkout by pkgver().
+pkgrel=1
+pkgdesc='Native ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
+arch=('x86_64')
+url='https://github.com/likelikeslike/ViPERDSP'
+license=('custom') # Project redistribution license not yet finalized; local testing only.
+depends=('glibc' 'gcc-libs' 'qt6-base' 'pipewire' 'ladspa' 'python')
+makedepends=('git' 'cmake' 'pkgconf')
+# Deliberately no conflicts=(), provides=() or replaces=() during local development.
+
+# makepkg's startdir is the directory containing this PKGBUILD.
+# In a tar.gz release this file lives under packaging/arch/.
+_local_repo="$(realpath "${startdir}/../..")"
+_viperdsp_commit=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
+source=("viper4linux::git+file://${_local_repo}"
+        "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git#commit=${_viperdsp_commit}")
+sha256sums=('SKIP' 'SKIP')  # Moving VCS sources, per ArchWiki VCS package guidelines.
+
+pkgver() {
+    cd "$srcdir/viper4linux"
+    # No release tags: use the actual monotonically increasing commit count
+    # and abbreviated hash. The r delimiter preserves pacman version ordering.
+    printf '0.1.0.r%s.g%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short=12 HEAD)"
+}
+
+prepare() {
+    mkdir -p "$srcdir/viper4linux/third_party"
+    ln -sfn -- "$srcdir/ViPERDSP" "$srcdir/viper4linux/third_party/ViPERDSP"
+    # A verified fix to one LUFS setter only, in this private dependency checkout.
+    python3 "$srcdir/viper4linux/patches/fix_lufs_speed.py"
+}
+
+build() {
+    cmake -S "$srcdir/viper4linux" -B "$srcdir/viper4linux-build" \
+        -DCMAKE_BUILD_TYPE=Release
+    cmake --build "$srcdir/viper4linux-build" --parallel "$(nproc)"
+}
+
+check() {
+    cd "$srcdir/viper4linux"
+    bash tests/check-mock.sh
+    python3 tests/check-launcher.py
+    python3 tests/check-theme-contract.py
+    python3 tests/check-ui-contract.py
+    python3 tests/check-packaging-contract.py
+    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
+}
+
+package() {
+    local tree="$srcdir/viper4linux"
+    local built="$srcdir/viper4linux-build"
+    install -Dm755 "$built/viper-gui" "$pkgdir/usr/bin/viper4linux-gui"
+    install -Dm755 "$built/viper-ctl" "$pkgdir/usr/bin/viper4linux-ctl"
+    install -Dm755 "$built/viper_dsp_ladspa.so" "$pkgdir/usr/lib/ladspa/viper_dsp_ladspa.so"
+    install -Dm644 "$tree/src/viper_launcher.py" "$pkgdir/usr/lib/viper4linux/viper_launcher.py"
+    install -Dm755 "$tree/packaging/arch/start-backend" "$pkgdir/usr/lib/viper4linux/start-backend"
+    install -Dm755 "$tree/packaging/arch/viper4linux" "$pkgdir/usr/bin/viper4linux"
+    install -Dm644 "$tree/routing-config/filter-chain.conf.d/99-viper-smart.conf" \
+        "$pkgdir/usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf"
+    install -Dm644 "$tree/packaging/arch/viper4linux.desktop" \
+        "$pkgdir/usr/share/applications/viper4linux.desktop"
+    install -Dm644 "$tree/resources/viper4linux-blue.png" \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/viper4linux.png"
+    install -Dm644 "$tree/resources/viper4linux-blue.svg" \
+        "$pkgdir/usr/share/icons/hicolor/scalable/apps/viper4linux.svg"
+    install -Dm644 "$tree/README.md" "$pkgdir/usr/share/doc/viper4linux/README.md"
+    install -d "$pkgdir/usr/share/doc/viper4linux/docs"
+    cp -a "$tree/docs/." "$pkgdir/usr/share/doc/viper4linux/docs/"
+}
