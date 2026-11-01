@@ -316,3 +316,10 @@ for token in [
     assert token in source, token
 assert 'tests/fixtures/neutral-test.vdc' not in source
 print('PASS: dedicated VDC profile library, import, refresh and selection')
+
+# Sound Correction tab keeps the independent effect controls, without a
+# redundant introductory Device correction notice taking up vertical space.
+assert 'addTabNotice(correctionLayout, "Device correction"' not in source
+assert 'addEffectPanel(correctionLayout, ddc_group, "ddc", ddc_enabled_)' in source
+assert 'addEffectPanel(correctionLayout, speaker_group, "speaker_correction", speaker_enabled_)' in source
+print('PASS: compact Sound Correction tab without redundant notice')

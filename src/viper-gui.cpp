@@ -1110,9 +1110,6 @@ public:
         mb_note->setWordWrap(true);
         mb_form->addRow(mb_note);
         addEffectPanel(dynamicsLayout, mb_group, "multiband", mb_enabled_);
-        addTabNotice(correctionLayout, "Device correction",
-            "ViPER-DDC accepts VDC headset profiles (44.1/48 kHz only). "
-            "Speaker Correction has fixed filters; Convolver accepts WAV-encoded .irs/.wav files.");
         auto* ddc_group = new QGroupBox("ViPER-DDC", tabs_);
         auto* ddc_form = new QFormLayout(ddc_group);
         ddc_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
