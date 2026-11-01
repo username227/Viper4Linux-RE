@@ -18,6 +18,7 @@ namespace {
     std::unordered_map<const ViPER*, viper::AnalogXParams> analogx;
     std::unordered_map<const ViPER*, viper::StereoImagerParams> imager;
     std::unordered_map<const ViPER*, viper::FetCompressorParams> fet;
+    std::unordered_map<const ViPER*, viper::MultibandCompressorParams> multiband;
     std::unordered_map<const ViPER*, viper::DynamicEqParams> deq;
     std::unordered_map<const ViPER*, viper::HeadphoneSurroundParams> headphone;
     std::unordered_map<const ViPER*, viper::DiffSurroundParams> diff;
@@ -44,6 +45,7 @@ static std::unordered_map<const ViPER*, viper::CureParams> crossfeed;
 void ViPER::ApplyCure(const viper::CureParams& p) { crossfeed[this] = p; }
 void ViPER::ApplyStereoImager(const viper::StereoImagerParams& p) { imager[this] = p; }
 void ViPER::ApplyFetCompressor(const viper::FetCompressorParams& p) { fet[this] = p; }
+void ViPER::ApplyMultibandCompressor(const viper::MultibandCompressorParams& p) { multiband[this] = p; }
 void ViPER::ApplyDynamicEq(const viper::DynamicEqParams& p) { deq[this] = p; }
 void ViPER::ApplyHeadphoneSurround(const viper::HeadphoneSurroundParams& p) { headphone[this] = p; }
 void ViPER::ApplyDiffSurround(const viper::DiffSurroundParams& p) { diff[this] = p; }
@@ -112,6 +114,16 @@ void ViPER::Process(std::vector<float>& values, uint32_t frames) {
     if (cf.enable) {
         const float factor = 1.03f + cf.crossfeed_preset * .01f; // mock only, not ViPERDSP
         for (uint32_t i=0;i<2*frames;++i) values[i] *= factor;
+    }
+    const auto mb = multiband[this];
+    if (mb.enable) {
+        // Synthetic control-path factor, not a compressor algorithm.
+        float factor = 1.f + .000001f * mb.crossover_frequencies[0];
+        for (std::uint32_t i=0; i<mb.band_count && i<5; ++i) {
+            const auto& b = mb.bands[i];
+            if (b.enable) factor += .01f*b.ratio + .001f*b.threshold + .001f*b.attack;
+        }
+        for (uint32_t i=0; i<2*frames; ++i) values[i] *= factor;
     }
     const auto fc = fet[this];
     if (fc.enable) {

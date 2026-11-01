@@ -46,6 +46,7 @@ assert 'const float r = in_r && std::isfinite(in_r[ix]) ? in_r[ix] : 0.0f;' in b
 routing = (Path(__file__).resolve().parents[1] / 'routing-config/filter-chain.conf.d/99-viper-smart.conf').read_text()
 assert 'Input Scale' not in routing
 assert 'addEffectPanel(dynamicsLayout, fet_group, "fet", fet_enabled_)' in source
+assert 'addEffectPanel(dynamicsLayout, mb_group, "multiband", mb_enabled_)' in source
 assert 'addEffectPanel(correctionLayout, conv_group, "convolver", convolver_enabled_)' in source
 assert 'Load' not in source or 'No impulse response' in source
 assert 'if (initialTabName == "Enhancements") initialTabName = "EQ & Tone";' in source
@@ -216,7 +217,7 @@ print('PASS: Stereo Imager independent native three-band UI, presets and worker 
 import re as _re
 card_keys = _re.findall(r'addEffectPanel\([^;]+?,\s*"([a-z_]+)"\s*,', source)
 glyph_code = source.split('class EffectGlyph final : public QWidget {', 1)[1].split('class EffectSwitch final', 1)[0]
-assert len(card_keys) == 21, card_keys
+assert len(card_keys) == 22, card_keys
 assert len(card_keys) == len(set(card_keys)), card_keys
 for key in card_keys:
     assert f'kind_ == "{key}"' in glyph_code, 'Missing vector icon for ' + key
@@ -228,7 +229,7 @@ assert 'setAttribute(Qt::WA_TransparentForMouseEvents)' in glyph_code
 assert 'findChildren<EffectGlyph*>()' not in source
 assert 'for (auto* widget : findChildren<QWidget*>())' in source
 assert 'dynamic_cast<EffectGlyph*>(widget)' in source
-print('PASS: 21 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
+print('PASS: 22 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
 
 # Dynamic EQ: a separate editor and static preview, native 10-band backend.
 for token in [

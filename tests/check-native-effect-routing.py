@@ -13,7 +13,7 @@ expected = {
  "Differential Surround": "ApplyDiffSurround",
  "Field Surround": "ApplyFieldSurround", "Reverberation": "ApplyReverb",
  "Graphic Equalizer": "ApplyEqualizer", "Tube Simulator": "ApplyTubeSimulator",
- "AnalogX": "ApplyAnalogX", "Crossfeed": "ApplyCure", "Stereo Imager": "ApplyStereoImager", "FET Compressor": "ApplyFetCompressor", "Dynamic EQ": "ApplyDynamicEq",
+ "AnalogX": "ApplyAnalogX", "Crossfeed": "ApplyCure", "Stereo Imager": "ApplyStereoImager", "FET Compressor": "ApplyFetCompressor", "Multiband Compressor": "ApplyMultibandCompressor", "Dynamic EQ": "ApplyDynamicEq",
  "Convolver": "ApplyConvolver",
  "Master Limiter": "ApplyMasterLimiter",
  "Playback Gain Control (AGC)": "ApplyPlaybackGainControl",

@@ -680,8 +680,91 @@ int main(int argc, char** argv) {
     assert(p->imager_applied_serial.load() == image_serial);
     d->run(h, 2048);
     near(ol[2047], imager_baseline);
+    // FET compressor: verify initial bypass, non-RT serial acknowledgment,
+    // dB/ratio/time conversion and full master bypass independently.
+    assert(p->fet_enabled.load() == 0);
+    assert(p->fet_threshold_db.load() == -18);
+    assert(p->fet_ratio_tenths.load() == 20);
+    assert(p->mb_enabled.load() == 0);
+    assert(p->mb_band_count.load() == 3);
+    d->run(h, 2048);
+    const float compressor_baseline = ol[2047];
+    p->fet_enabled.store(1);
+    auto fet_serial = p->fet_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->fet_applied_serial.load()!=fet_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->fet_applied_serial.load() == fet_serial);
+    constexpr float db_to_ln = 0.11512925464970229f;
+    auto fetFactor = [&]() {
+        return 1.f + .03f * -(1.f - 10.f/p->fet_ratio_tenths.load())
+            + .005f * (p->fet_threshold_db.load()*db_to_ln)
+            + .002f * (p->fet_knee_db.load()*db_to_ln)
+            + .004f * (p->fet_makeup_db.load()*db_to_ln)
+            + .01f * (p->fet_attack_ms.load()/1000.f)
+            + .01f * (p->fet_release_ms.load()/1000.f);
+    };
+    d->run(h, 2048);
+    near(ol[2047], compressor_baseline * fetFactor());
+    p->fet_threshold_db.store(-30);
+    p->fet_ratio_tenths.store(40);
+    p->fet_makeup_db.store(3);
+    fet_serial = p->fet_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->fet_applied_serial.load()!=fet_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->fet_applied_serial.load() == fet_serial);
+    d->run(h, 2048);
+    near(ol[2047], compressor_baseline * fetFactor());
+    p->fet_enabled.store(0);
+    fet_serial = p->fet_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->fet_applied_serial.load()!=fet_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->fet_applied_serial.load() == fet_serial);
+    d->run(h, 2048);
+    near(ol[2047], compressor_baseline);
+    // Native multiband: test 3->5 layout, each band, new crossover,
+    // disabled per-band DSP, independent FET and global bypass.
+    p->mb_enabled.store(1);
+    p->mb_band_count.store(5);
+    const int five_xover[]{120,500,4000,8000};
+    for (int i=0;i<4;++i) p->mb_crossovers_hz[i].store(five_xover[i]);
+    auto mb_serial = p->mb_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->mb_applied_serial.load()!=mb_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->mb_applied_serial.load() == mb_serial);
+    auto mbFactor = [&]() {
+        float factor = 1.f + .000001f * p->mb_crossovers_hz[0].load();
+        for (int i=0;i<p->mb_band_count.load();++i) {
+            auto& b = p->mb_bands[i];
+            if (b.enabled.load()) factor += .01f*-(1.f-10.f/b.ratio_tenths.load())
+                + .001f*b.threshold_db.load()*db_to_ln
+                + .001f*b.attack_ms.load()/1000.f;
+        }
+        return factor;
+    };
+    d->run(h, 2048);
+    near(ol[2047], compressor_baseline * mbFactor());
+    p->mb_bands[2].enabled.store(0);
+    p->mb_bands[4].ratio_tenths.store(60);
+    p->mb_crossovers_hz[0].store(180);
+    mb_serial = p->mb_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->mb_applied_serial.load()!=mb_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->mb_applied_serial.load() == mb_serial);
+    d->run(h, 2048);
+    near(ol[2047], compressor_baseline * mbFactor());
+    p->master_enabled.store(0);
+    d->run(h, 2048);
+    near(ol[2047], compressor_baseline);
+    p->master_enabled.store(1);
+    p->mb_enabled.store(0);
+    mb_serial = p->mb_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->mb_applied_serial.load()!=mb_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->mb_applied_serial.load() == mb_serial);
+    d->run(h, 2048);
+    near(ol[2047], compressor_baseline);
     d->cleanup(h);
     page.close();
     dlclose(lib);
-    std::puts("PASS: mock LADSPA, native Stereo Imager/Dynamic EQ/AnalogX/Tube Simulator/Graphic EQ/Convolver forwarding, limiter/AGC/LUFS, bypass, IPC isolation, rates, cleanup");
+    std::puts("PASS: mock LADSPA, native FET/Multiband Compressor/Stereo Imager/Dynamic EQ/AnalogX/Tube Simulator/Graphic EQ/Convolver forwarding, limiter/AGC/LUFS, bypass, IPC isolation, rates, cleanup");
 }

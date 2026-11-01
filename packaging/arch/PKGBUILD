@@ -38,6 +38,7 @@ prepare() {
     # Verified downstream fixes in this private, pinned ViPERDSP checkout.
     python3 "$srcdir/viper4linux/patches/fix_lufs_speed.py"
     python3 "$srcdir/viper4linux/patches/preallocate_stereo_imager.py"
+    python3 "$srcdir/viper4linux/patches/preallocate_multiband_compressor.py"
 }
 
 build() {

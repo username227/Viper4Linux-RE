@@ -17,7 +17,7 @@
 
 namespace viperbass {
 constexpr std::uint32_t kMagic = 0x56434C31; // VBPC
-constexpr std::uint32_t kVersion = 23;
+constexpr std::uint32_t kVersion = 24;
 struct alignas(64) Controls {
     std::uint32_t magic = kMagic;
     std::uint32_t version = kVersion;
@@ -83,6 +83,23 @@ struct alignas(64) Controls {
     std::atomic<std::int32_t> fet_release_ms{100}; // 5..500 ms
     std::atomic<std::uint32_t> fet_request_serial{0};
     std::atomic<std::uint32_t> fet_applied_serial{0};
+    // Native ViPERDSP Multiband Compressor: 3 or 5 bands, off by default.
+    // Each band is an independent native FET compressor instance.
+    struct MultibandControls {
+        std::atomic<std::int32_t> enabled{1};
+        std::atomic<std::int32_t> threshold_db{-18};
+        std::atomic<std::int32_t> ratio_tenths{20};
+        std::atomic<std::int32_t> knee_db{6};
+        std::atomic<std::int32_t> makeup_db{0};
+        std::atomic<std::int32_t> attack_ms{10};
+        std::atomic<std::int32_t> release_ms{100};
+    };
+    std::atomic<std::int32_t> mb_enabled{0};
+    std::atomic<std::int32_t> mb_band_count{3};
+    std::atomic<std::int32_t> mb_crossovers_hz[4]{{200}, {4000}, {5000}, {8000}};
+    MultibandControls mb_bands[5]{};
+    std::atomic<std::uint32_t> mb_request_serial{0};
+    std::atomic<std::uint32_t> mb_applied_serial{0};
     // Native three-band Stereo Imager. 100% = unity side gain in each band.
     // Crossover coefficient updates belong to the non-realtime worker.
     std::atomic<std::int32_t> imager_enabled{0};

@@ -16,6 +16,18 @@ struct SpectrumExtensionParams { bool enable; int strength; float exciter; };
 struct TubeSimulatorParams { bool enable=false; int model=0; float drive=0.5f; float mix=0.3f; };
 struct AnalogXParams { bool enable=false; int mode=0; };
 struct CureParams { bool enable=false; int crossfeed_preset=0; };
+struct MultibandCompressorBandParams {
+    bool enable=false; float threshold=0, ratio=0, knee=0, gain=0;
+    bool knee_auto=false, gain_auto=false, attack_auto=false, release_auto=false;
+    float attack=0.01f, release=0.1f, knee_multi=2.f, max_attack=0.08f,
+          max_release=0.5f, crest=0.2f, adapt=2.5f;
+    bool no_clip=true;
+};
+struct MultibandCompressorParams {
+    bool enable=false; std::uint32_t band_count=0;
+    std::array<float,5> crossover_frequencies{};
+    std::array<MultibandCompressorBandParams,5> bands{};
+};
 struct FetCompressorParams {
     bool enable=false; float threshold=0, ratio=0, knee=0, gain=0;
     bool knee_auto=false, gain_auto=false, attack_auto=false, release_auto=false;
@@ -58,6 +70,7 @@ void ApplyAnalogX(const viper::AnalogXParams&);
 void ApplyCure(const viper::CureParams&);
 void ApplyStereoImager(const viper::StereoImagerParams&);
 void ApplyFetCompressor(const viper::FetCompressorParams&);
+void ApplyMultibandCompressor(const viper::MultibandCompressorParams&);
 void ApplyDynamicEq(const viper::DynamicEqParams&);
 void ApplyHeadphoneSurround(const viper::HeadphoneSurroundParams&);
 void ApplyDiffSurround(const viper::DiffSurroundParams&);

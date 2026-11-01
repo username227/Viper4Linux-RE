@@ -4,6 +4,7 @@
 #include "viper-eq-presets.h"
 #include "viper-build-info.h"
 #include <QApplication>
+#include <QByteArray>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QCloseEvent>
@@ -182,6 +183,13 @@ protected:
             QPainterPath a(QPointF(6,5)); a.cubicTo(9,5,9,19,14,19);
             QPainterPath b(QPointF(18,19)); b.cubicTo(15,19,15,5,10,5);
             p.drawPath(a); p.drawPath(b);
+        } else if (kind_ == "multiband") {
+            for (int i = 0; i < 4; ++i) {
+                const qreal x = 3 + i*6;
+                const qreal h = 5 + ((i+1)%3)*3;
+                p.drawRect(QRectF(x, 21-h, 3, h));
+            }
+            p.setPen(QPen(color_, 1.3, Qt::DashLine)); line(2,9,22,9);
         } else if (kind_ == "fet") {
             // Compression curve bends at the knee into a quieter slope.
             line(2,20,10,12); line(10,12,15,9); line(15,9,22,6);
@@ -1008,8 +1016,38 @@ public:
         fet_note->setWordWrap(true);
         fet_form->addRow(fet_note);
         addEffectPanel(dynamicsLayout, fet_group, "fet", fet_enabled_);
-        addTabNotice(dynamicsLayout, "Next: Multiband Compressor",
-            "Separate native three/five-band compressor will follow in its own commit.");
+        auto* mb_group = new QGroupBox("Multiband Compressor", tabs_);
+        auto* mb_form = new QFormLayout(mb_group);
+        mb_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        mb_enabled_ = new EffectSwitch(mb_group);
+        mb_form->addRow("Enable native multiband compression", mb_enabled_);
+        mb_band_count_ = new QComboBox(mb_group);
+        mb_band_count_->addItems({"3 bands", "5 bands"});
+        mb_form->addRow("Processing bands", mb_band_count_);
+        for (int i = 0; i < 4; ++i) {
+            const QByteArray caption = QString("Crossover %1").arg(i+1).toUtf8();
+            mb_crossovers_[i] = addSlider(mb_form, caption.constData(), 80, 15000);
+        }
+        for (int i = 0; i < 5; ++i) {
+            auto* group = new QGroupBox(QString("Band %1").arg(i+1), mb_group);
+            mb_band_groups_[i] = group;
+            auto* form = new QFormLayout(group);
+            form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+            mb_bands_[i].enabled = new QCheckBox("Compress this band", group);
+            form->addRow(mb_bands_[i].enabled);
+            mb_bands_[i].threshold = addSlider(form, "Threshold", -48, 0);
+            mb_bands_[i].ratio = addSlider(form, "Ratio", 10, 100);
+            mb_bands_[i].knee = addSlider(form, "Soft knee", 0, 12);
+            mb_bands_[i].gain = addSlider(form, "Makeup gain", 0, 24);
+            mb_bands_[i].attack = addSlider(form, "Attack", 1, 100);
+            mb_bands_[i].release = addSlider(form, "Release", 5, 500);
+            mb_form->addRow(group);
+        }
+        auto* mb_note = new QLabel("Each active band uses native ViPERDSP FET compression. "
+                                   "Start with low ratios and watch loudness; crossovers must increase.", mb_group);
+        mb_note->setWordWrap(true);
+        mb_form->addRow(mb_note);
+        addEffectPanel(dynamicsLayout, mb_group, "multiband", mb_enabled_);
         addTabNotice(correctionLayout, "Planned correction effects",
             "ViPER-DDC and Speaker Correction are not implemented. "
             "Native Convolver supports standard WAV-encoded .irs/.wav files.");
@@ -1456,6 +1494,7 @@ public:
         analogx_mode_->setCurrentIndex(std::clamp(settings_.value("analogx_mode", 0).toInt(), 0, 2));
         crossfeed_enabled_->setChecked(settings_.value("crossfeed_enabled", false).toBool());
         crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("crossfeed_preset", 0).toInt(), 0, 2));
+        loadMultibandSettings("");
         fet_enabled_->setChecked(settings_.value("fet_enabled", false).toBool());
         fet_threshold_.slider->setValue(std::clamp(settings_.value("fet_threshold_db", -18).toInt(), -48, 0));
         fet_ratio_.slider->setValue(std::clamp(settings_.value("fet_ratio_tenths", 20).toInt(), 10, 100));
@@ -1573,6 +1612,25 @@ public:
                 this, [this](int){ commitDeqEditorBand(); });
         connect(crossfeed_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(crossfeed_mode_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]{ push(); });
+        connect(mb_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
+        connect(mb_band_count_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index){
+            if (index < 0) return;
+            const std::array<int,4> defaults = index == 0
+                ? std::array<int,4>{200, 4000, 5000, 8000}
+                : std::array<int,4>{120, 500, 4000, 8000};
+            for (int i=0; i<4; ++i) {
+                const QSignalBlocker block(mb_crossovers_[i].slider);
+                mb_crossovers_[i].slider->setValue(defaults[i]);
+            }
+            updateMultibandVisibility(); updateLabels(); push();
+        });
+        for (int i=0; i<4; ++i)
+            connect(mb_crossovers_[i].slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
+        for (auto& band : mb_bands_) {
+            connect(band.enabled, &QCheckBox::toggled, this, [this]{ push(); });
+            for (const auto& r : {band.threshold, band.ratio, band.knee, band.gain, band.attack, band.release})
+                connect(r.slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
+        }
         connect(fet_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         for (const auto& row : {fet_threshold_, fet_ratio_, fet_knee_, fet_gain_, fet_attack_, fet_release_})
             connect(row.slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
@@ -1632,6 +1690,7 @@ public:
             settings_.setValue("preset/analogx_mode", analogx_mode_->currentIndex());
             settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked());
             settings_.setValue("preset/crossfeed_preset", crossfeed_mode_->currentIndex());
+            saveMultibandSettings("preset/");
             settings_.setValue("preset/fet_enabled", fet_enabled_->isChecked());
             settings_.setValue("preset/fet_threshold_db", fet_threshold_.slider->value());
             settings_.setValue("preset/fet_ratio_tenths", fet_ratio_.slider->value());
@@ -1741,6 +1800,7 @@ public:
                 updateLabels();
             }
             restoreFetSettings("preset/");
+            loadMultibandSettings("preset/");
             restoreDeqPreset();
             {
                 const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
@@ -1780,6 +1840,7 @@ public:
                 updateLabels();
             }
             resetFetSettings();
+            resetMultibandSettings();
             resetDeq();
             {
                 const QSignalBlocker blockEq(eq_enabled_), blockMode(eq_mode_);
@@ -2191,6 +2252,10 @@ private:
         column->insertWidget(column->count() - 1, panel);
     }
     struct SliderRow { QSlider* slider; QLabel* value; };
+    struct MbBandRows {
+        QCheckBox* enabled{};
+        SliderRow threshold{}, ratio{}, knee{}, gain{}, attack{}, release{};
+    };
     SliderRow addSlider(QFormLayout* form, const char* label, int min, int max) {
         // Android-inspired parameter presentation: label and live value share
         // a row, with a full-width slider underneath.  This is visual only.
@@ -2252,6 +2317,16 @@ private:
         diff_mix_.value->setText(QString::number(diff_mix_.slider->value()) + "%");
         field_widen_.value->setText(QString::number(field_widen_.slider->value() / 10.0, 'f', 1));
         field_mid_.value->setText(QString::number(field_mid_.slider->value() / 100.0, 'f', 2));
+        for (int i=0; i<4; ++i)
+            mb_crossovers_[i].value->setText(QString::number(mb_crossovers_[i].slider->value()) + " Hz");
+        for (auto& band : mb_bands_) {
+            band.threshold.value->setText(QString::number(band.threshold.slider->value()) + " dBFS");
+            band.ratio.value->setText(QString::number(band.ratio.slider->value()/10.0, 'f', 1) + ":1");
+            band.knee.value->setText(QString::number(band.knee.slider->value()) + " dB");
+            band.gain.value->setText(QString::number(band.gain.slider->value()) + " dB");
+            band.attack.value->setText(QString::number(band.attack.slider->value()) + " ms");
+            band.release.value->setText(QString::number(band.release.slider->value()) + " ms");
+        }
         fet_threshold_.value->setText(QString::number(fet_threshold_.slider->value()) + " dBFS");
         fet_ratio_.value->setText(QString::number(fet_ratio_.slider->value() / 10.0, 'f', 1) + ":1");
         fet_knee_.value->setText(QString::number(fet_knee_.slider->value()) + " dB");
@@ -2400,7 +2475,7 @@ private:
 <p><b>Stereo Imager:</b> Native three-band stereo width processing. Low, mid and high widths each range from 0 to 200%; 100% is neutral. Separate low/mid (80–400 Hz) and mid/high (2–8 kHz) crossovers. It is off by default, and excessive widening may reduce mono compatibility.</p>
 <h3>Sound Correction</h3><p><b>Convolver:</b> Applies a WAV-encoded .irs or .wav impulse response. Select from the local IRS library, or use Import to copy a new file into it. Kernel changes apply live.</p>
 <p><b>IRS library:</b> ~/.local/share/viper4linux/IRS/ (or the XDG data home equivalent). Import multiple files at once; the dropdown updates when the directory changes, never while open. Different-rate IRs are resampled in the backend without restarting audio.</p>
-<h3>Planned</h3><p>DDC, Speaker Correction, FET and Multiband Compressors remain unimplemented.</p>)HTML");
+<h3>Planned</h3><p>ViPER-DDC and Speaker Correction are not yet implemented.</p>)HTML");
         layout->addWidget(text);
         auto* close = new QPushButton("Close", &help);
         connect(close, &QPushButton::clicked, &help, &QDialog::accept);
@@ -2650,6 +2725,7 @@ private:
         settings_.setValue("analogx_mode", analogx_mode_->currentIndex());
         settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked());
         settings_.setValue("crossfeed_preset", crossfeed_mode_->currentIndex());
+        saveMultibandSettings("");
         settings_.setValue("fet_enabled", fet_enabled_->isChecked());
         settings_.setValue("fet_threshold_db", fet_threshold_.slider->value());
         settings_.setValue("fet_ratio_tenths", fet_ratio_.slider->value());
@@ -2802,6 +2878,28 @@ private:
         setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0);
         setCrossfeed(c->crossfeed_preset, crossfeed_mode_->currentIndex());
         if (crossfeed_changed) c->crossfeed_request_serial.fetch_add(1, std::memory_order_release);
+        bool mb_changed = false;
+        const auto setMb = [&mb_changed](std::atomic<std::int32_t>& dst, int value) {
+            if (dst.load(std::memory_order_relaxed) != value) {
+                dst.store(value, std::memory_order_relaxed);
+                mb_changed = true;
+            }
+        };
+        setMb(c->mb_enabled, mb_enabled_->isChecked() ? 1 : 0);
+        setMb(c->mb_band_count, mb_band_count_->currentIndex() == 1 ? 5 : 3);
+        for (int i=0; i<4; ++i) setMb(c->mb_crossovers_hz[i], mb_crossovers_[i].slider->value());
+        for (int i=0; i<5; ++i) {
+            const auto& src = mb_bands_[i];
+            auto& dst = c->mb_bands[i];
+            setMb(dst.enabled, src.enabled->isChecked() ? 1 : 0);
+            setMb(dst.threshold_db, src.threshold.slider->value());
+            setMb(dst.ratio_tenths, src.ratio.slider->value());
+            setMb(dst.knee_db, src.knee.slider->value());
+            setMb(dst.makeup_db, src.gain.slider->value());
+            setMb(dst.attack_ms, src.attack.slider->value());
+            setMb(dst.release_ms, src.release.slider->value());
+        }
+        if (mb_changed) c->mb_request_serial.fetch_add(1, std::memory_order_release);
         bool fet_changed = false;
         const auto setFet = [&fet_changed](std::atomic<std::int32_t>& dst, int value) {
             if (dst.load(std::memory_order_relaxed) != value) {
@@ -3140,6 +3238,82 @@ private:
         tube_mix_.slider->setValue(std::clamp(mix, 0, 100));
         updateLabels();
     }
+    void updateMultibandVisibility() {
+        const int n = mb_band_count_->currentIndex() == 1 ? 5 : 3;
+        for (int i=0; i<5; ++i) mb_band_groups_[i]->setVisible(i < n);
+        for (int i=0; i<4; ++i) {
+            // addSlider creates a QWidget for each QFormLayout row.
+            QWidget* row = mb_crossovers_[i].slider->parentWidget();
+            if (row) row->setVisible(i < n - 1);
+        }
+    }
+    void saveMultibandSettings(const QString& prefix) {
+        settings_.setValue(prefix + "mb_enabled", mb_enabled_->isChecked());
+        settings_.setValue(prefix + "mb_band_count", mb_band_count_->currentIndex() == 1 ? 5 : 3);
+        for (int i=0; i<4; ++i)
+            settings_.setValue(prefix + QString("mb_x%1_hz").arg(i), mb_crossovers_[i].slider->value());
+        for (int i=0; i<5; ++i) {
+            const auto key = prefix + QString("mb_b%1_").arg(i);
+            const auto& b = mb_bands_[i];
+            settings_.setValue(key + "enabled", b.enabled->isChecked());
+            settings_.setValue(key + "threshold_db", b.threshold.slider->value());
+            settings_.setValue(key + "ratio_tenths", b.ratio.slider->value());
+            settings_.setValue(key + "knee_db", b.knee.slider->value());
+            settings_.setValue(key + "makeup_db", b.gain.slider->value());
+            settings_.setValue(key + "attack_ms", b.attack.slider->value());
+            settings_.setValue(key + "release_ms", b.release.slider->value());
+        }
+    }
+    void loadMultibandSettings(const QString& prefix) {
+        const QSignalBlocker en(mb_enabled_), count(mb_band_count_);
+        mb_enabled_->setChecked(settings_.value(prefix + "mb_enabled", false).toBool());
+        const int bands = settings_.value(prefix + "mb_band_count", 3).toInt() == 5 ? 5 : 3;
+        mb_band_count_->setCurrentIndex(bands == 5 ? 1 : 0);
+        const std::array<int,4> defaults = bands == 5
+            ? std::array<int,4>{120,500,4000,8000} : std::array<int,4>{200,4000,5000,8000};
+        for (int i=0; i<4; ++i) {
+            const QSignalBlocker block(mb_crossovers_[i].slider);
+            mb_crossovers_[i].slider->setValue(std::clamp(settings_.value(prefix + QString("mb_x%1_hz").arg(i), defaults[i]).toInt(),80,15000));
+        }
+        for (int i=0; i<5; ++i) {
+            const auto key = prefix + QString("mb_b%1_").arg(i);
+            auto& b = mb_bands_[i];
+            const QSignalBlocker block(b.enabled);
+            b.enabled->setChecked(settings_.value(key + "enabled", true).toBool());
+            for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
+                {b.threshold, std::clamp(settings_.value(key + "threshold_db", -18).toInt(), -48, 0)},
+                {b.ratio, std::clamp(settings_.value(key + "ratio_tenths", 20).toInt(),10,100)},
+                {b.knee, std::clamp(settings_.value(key + "knee_db", 6).toInt(),0,12)},
+                {b.gain, std::clamp(settings_.value(key + "makeup_db", 0).toInt(),0,24)},
+                {b.attack, std::clamp(settings_.value(key + "attack_ms", 10).toInt(),1,100)},
+                {b.release, std::clamp(settings_.value(key + "release_ms", 100).toInt(),5,500)}}) {
+                const QSignalBlocker lock(item.first.slider);
+                item.first.slider->setValue(item.second);
+            }
+        }
+        updateMultibandVisibility(); updateLabels();
+    }
+    void resetMultibandSettings() {
+        const QSignalBlocker en(mb_enabled_), count(mb_band_count_);
+        mb_enabled_->setChecked(false);
+        mb_band_count_->setCurrentIndex(0);
+        const std::array<int,4> defaults{200,4000,5000,8000};
+        for (int i=0; i<4; ++i) {
+            const QSignalBlocker lock(mb_crossovers_[i].slider);
+            mb_crossovers_[i].slider->setValue(defaults[i]);
+        }
+        for (auto& b : mb_bands_) {
+            const QSignalBlocker enBand(b.enabled);
+            b.enabled->setChecked(true);
+            for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
+                {b.threshold,-18}, {b.ratio,20}, {b.knee,6},
+                {b.gain,0}, {b.attack,10}, {b.release,100}}) {
+                const QSignalBlocker lock(item.first.slider);
+                item.first.slider->setValue(item.second);
+            }
+        }
+        updateMultibandVisibility(); updateLabels();
+    }
     void restoreFetSettings(const QString& prefix) {
         const QSignalBlocker on(fet_enabled_);
         fet_enabled_->setChecked(settings_.value(prefix + "fet_enabled", false).toBool());
@@ -3367,6 +3541,7 @@ private:
         const QSignalBlocker blockCrossfeed(crossfeed_enabled_), blockCrossfeedMode(crossfeed_mode_);
         const QSignalBlocker blockImager(imager_enabled_);
         const QSignalBlocker blockFet(fet_enabled_);
+        const QSignalBlocker blockMb(mb_enabled_), blockMbCount(mb_band_count_);
         const QSignalBlocker block5(headphone_enabled_);
         const QSignalBlocker block6(headphone_quality_);
         const QSignalBlocker block7(diff_enabled_);
@@ -3405,6 +3580,39 @@ private:
             const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
             crossfeed_enabled_->setChecked(c->crossfeed_enabled.load() != 0);
             crossfeed_mode_->setCurrentIndex(std::clamp(c->crossfeed_preset.load(), 0, 2));
+        }
+        mb_enabled_->setChecked(c->mb_enabled.load() != 0);
+        const int newCount = c->mb_band_count.load() == 5 ? 1 : 0;
+        if (mb_band_count_->currentIndex() != newCount) {
+            mb_band_count_->setCurrentIndex(newCount);
+            updateMultibandVisibility();
+        }
+        for (int i=0; i<4; ++i) {
+            auto* slider = mb_crossovers_[i].slider;
+            if (!slider->isSliderDown()) {
+                const QSignalBlocker lock(slider);
+                slider->setValue(std::clamp(c->mb_crossovers_hz[i].load(),80,15000));
+            }
+        }
+        for (int i=0; i<5; ++i) {
+            auto& b = mb_bands_[i];
+            const auto& src = c->mb_bands[i];
+            {
+                const QSignalBlocker lock(b.enabled);
+                b.enabled->setChecked(src.enabled.load() != 0);
+            }
+            for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
+                {b.threshold, std::clamp(src.threshold_db.load(),-48,0)},
+                {b.ratio, std::clamp(src.ratio_tenths.load(),10,100)},
+                {b.knee, std::clamp(src.knee_db.load(),0,12)},
+                {b.gain, std::clamp(src.makeup_db.load(),0,24)},
+                {b.attack, std::clamp(src.attack_ms.load(),1,100)},
+                {b.release, std::clamp(src.release_ms.load(),5,500)}}) {
+                if (!item.first.slider->isSliderDown()) {
+                    const QSignalBlocker lock(item.first.slider);
+                    item.first.slider->setValue(item.second);
+                }
+            }
         }
         fet_enabled_->setChecked(c->fet_enabled.load() != 0);
         for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
@@ -3611,6 +3819,11 @@ private:
     std::array<QLabel*, 31> eq_frequencies_{};
     QCheckBox* crossfeed_enabled_{};
     QComboBox* crossfeed_mode_{};
+    QCheckBox* mb_enabled_{};
+    QComboBox* mb_band_count_{};
+    std::array<SliderRow,4> mb_crossovers_{};
+    std::array<QGroupBox*,5> mb_band_groups_{};
+    std::array<MbBandRows,5> mb_bands_{};
     QCheckBox* fet_enabled_{};
     SliderRow fet_threshold_{}, fet_ratio_{}, fet_knee_{}, fet_gain_{}, fet_attack_{}, fet_release_{};
     QCheckBox* imager_enabled_{};

@@ -139,6 +139,32 @@ void load_saved_settings(viperbass::Controls& state) {
                     }
                 }
             }
+            else if (key == "mb_enabled") state.mb_enabled.store(value == "true" || value == "1");
+            else if (key == "mb_band_count") {
+                const int n = std::stoi(value);
+                if (n == 3 || n == 5) state.mb_band_count.store(n);
+            }
+            else if (key.rfind("mb_x", 0) == 0 && key.size() == 8 && key.substr(5) == "_hz") {
+                const int i = std::stoi(key.substr(4, 1));
+                if (i >= 0 && i < 4) state.mb_crossovers_hz[i].store(std::clamp(std::stoi(value), 80, 15000));
+            }
+            else if (key.rfind("mb_b", 0) == 0) {
+                const auto sep = key.find('_', 4);
+                if (sep != std::string::npos) {
+                    const int index = std::stoi(key.substr(4, sep - 4));
+                    if (index >= 0 && index < 5) {
+                        auto& b = state.mb_bands[index];
+                        const auto field = key.substr(sep + 1);
+                        if (field == "enabled") b.enabled.store(value == "true" || value == "1");
+                        else if (field == "threshold_db") b.threshold_db.store(std::clamp(std::stoi(value), -48, 0));
+                        else if (field == "ratio_tenths") b.ratio_tenths.store(std::clamp(std::stoi(value), 10, 100));
+                        else if (field == "knee_db") b.knee_db.store(std::clamp(std::stoi(value), 0, 12));
+                        else if (field == "makeup_db") b.makeup_db.store(std::clamp(std::stoi(value), 0, 24));
+                        else if (field == "attack_ms") b.attack_ms.store(std::clamp(std::stoi(value), 1, 100));
+                        else if (field == "release_ms") b.release_ms.store(std::clamp(std::stoi(value), 5, 500));
+                    }
+                }
+            }
             else if (key == "fet_enabled") state.fet_enabled.store(value == "true" || value == "1");
             else if (key == "fet_threshold_db") state.fet_threshold_db.store(std::clamp(std::stoi(value), -48, 0));
             else if (key == "fet_ratio_tenths") state.fet_ratio_tenths.store(std::clamp(std::stoi(value), 10, 100));
@@ -281,6 +307,7 @@ struct Processor {
         configure_analogx(false, 0);
         configure_crossfeed(false, 0);
         configure_fet(false, -18, 20, 6, 0, 10, 100);
+        configure_multiband(false, 3, {200, 4000, 5000, 8000}, {});
         configure_imager(false, 100, 100, 100, 200, 4000);
         configure_dynamic_eq(false, 0, {});
         configure_headphone(false, 0);
@@ -300,6 +327,7 @@ struct Processor {
             apply_analogx_from_controls();
             apply_crossfeed_from_controls();
             apply_fet_from_controls();
+            apply_multiband_from_controls();
             apply_imager_from_controls();
             apply_dynamic_eq_from_controls();
             const auto path = saved_ir_path();
@@ -343,6 +371,7 @@ struct Processor {
         auto observed_crossfeed = controls->crossfeed_request_serial.load(std::memory_order_acquire);
         auto observed_imager = controls->imager_request_serial.load(std::memory_order_acquire);
         auto observed_fet = controls->fet_request_serial.load(std::memory_order_acquire);
+        auto observed_multiband = controls->mb_request_serial.load(std::memory_order_acquire);
         auto observed_deq = controls->deq_request_serial.load(std::memory_order_acquire);
         while (!ir_worker_stop.load(std::memory_order_acquire)) {
             const auto requested = controls->convolver_request_serial.load(std::memory_order_acquire);
@@ -423,6 +452,12 @@ struct Processor {
                 observed_fet = fet_request;
                 apply_fet_from_controls();
                 controls->fet_applied_serial.store(observed_fet, std::memory_order_release);
+            }
+            const auto mb_request = controls->mb_request_serial.load(std::memory_order_acquire);
+            if (mb_request != observed_multiband) {
+                observed_multiband = mb_request;
+                apply_multiband_from_controls();
+                controls->mb_applied_serial.store(observed_multiband, std::memory_order_release);
             }
             const auto imager_request = controls->imager_request_serial.load(std::memory_order_acquire);
             if (imager_request != observed_imager) {
@@ -602,6 +637,80 @@ struct Processor {
         if (!enabled && !last_fet_enabled) return;
         std::lock_guard<std::mutex> lock(wet_mutex);
         configure_fet(enabled, threshold, ratio, knee, makeup, attack, release);
+    }
+
+    struct MultibandSnapshot {
+        bool enabled = false;
+        int threshold = -18, ratio = 20, knee = 6, makeup = 0, attack = 10, release = 100;
+    };
+    void configure_multiband(bool enabled, int band_count,
+                             const std::array<int, 4>& crossovers,
+                             const std::array<MultibandSnapshot, 5>& bands) {
+        viper::MultibandCompressorParams p{};
+        p.enable = enabled;
+        p.band_count = static_cast<std::uint32_t>(band_count == 5 ? 5 : 3);
+        for (int j = 0; j < band_count - 1; ++j)
+            p.crossover_frequencies[j] = static_cast<float>(crossovers[j]);
+        for (int i = 0; i < band_count; ++i) {
+            const auto& s = bands[i];
+            const auto native = native_fet_params(s.enabled, s.threshold, s.ratio, s.knee,
+                                                   s.makeup, s.attack, s.release);
+            auto& b = p.bands[i];
+            b.enable = native.enable;
+            b.threshold = native.threshold;
+            b.ratio = native.ratio;
+            b.knee = native.knee;
+            b.knee_auto = native.knee_auto;
+            b.gain = native.gain;
+            b.gain_auto = native.gain_auto;
+            b.attack = native.attack;
+            b.attack_auto = native.attack_auto;
+            b.release = native.release;
+            b.release_auto = native.release_auto;
+            b.knee_multi = native.knee_multi;
+            b.max_attack = native.max_attack;
+            b.max_release = native.max_release;
+            b.crest = native.crest;
+            b.adapt = native.adapt;
+            b.no_clip = native.no_clip;
+        }
+        wet.ApplyMultibandCompressor(p);
+        last_mb_enabled = enabled;
+    }
+    void apply_multiband_from_controls() {
+        if (!controls) return;
+        const auto serial = controls->mb_request_serial.load(std::memory_order_acquire);
+        const bool enabled = controls->mb_enabled.load(std::memory_order_relaxed) != 0;
+        const int count = controls->mb_band_count.load(std::memory_order_relaxed) == 5 ? 5 : 3;
+        std::array<int, 4> crossover{};
+        int last = 0;
+        const int nyquist_ceiling = std::max(200, std::min(15000, static_cast<int>(rate / 2 - 100)));
+        for (int i = 0; i < count - 1; ++i) {
+            // Reserve 20 Hz for each later crossover: even out-of-order
+            // GUI edits and low sample rates must not invert filter bands.
+            const int floor = last + 20;
+            const int ceiling = std::max(floor, nyquist_ceiling - 20 * (count - 2 - i));
+            crossover[i] = std::clamp(controls->mb_crossovers_hz[i].load(std::memory_order_relaxed),
+                                      floor, ceiling);
+            last = crossover[i];
+        }
+        std::array<MultibandSnapshot, 5> bands{};
+        for (int i = 0; i < count; ++i) {
+            const auto& src = controls->mb_bands[i];
+            auto& b = bands[i];
+            b.enabled = src.enabled.load(std::memory_order_relaxed) != 0;
+            b.threshold = std::clamp(src.threshold_db.load(std::memory_order_relaxed), -48, 0);
+            b.ratio = std::clamp(src.ratio_tenths.load(std::memory_order_relaxed), 10, 100);
+            b.knee = std::clamp(src.knee_db.load(std::memory_order_relaxed), 0, 12);
+            b.makeup = std::clamp(src.makeup_db.load(std::memory_order_relaxed), 0, 24);
+            b.attack = std::clamp(src.attack_ms.load(std::memory_order_relaxed), 1, 100);
+            b.release = std::clamp(src.release_ms.load(std::memory_order_relaxed), 5, 500);
+        }
+        if (serial != controls->mb_request_serial.load(std::memory_order_acquire)) return;
+        if (!enabled && !last_mb_enabled) return;
+        // Native band/crossover rebuilding only under the worker mutex.
+        std::lock_guard<std::mutex> lock(wet_mutex);
+        configure_multiband(enabled, count, crossover, bands);
     }
 
     void configure_imager(bool enabled, int low_width, int mid_width, int high_width,
@@ -949,6 +1058,7 @@ struct Processor {
             controls->tube_enabled.load(std::memory_order_relaxed) != 0;
         const bool analogx_enabled = controls &&
             controls->analogx_enabled.load(std::memory_order_relaxed) != 0;
+        const bool mb_enabled = controls && controls->mb_enabled.load(std::memory_order_relaxed) != 0;
         const bool fet_enabled = controls && controls->fet_enabled.load(std::memory_order_relaxed) != 0;
         const bool imager_enabled = controls &&
             controls->imager_enabled.load(std::memory_order_relaxed) != 0;
@@ -1021,7 +1131,7 @@ struct Processor {
             controls->convolver_enabled.load(std::memory_order_relaxed) != 0;
         const float convolver_cross = controls ?
             std::clamp(controls->convolver_cross_percent.load(std::memory_order_relaxed), 0, 100) * 0.01f : 0.0f;
-        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || fet_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
+        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || fet_enabled || mb_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
         const float safe_strength = std::clamp(strength, 0.5f, 10.0f);
         const float safe_frequency = std::clamp(frequency, 15.0f, 150.0f);
         // Apply only changed parameters. Avoid resetting an effect on every
@@ -1159,6 +1269,7 @@ struct Processor {
     bool last_crossfeed_enabled = false;
     int last_crossfeed_preset = 0;
     bool last_fet_enabled = false;
+    bool last_mb_enabled = false;
     bool last_imager_enabled = false;
     int last_imager_low = 100, last_imager_mid = 100, last_imager_high = 100;
     int last_imager_low_xover = 200, last_imager_high_xover = 4000;
