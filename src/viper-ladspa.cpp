@@ -5,6 +5,7 @@
 #include "viper/ViPER.h"
 #include "viper-control.h"
 #include "viper-ir-wave.h"
+#include "viper-ddc.h"
 
 #include <algorithm>
 #include <array>
@@ -58,6 +59,22 @@ std::string saved_ir_path() {
         if (!line.empty() && line.front() == '[') { general = false; continue; }
         if (general && line.rfind("convolver_kernel=", 0) == 0)
             return line.substr(std::strlen("convolver_kernel="));
+    }
+    return {};
+}
+std::string saved_ddc_path() {
+    const auto dir = config_directory();
+    if (dir.empty()) return {};
+    std::ifstream file(dir + "/ViPERforLinux/ViPERClean.conf");
+    if (!file) return {};
+    bool general = false;
+    std::string line;
+    while (std::getline(file, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line == "[General]") { general = true; continue; }
+        if (!line.empty() && line.front() == '[') { general = false; continue; }
+        if (general && line.rfind("ddc_profile=", 0) == 0)
+            return line.substr(std::strlen("ddc_profile="));
     }
     return {};
 }
@@ -174,6 +191,7 @@ void load_saved_settings(viperbass::Controls& state) {
             else if (key == "fet_release_ms") state.fet_release_ms.store(std::clamp(std::stoi(value), 5, 500));
             else if (key == "crossfeed_enabled") state.crossfeed_enabled.store(value == "true" || value == "1");
             else if (key == "crossfeed_preset") state.crossfeed_preset.store(std::clamp(std::stoi(value), 0, 2));
+            else if (key == "ddc_enabled") state.ddc_enabled.store(value == "true" || value == "1");
             else if (key == "speaker_enabled") state.speaker_enabled.store(value == "true" || value == "1");
             else if (key == "imager_enabled") state.imager_enabled.store(value == "true" || value == "1");
             else if (key == "imager_low_width_percent") state.imager_low_width_percent.store(std::clamp(std::stoi(value), 0, 200));
@@ -311,6 +329,7 @@ struct Processor {
         configure_multiband(false, 3, {200, 4000, 5000, 8000}, {});
         configure_imager(false, 100, 100, 100, 200, 4000);
         configure_speaker(false);
+        configure_ddc(false);
         configure_dynamic_eq(false, 0, {});
         configure_headphone(false, 0);
         configure_diff(false, 8, false, 0.5f, 0);
@@ -332,6 +351,7 @@ struct Processor {
             apply_multiband_from_controls();
             apply_imager_from_controls();
             apply_speaker_from_controls();
+            load_ddc_profile(saved_ddc_path());
             apply_dynamic_eq_from_controls();
             const auto path = saved_ir_path();
             if (!path.empty()) {
@@ -374,6 +394,7 @@ struct Processor {
         auto observed_crossfeed = controls->crossfeed_request_serial.load(std::memory_order_acquire);
         auto observed_imager = controls->imager_request_serial.load(std::memory_order_acquire);
         auto observed_speaker = controls->speaker_request_serial.load(std::memory_order_acquire);
+        auto observed_ddc = controls->ddc_request_serial.load(std::memory_order_acquire);
         auto observed_fet = controls->fet_request_serial.load(std::memory_order_acquire);
         auto observed_multiband = controls->mb_request_serial.load(std::memory_order_acquire);
         auto observed_deq = controls->deq_request_serial.load(std::memory_order_acquire);
@@ -469,6 +490,12 @@ struct Processor {
                 apply_imager_from_controls();
                 controls->imager_applied_serial.store(observed_imager, std::memory_order_release);
             }
+            const auto ddc_request = controls->ddc_request_serial.load(std::memory_order_acquire);
+            if (ddc_request != observed_ddc) {
+                observed_ddc = ddc_request;
+                load_ddc_profile(saved_ddc_path());
+                controls->ddc_applied_serial.store(observed_ddc, std::memory_order_release);
+            }
             const auto speaker_request = controls->speaker_request_serial.load(std::memory_order_acquire);
             if (speaker_request != observed_speaker) {
                 observed_speaker = speaker_request;
@@ -483,6 +510,42 @@ struct Processor {
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(35));
         }
+    }
+
+    void configure_ddc(bool enabled) {
+        viper::DdcParams p{};
+        p.enable = enabled;
+        wet.ApplyDdc(p);
+    }
+    void load_ddc_profile(const std::string& path) {
+        if (!controls) return;
+        controls->ddc_status.store(2, std::memory_order_release);
+        // Parse and stability-check entirely off PipeWire's RT callback.
+        viper_ddc::Profile profile;
+        if (!path.empty()) profile = viper_ddc::read(path);
+        const bool valid = !path.empty() && static_cast<bool>(profile);
+        const bool rate_ok = rate == 44100 || rate == 48000;
+        ir_transition.store(true, std::memory_order_release);
+        std::this_thread::sleep_for(std::chrono::milliseconds(35));
+        {
+            std::lock_guard<std::mutex> lock(wet_mutex);
+            configure_ddc(false);
+            // Clear old coefficients on invalid/removed profiles, preventing
+            // stale correction after a failed profile switch.
+            wet.LoadDdcCoefficients(nullptr, nullptr, 0);
+            if (valid && rate_ok) {
+                wet.LoadDdcCoefficients(profile.at_44100.data(), profile.at_48000.data(),
+                    static_cast<std::uint32_t>(profile.at_44100.size()));
+                configure_ddc(controls->ddc_enabled.load(std::memory_order_relaxed) != 0);
+            }
+        }
+        ir_transition.store(false, std::memory_order_release);
+        controls->ddc_ready.store(valid && rate_ok ? 1 : 0, std::memory_order_release);
+        controls->ddc_status.store(path.empty() ? 0 : (!valid ? -1 : (rate_ok ? 1 : -2)), std::memory_order_release);
+        if (!valid && !path.empty())
+            std::fprintf(stderr, "ViPER: DDC: %s: %s\n", path.c_str(), profile.error.c_str());
+        if (valid && !rate_ok)
+            std::fprintf(stderr, "ViPER: DDC unsupported at %u Hz (use 44100/48000).\n", rate);
     }
 
     void configure_speaker(bool enabled) {
@@ -1086,6 +1149,7 @@ struct Processor {
             controls->analogx_enabled.load(std::memory_order_relaxed) != 0;
         const bool mb_enabled = controls && controls->mb_enabled.load(std::memory_order_relaxed) != 0;
         const bool fet_enabled = controls && controls->fet_enabled.load(std::memory_order_relaxed) != 0;
+        const bool ddc_enabled = controls && controls->ddc_enabled.load(std::memory_order_relaxed) != 0 && controls->ddc_ready.load(std::memory_order_relaxed) != 0;
         const bool speaker_enabled = controls && controls->speaker_enabled.load(std::memory_order_relaxed) != 0;
         const bool imager_enabled = controls &&
             controls->imager_enabled.load(std::memory_order_relaxed) != 0;
@@ -1158,7 +1222,7 @@ struct Processor {
             controls->convolver_enabled.load(std::memory_order_relaxed) != 0;
         const float convolver_cross = controls ?
             std::clamp(controls->convolver_cross_percent.load(std::memory_order_relaxed), 0, 100) * 0.01f : 0.0f;
-        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || speaker_enabled || fet_enabled || mb_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
+        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || speaker_enabled || ddc_enabled || fet_enabled || mb_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
         const float safe_strength = std::clamp(strength, 0.5f, 10.0f);
         const float safe_frequency = std::clamp(frequency, 15.0f, 150.0f);
         // Apply only changed parameters. Avoid resetting an effect on every

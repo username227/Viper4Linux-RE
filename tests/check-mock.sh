@@ -99,4 +99,6 @@ g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-eq-presets.cpp -o "$w
 "$work/check-eq-presets"
 g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ir-reader.cpp -o "$work/check-ir-reader"
 "$work/check-ir-reader" "$work"
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ddc-reader.cpp -o "$work/check-ddc-reader"
+"$work/check-ddc-reader"
 XDG_CONFIG_HOME="$config" "$work/check" "$work/viper_mock.so"

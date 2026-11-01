@@ -17,7 +17,7 @@
 
 namespace viperbass {
 constexpr std::uint32_t kMagic = 0x56434C31; // VBPC
-constexpr std::uint32_t kVersion = 25;
+constexpr std::uint32_t kVersion = 26;
 struct alignas(64) Controls {
     std::uint32_t magic = kMagic;
     std::uint32_t version = kVersion;
@@ -100,6 +100,12 @@ struct alignas(64) Controls {
     MultibandControls mb_bands[5]{};
     std::atomic<std::uint32_t> mb_request_serial{0};
     std::atomic<std::uint32_t> mb_applied_serial{0};
+    // ViPER-DDC: path stored in QSettings; loader worker validates and applies.
+    std::atomic<std::int32_t> ddc_enabled{0};
+    std::atomic<std::int32_t> ddc_ready{0};
+    std::atomic<std::int32_t> ddc_status{0}; // 0 none, 1 ready, 2 loading, -1 invalid, -2 unsupported rate
+    std::atomic<std::uint32_t> ddc_request_serial{0};
+    std::atomic<std::uint32_t> ddc_applied_serial{0};
     // Speaker Correction is a native, fixed-filter processor intended for speakers.
     // Its enable/reset is performed on the non-real-time worker.
     std::atomic<std::int32_t> speaker_enabled{0};
