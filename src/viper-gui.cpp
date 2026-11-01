@@ -2,6 +2,7 @@
 // Audio runs in PipeWire's independent filter-chain, not inside this GUI.
 #include "viper-control.h"
 #include "viper-eq-presets.h"
+#include "viper-build-info.h"
 #include <QApplication>
 #include <QGuiApplication>
 #include <QScreen>
@@ -1317,7 +1318,20 @@ public:
                 tabs_->tabText(index) == "EQ && Tone" ? "EQ & Tone" : tabs_->tabText(index));
         });
         status_ = new QLabel("Checking backend...", central);
-        layout->addWidget(status_);
+        auto* footer = new QHBoxLayout();
+        footer->setContentsMargins(0, 0, 0, 0);
+        footer->addWidget(status_, 1);
+        auto* aboutButton = new QToolButton(central);
+        aboutButton->setObjectName("viperAboutButton");
+        aboutButton->setText(QString::fromUtf8("ⓘ"));
+        aboutButton->setToolTip("About Viper4Linux — version and commit information");
+        aboutButton->setAccessibleName("About Viper4Linux");
+        aboutButton->setAutoRaise(true);
+        aboutButton->setFixedSize(28, 28);
+        aboutButton->setFocusPolicy(Qt::StrongFocus);
+        footer->addWidget(aboutButton, 0, Qt::AlignRight);
+        connect(aboutButton, &QToolButton::clicked, this, [this] { showAbout(); });
+        layout->addLayout(footer);
         setCentralWidget(central);
 
         save_timer_ = new QTimer(this);
@@ -2186,6 +2200,26 @@ private:
         requestIrsLoad();
         updateIrsName(path); // even if the popup is still open and frozen
         refreshIrsLibrary();
+    }
+    void showAbout() {
+        // A minimal, non-intrusive About dialog, kept independent of the
+        // effect help. The development revision comes from the source commit.
+        QMessageBox about(this);
+        about.setWindowTitle("About Viper4Linux");
+        about.setWindowIcon(QIcon(":/viper4linux/blue.png"));
+        about.setIconPixmap(QPixmap(":/viper4linux/blue.png").scaled(
+            48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        about.setText("<b>Viper4Linux</b>");
+        about.setInformativeText(
+            QString("Development build: <b>%1</b><br>"
+                    "Application commit: <code>%2</code><br>"
+                    "ViPERDSP upstream: <code>%3</code><br><br>"
+                    "Native ViPERDSP processing via PipeWire; Qt6 control interface.")
+                .arg(VIPER4LINUX_DEV_VERSION,
+                     VIPER4LINUX_DEV_REVISION,
+                     VIPER4LINUX_VIPERDSP_REVISION));
+        about.setStandardButtons(QMessageBox::Ok);
+        about.exec();
     }
     void showHelp() {
         QDialog help(this);
