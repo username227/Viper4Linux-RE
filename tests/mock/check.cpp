@@ -590,6 +590,17 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 200 && p->deq_applied_serial.load() != deq_serial; ++i)
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     assert(p->deq_applied_serial.load() == deq_serial);
+    // Once disabled, changing an inactive band's saved parameters must be
+    // a strict audio no-op even while other native effects are active.
+    d->run(h, 2048);
+    const float disabled_baseline = ol[2047];
+    p->deq_bands[0].gain_hundredths.store(-750);
+    const auto disabled_edit = p->deq_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i = 0; i < 200 && p->deq_applied_serial.load() != disabled_edit; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->deq_applied_serial.load() == disabled_edit);
+    d->run(h, 2048);
+    near(ol[2047], disabled_baseline);
     d->cleanup(h);
     page.close();
     dlclose(lib);
