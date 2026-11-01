@@ -14,3 +14,7 @@ Band/crossover updates occur on the worker outside PipeWire's audio callback.
 
 Use modest compression, avoid excessive makeup gain and compare level-matched.
 Combining FET, multiband, AGC and LUFS can cause unexpected dynamics.
+
+## Compact editor
+
+The horizontal selector runs from bass to treble. Select a frequency band to edit its six controls; only that band’s settings are visible. The active selector is remembered between GUI sessions. Crossover adjustments are grouped under a collapsed “Edit crossover frequencies” panel. This is a GUI-only change: all bands continue processing and retain their independent settings.
