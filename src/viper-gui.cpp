@@ -424,21 +424,28 @@ public:
     }
 protected:
     void mousePressEvent(QMouseEvent* event) override {
-        if (event->button() == Qt::LeftButton) {
-            if (editor_mode_ && selectBand) {
-                // Use the same displaced marker coordinates as painting, so
-                // coincident-frequency bands remain individually selectable.
-                int nearest = 0;
-                double distance = std::numeric_limits<double>::infinity();
-                for (int i = 0; i < count_; ++i) {
-                    const double d = std::hypot(markers_[i].x() - event->position().x(),
-                                                markers_[i].y() - event->position().y());
-                    if (d < distance) { distance = d; nearest = i; }
-                }
-                selectBand(nearest);
-            } else if (openEditor) openEditor();
-            event->accept();
-        } else QWidget::mousePressEvent(event);
+        if (event->button() != Qt::LeftButton) {
+            QWidget::mousePressEvent(event);
+            return;
+        }
+        // Both graphs use the same coordinates computed by paintEvent().
+        // Only a deliberate click near a numbered marker selects a band from
+        // the main overview. A click elsewhere still opens the editor at its
+        // previous selection. Inside the editor, clicking anywhere selects
+        // the nearest active band, as before.
+        int nearest = -1;
+        double distance = std::numeric_limits<double>::infinity();
+        for (int i = 0; i < count_; ++i) {
+            const double d = std::hypot(markers_[i].x() - event->position().x(),
+                                        markers_[i].y() - event->position().y());
+            if (d < distance) { distance = d; nearest = i; }
+        }
+        if (nearest >= 0 && (editor_mode_ || distance <= 19.0)) {
+            setSelectedBand(nearest);
+            if (selectBand) selectBand(nearest);
+        }
+        if (!editor_mode_ && openEditor) openEditor();
+        event->accept();
     }
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);
@@ -547,7 +554,7 @@ protected:
         markerFont.setBold(true);
         p.setFont(markerFont);
         for (int i = 0; i < count_; ++i) {
-            const bool selected = editor_mode_ && selected_band_ == i;
+            const bool selected = selected_band_ == i;
             const QPointF center = markers_[i];
             const double radius = selected ? 10.0 : 8.5;
             p.setPen(QPen(accent, selected ? 2.0 : 1.5));
@@ -857,6 +864,10 @@ public:
         deq_actions->addWidget(deq_close);
         deq_editor_layout->addLayout(deq_actions);
         connect(deq_close, &QPushButton::clicked, deq_editor_, &QDialog::hide);
+        deq_overview_->selectBand = [this](int index) {
+            if (index >= 0 && index < deq_active_count_)
+                deq_band_select_->setCurrentIndex(index);
+        };
         deq_overview_->openEditor = [this] {
             deq_editor_->show(); deq_editor_->raise(); deq_editor_->activateWindow();
         };
@@ -2840,6 +2851,7 @@ private:
         if (deq_selected_label_)
             deq_selected_label_->setText(QString("Band %1 — %2 Hz").arg(index + 1).arg(b.frequency));
         if (deq_editor_graph_) deq_editor_graph_->setSelectedBand(index);
+        if (deq_overview_) deq_overview_->setSelectedBand(index);
         if (deq_table_) {
             const QSignalBlocker guard(deq_table_);
             deq_table_->selectRow(index);

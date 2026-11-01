@@ -13,7 +13,11 @@ assert 'for (int i = 0; i < count_; ++i)' in plot
 assert 'QString::number(i+1)' in plot
 assert 'std::hypot(markers_[i].x() - event->position().x()' in plot
 assert 'p.drawLine(anchors[i], markers_[i]);' in plot
-assert 'editor_mode_ && selectBand' in plot
+assert 'if (nearest >= 0 && (editor_mode_ || distance <= 19.0))' in plot
+assert 'if (!editor_mode_ && openEditor) openEditor();' in plot
+assert 'deq_overview_->selectBand = [this](int index)' in source
+assert 'deq_band_select_->setCurrentIndex(index);' in source
+assert 'if (deq_overview_) deq_overview_->setSelectedBand(index);' in source
 assert 'if (editor_mode_) {' not in plot[plot.index('// Each active band gets'):]
 assert 'deq_count_ = new QSpinBox(deq_group)' in source
 assert 'deq_editor_count_ = new QSpinBox(deq_content)' in source
@@ -43,4 +47,4 @@ for count in range(1, 11):
     assert len(frequencies) == len(set(frequencies)), (count, frequencies)
     assert frequencies == sorted(frequencies), (count, frequencies)
     assert all(20 <= f <= 20000 for f in frequencies), (count, frequencies)
-print('PASS: numbered Dynamic EQ markers in both views, spread 1–10 band defaults, saved edits, and persisted window sizes')
+print('PASS: graph-click selection and numbered Dynamic EQ markers in both views, spread 1–10 band defaults, saved edits, and persisted window sizes')
