@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Viper4Linux
+Comment=Native ViPERDSP effects for PipeWire
+Exec=viper4linux
+Icon=viper4linux
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupNotify=true

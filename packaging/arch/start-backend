@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# The packaged Viper4Linux client uses the distribution PipeWire base config,
+# with only its *own* filter-chain supplement in a per-user runtime directory.
+set -euo pipefail
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+[[ -d $runtime ]] || { echo "Missing user runtime directory: $runtime" >&2; exit 1; }
+[[ -r /usr/share/pipewire/filter-chain.conf ]] || {
+  echo 'Missing system PipeWire filter-chain configuration' >&2; exit 1;
+}
+[[ -r /usr/lib/ladspa/viper_dsp_ladspa.so && -x /usr/bin/viper4linux-ctl ]] || {
+  echo 'Viper4Linux native backend files missing' >&2; exit 1;
+}
+command -v pipewire >/dev/null || { echo 'PipeWire executable missing' >&2; exit 1; }
+[[ ${PIPEWIRE_DAEMON:-false} != true ]] || { echo 'Refusing to start PipeWire as a daemon' >&2; exit 1; }
+exec 9>"$runtime/viperlinux-unified-v1.lock"
+flock -n 9 || { echo 'Viper4Linux backend is already running' >&2; exit 1; }
+config="$runtime/viper4linux-filter-config"
+install -d -m 700 "$config"
+cp -- /usr/share/pipewire/filter-chain.conf "$config/filter-chain.conf"
+ln -sfn -- /usr/share/viper4linux/routing-config/filter-chain.conf.d "$config/filter-chain.conf.d"
+fingerprint=$(/usr/bin/python3 /usr/lib/viper4linux/viper_launcher.py --fingerprint)
+exec env -u PIPEWIRE_DAEMON \
+  VIPER_CLEAN_INSTANCE=viperlinux-unified-v1 \
+  VIPER_BACKEND_FINGERPRINT="$fingerprint" \
+  LADSPA_PATH="/usr/lib/ladspa${LADSPA_PATH:+:$LADSPA_PATH}" \
+  PIPEWIRE_CONFIG_DIR="$config" \
+  pipewire -c filter-chain.conf

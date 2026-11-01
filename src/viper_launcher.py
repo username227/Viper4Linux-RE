@@ -19,14 +19,25 @@ import time
 INSTANCE = b"VIPER_CLEAN_INSTANCE=viperlinux-unified-v1"
 FINGERPRINT_ENV = b"VIPER_BACKEND_FINGERPRINT="
 ROOT = Path(__file__).resolve().parent.parent
+# The Arch package installs this module at /usr/lib/viper4linux; source-tree
+# builds keep the original relative layout and never touch /usr.
+SYSTEM_MODE = Path(__file__).resolve().parent == Path('/usr/lib/viper4linux')
+SYSTEM_BACKEND = Path('/usr/lib/ladspa/viper_dsp_ladspa.so')
+SYSTEM_CTL = Path('/usr/bin/viper4linux-ctl')
+SYSTEM_ROUTING = Path('/usr/share/viper4linux/routing-config/filter-chain.conf.d')
 PROC = Path('/proc')
 
 
 def fingerprint(root: Path = ROOT) -> str:
     # Include the native DSP binary, the IPC controller and the filter-chain
     # configuration. A rebuilt backend is detected even if Git HEAD is unchanged.
-    paths = [root / 'build/viper_dsp_ladspa.so', root / 'build/viper-ctl']
-    paths += sorted((root / 'routing-config').rglob('*.conf'))
+    if SYSTEM_MODE and root == ROOT:
+        paths = [SYSTEM_BACKEND, SYSTEM_CTL]
+        paths += sorted(SYSTEM_ROUTING.rglob('*.conf'))
+        root = Path('/usr')  # stable path components in the fingerprint
+    else:
+        paths = [root / 'build/viper_dsp_ladspa.so', root / 'build/viper-ctl']
+        paths += sorted((root / 'routing-config').rglob('*.conf'))
     if len(paths) < 3:
         raise RuntimeError('PipeWire configuration missing. Run ./install.sh first.')
     digest = hashlib.sha256(b'viper4linux-backend-fingerprint-v1\0')
@@ -102,8 +113,10 @@ def ensure_backend(root: Path = ROOT) -> None:
         state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'viper4linux'
         state.mkdir(parents=True, exist_ok=True)
         log_path = state / 'backend.log'
+        backend_start = (Path('/usr/lib/viper4linux/start-backend')
+                         if SYSTEM_MODE and root == ROOT else root / 'start.sh')
         with log_path.open('ab') as log:
-            proc = subprocess.Popen([str(root / 'start.sh')], cwd=root, stdin=subprocess.DEVNULL,
+            proc = subprocess.Popen([str(backend_start)], cwd=root, stdin=subprocess.DEVNULL,
                                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
                                     close_fds=True)
         # Seeing the correct process marker proves that start.sh exec'd PipeWire.
@@ -137,7 +150,7 @@ def main() -> int:
         if args.fingerprint:
             print(fingerprint())
             return 0
-        gui = ROOT / 'build/viper-gui'
+        gui = Path('/usr/bin/viper4linux-gui') if SYSTEM_MODE else ROOT / 'build/viper-gui'
         if not gui.is_file() or not os.access(gui, os.X_OK):
             raise RuntimeError('GUI not built. Run ./install.sh first.')
         ensure_backend()
