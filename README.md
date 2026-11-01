@@ -54,6 +54,14 @@ The top-right ☰ application menu opens the Effect Guide, preferences, librarie
 backend log and About without adding controls to the effect tabs. See `docs/CONVOLVER-PROOF-OF-CONCEPT.md` for input format limits, live
 processing handoff, and troubleshooting.
 
+## Resetting effect settings
+
+**Save preset** and **Restore preset** continue to operate on a separate,
+single manually saved configuration. **Reset Effects to Defaults…** restores
+the original application settings (Natural Bass on; other effects off) only
+after a confirmation dialog. Cancel is the default, and resetting does not
+delete the manually saved preset. See `docs/PRESET-RESET-UI.md`.
+
 ## GUI color themes
 
 The title bar has a **Theme** selector: **Modern teal** (default) or **Classic Viper**
