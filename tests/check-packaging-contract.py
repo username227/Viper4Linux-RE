@@ -8,7 +8,7 @@ launcher = (root / 'src/viper_launcher.py').read_text()
 backend = (root / 'packaging/arch/start-backend').read_text()
 for required in ("pkgname=viper4linux-re-git", 'pkgver() {',
                  'git rev-list --count HEAD', 'git rev-parse --short=12 HEAD',
-                 'git+file://', 'Desktop/viper4linux-preset-reset', 'ViPERDSP::git+https://',
+                 'git+file://', 'Desktop/viper4linux-presets', 'ViPERDSP::git+https://',
                  'sha256sums=(\'SKIP\' \'SKIP\')', 'package() {',
                  'check() {', 'install -Dm755', 'usr/lib/ladspa/viper_dsp_ladspa.so'):
     assert required in pkg, required
