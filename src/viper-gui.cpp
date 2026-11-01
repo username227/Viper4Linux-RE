@@ -1024,16 +1024,24 @@ public:
         mb_band_count_ = new QComboBox(mb_group);
         mb_band_count_->addItems({"3 bands", "5 bands"});
         mb_form->addRow("Processing bands", mb_band_count_);
-        for (int i = 0; i < 4; ++i) {
-            const QByteArray caption = QString("Crossover %1").arg(i+1).toUtf8();
-            mb_crossovers_[i] = addSlider(mb_form, caption.constData(), 80, 15000);
-        }
+        // Frequency bands follow bass -> treble. Select one to edit; all five
+        // native compressor instances and their saved values remain intact.
+        mb_band_tabs_ = new QTabWidget(mb_group);
+        mb_band_tabs_->setObjectName("viperMultibandBandSelector");
+        mb_band_tabs_->setDocumentMode(true);
+        mb_band_tabs_->setUsesScrollButtons(true);
+        mb_band_tabs_->tabBar()->setExpanding(true);
+        mb_band_tabs_->setMinimumWidth(0);
+        mb_band_tabs_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        mb_band_tabs_->setAccessibleName("Multiband frequency bands, bass to treble");
         for (int i = 0; i < 5; ++i) {
-            auto* group = new QGroupBox(QString("Band %1").arg(i+1), mb_group);
-            mb_band_groups_[i] = group;
-            auto* form = new QFormLayout(group);
+            auto* page = new QWidget(mb_band_tabs_);
+            auto* form = new QFormLayout(page);
             form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-            mb_bands_[i].enabled = new QCheckBox("Compress this band", group);
+            mb_band_ranges_[i] = new QLabel(page);
+            mb_band_ranges_[i]->setWordWrap(true);
+            form->addRow(mb_band_ranges_[i]);
+            mb_bands_[i].enabled = new QCheckBox("Compress this band", page);
             form->addRow(mb_bands_[i].enabled);
             mb_bands_[i].threshold = addSlider(form, "Threshold", -48, 0);
             mb_bands_[i].ratio = addSlider(form, "Ratio", 10, 100);
@@ -1041,8 +1049,35 @@ public:
             mb_bands_[i].gain = addSlider(form, "Makeup gain", 0, 24);
             mb_bands_[i].attack = addSlider(form, "Attack", 1, 100);
             mb_bands_[i].release = addSlider(form, "Release", 5, 500);
-            mb_form->addRow(group);
+            mb_band_tabs_->addTab(page, QString("Band %1").arg(i+1));
         }
+        mb_form->addRow(mb_band_tabs_);
+        auto* mb_crossover_toggle = new QToolButton(mb_group);
+        mb_crossover_toggle->setObjectName("viperMultibandCrossoverToggle");
+        mb_crossover_toggle->setText("Edit crossover frequencies");
+        mb_crossover_toggle->setCheckable(true);
+        mb_crossover_toggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        mb_crossover_toggle->setArrowType(Qt::RightArrow);
+        mb_crossover_toggle->setToolTip("Adjust boundaries between the frequency bands");
+        mb_form->addRow(mb_crossover_toggle);
+        mb_crossover_panel_ = new QWidget(mb_group);
+        auto* mb_crossover_form = new QFormLayout(mb_crossover_panel_);
+        mb_crossover_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        for (int i = 0; i < 4; ++i) {
+            const QByteArray caption = QString("Crossover %1").arg(i+1).toUtf8();
+            mb_crossovers_[i] = addSlider(mb_crossover_form, caption.constData(), 80, 15000);
+        }
+        mb_form->addRow(mb_crossover_panel_);
+        mb_crossover_panel_->setVisible(false);
+        connect(mb_crossover_toggle, &QToolButton::toggled, this,
+                [this, mb_crossover_toggle](bool expanded) {
+            mb_crossover_panel_->setVisible(expanded);
+            mb_crossover_toggle->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
+        });
+        mb_band_tabs_->setCurrentIndex(std::clamp(settings_.value("ui/mb_selected_band", 0).toInt(), 0, 4));
+        connect(mb_band_tabs_, &QTabWidget::currentChanged, this, [this](int index) {
+            if (index >= 0) settings_.setValue("ui/mb_selected_band", index);
+        });
         auto* mb_note = new QLabel("Each active band uses native ViPERDSP FET compression. "
                                    "Start with low ratios and watch loudness; crossovers must increase.", mb_group);
         mb_note->setWordWrap(true);
@@ -1625,7 +1660,9 @@ public:
             updateMultibandVisibility(); updateLabels(); push();
         });
         for (int i=0; i<4; ++i)
-            connect(mb_crossovers_[i].slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
+            connect(mb_crossovers_[i].slider, &QSlider::valueChanged, this, [this]{
+                updateMultibandFrequencyLabels(); updateLabels(); push();
+            });
         for (auto& band : mb_bands_) {
             connect(band.enabled, &QCheckBox::toggled, this, [this]{ push(); });
             for (const auto& r : {band.threshold, band.ratio, band.knee, band.gain, band.attack, band.release})
@@ -2319,6 +2356,7 @@ private:
         field_mid_.value->setText(QString::number(field_mid_.slider->value() / 100.0, 'f', 2));
         for (int i=0; i<4; ++i)
             mb_crossovers_[i].value->setText(QString::number(mb_crossovers_[i].slider->value()) + " Hz");
+        updateMultibandFrequencyLabels();
         for (auto& band : mb_bands_) {
             band.threshold.value->setText(QString::number(band.threshold.slider->value()) + " dBFS");
             band.ratio.value->setText(QString::number(band.ratio.slider->value()/10.0, 'f', 1) + ":1");
@@ -3238,14 +3276,32 @@ private:
         tube_mix_.slider->setValue(std::clamp(mix, 0, 100));
         updateLabels();
     }
+    void updateMultibandFrequencyLabels() {
+        const int n = mb_band_count_->currentIndex() == 1 ? 5 : 3;
+        // Labels identify the actual native DSP frequency regions, not EQ gains.
+        static constexpr const char* kThreeNames[3] = {"Bass", "Mids", "Treble"};
+        static constexpr const char* kFiveNames[5] = {"Sub", "Bass", "Mids", "Presence", "Treble"};
+        for (int i = 0; i < n; ++i) {
+            const int low = i == 0 ? 20 : mb_crossovers_[i-1].slider->value();
+            const QString range = i == n-1
+                ? QString("%1 Hz and above").arg(low)
+                : QString("%1–%2 Hz").arg(low).arg(mb_crossovers_[i].slider->value());
+            const QString name = QString::fromUtf8(n == 3 ? kThreeNames[i] : kFiveNames[i]);
+            mb_band_tabs_->setTabText(i, name);
+            mb_band_tabs_->setTabToolTip(i, range);
+            mb_band_ranges_[i]->setText(name + " · " + range);
+        }
+    }
     void updateMultibandVisibility() {
         const int n = mb_band_count_->currentIndex() == 1 ? 5 : 3;
-        for (int i=0; i<5; ++i) mb_band_groups_[i]->setVisible(i < n);
-        for (int i=0; i<4; ++i) {
+        for (int i = 0; i < 5; ++i) mb_band_tabs_->setTabVisible(i, i < n);
+        if (mb_band_tabs_->currentIndex() >= n) mb_band_tabs_->setCurrentIndex(n - 1);
+        for (int i = 0; i < 4; ++i) {
             // addSlider creates a QWidget for each QFormLayout row.
             QWidget* row = mb_crossovers_[i].slider->parentWidget();
             if (row) row->setVisible(i < n - 1);
         }
+        updateMultibandFrequencyLabels();
     }
     void saveMultibandSettings(const QString& prefix) {
         settings_.setValue(prefix + "mb_enabled", mb_enabled_->isChecked());
@@ -3822,7 +3878,9 @@ private:
     QCheckBox* mb_enabled_{};
     QComboBox* mb_band_count_{};
     std::array<SliderRow,4> mb_crossovers_{};
-    std::array<QGroupBox*,5> mb_band_groups_{};
+    QTabWidget* mb_band_tabs_{};
+    QWidget* mb_crossover_panel_{};
+    std::array<QLabel*,5> mb_band_ranges_{};
     std::array<MbBandRows,5> mb_bands_{};
     QCheckBox* fet_enabled_{};
     SliderRow fet_threshold_{}, fet_ratio_{}, fet_knee_{}, fet_gain_{}, fet_attack_{}, fet_release_{};
