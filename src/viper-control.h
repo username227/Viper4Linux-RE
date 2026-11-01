@@ -17,7 +17,7 @@
 
 namespace viperbass {
 constexpr std::uint32_t kMagic = 0x56434C31; // VBPC
-constexpr std::uint32_t kVersion = 22;
+constexpr std::uint32_t kVersion = 23;
 struct alignas(64) Controls {
     std::uint32_t magic = kMagic;
     std::uint32_t version = kVersion;
@@ -72,6 +72,17 @@ struct alignas(64) Controls {
     std::atomic<std::int32_t> crossfeed_preset{0}; // 0=Mild, 1=Medium, 2=Strong
     std::atomic<std::uint32_t> crossfeed_request_serial{0};
     std::atomic<std::uint32_t> crossfeed_applied_serial{0};
+    // Native FET Compressor, default disabled. Ratio is stored as R*10.
+    // dB and milliseconds are converted to native logarithmic/second units by worker.
+    std::atomic<std::int32_t> fet_enabled{0};
+    std::atomic<std::int32_t> fet_threshold_db{-18}; // -48..0 dB
+    std::atomic<std::int32_t> fet_ratio_tenths{20}; // 10..100 = 1:1 .. 10:1
+    std::atomic<std::int32_t> fet_knee_db{6}; // 0..12 dB
+    std::atomic<std::int32_t> fet_makeup_db{0}; // 0..24 dB
+    std::atomic<std::int32_t> fet_attack_ms{10}; // 1..100 ms
+    std::atomic<std::int32_t> fet_release_ms{100}; // 5..500 ms
+    std::atomic<std::uint32_t> fet_request_serial{0};
+    std::atomic<std::uint32_t> fet_applied_serial{0};
     // Native three-band Stereo Imager. 100% = unity side gain in each band.
     // Crossover coefficient updates belong to the non-realtime worker.
     std::atomic<std::int32_t> imager_enabled{0};

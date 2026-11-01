@@ -182,6 +182,10 @@ protected:
             QPainterPath a(QPointF(6,5)); a.cubicTo(9,5,9,19,14,19);
             QPainterPath b(QPointF(18,19)); b.cubicTo(15,19,15,5,10,5);
             p.drawPath(a); p.drawPath(b);
+        } else if (kind_ == "fet") {
+            // Compression curve bends at the knee into a quieter slope.
+            line(2,20,10,12); line(10,12,15,9); line(15,9,22,6);
+            p.setPen(QPen(color_, 1.3, Qt::DashLine)); line(2,11,22,11);
         } else if (kind_ == "imager") {
             // Three distinct frequency bands spreading outward from center.
             for (int y : {5, 12, 19}) {
@@ -988,10 +992,24 @@ public:
             updateEqDeleteButton();
         });
 
-        addTabNotice(dynamicsLayout, "Not implemented yet",
-            "Planned: FET Compressor and Multiband Compressor. "
-            "This tab has no processing controls until those native ViPERDSP "
-            "effects are integrated and tested.");
+        auto* fet_group = new QGroupBox("FET Compressor", tabs_);
+        auto* fet_form = new QFormLayout(fet_group);
+        fet_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        fet_enabled_ = new EffectSwitch(fet_group);
+        fet_form->addRow("Enable FET dynamic compression", fet_enabled_);
+        fet_threshold_ = addSlider(fet_form, "Threshold", -48, 0);
+        fet_ratio_ = addSlider(fet_form, "Compression ratio", 10, 100);
+        fet_knee_ = addSlider(fet_form, "Soft knee", 0, 12);
+        fet_gain_ = addSlider(fet_form, "Makeup gain", 0, 24);
+        fet_attack_ = addSlider(fet_form, "Attack", 1, 100);
+        fet_release_ = addSlider(fet_form, "Release", 5, 500);
+        auto* fet_note = new QLabel("Native ViPERDSP FET compression; start with conservative settings. "
+                                    "Keep off when you want to preserve recording dynamics.", fet_group);
+        fet_note->setWordWrap(true);
+        fet_form->addRow(fet_note);
+        addEffectPanel(dynamicsLayout, fet_group, "fet", fet_enabled_);
+        addTabNotice(dynamicsLayout, "Next: Multiband Compressor",
+            "Separate native three/five-band compressor will follow in its own commit.");
         addTabNotice(correctionLayout, "Planned correction effects",
             "ViPER-DDC and Speaker Correction are not implemented. "
             "Native Convolver supports standard WAV-encoded .irs/.wav files.");
@@ -1438,6 +1456,13 @@ public:
         analogx_mode_->setCurrentIndex(std::clamp(settings_.value("analogx_mode", 0).toInt(), 0, 2));
         crossfeed_enabled_->setChecked(settings_.value("crossfeed_enabled", false).toBool());
         crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("crossfeed_preset", 0).toInt(), 0, 2));
+        fet_enabled_->setChecked(settings_.value("fet_enabled", false).toBool());
+        fet_threshold_.slider->setValue(std::clamp(settings_.value("fet_threshold_db", -18).toInt(), -48, 0));
+        fet_ratio_.slider->setValue(std::clamp(settings_.value("fet_ratio_tenths", 20).toInt(), 10, 100));
+        fet_knee_.slider->setValue(std::clamp(settings_.value("fet_knee_db", 6).toInt(), 0, 12));
+        fet_gain_.slider->setValue(std::clamp(settings_.value("fet_makeup_db", 0).toInt(), 0, 24));
+        fet_attack_.slider->setValue(std::clamp(settings_.value("fet_attack_ms", 10).toInt(), 1, 100));
+        fet_release_.slider->setValue(std::clamp(settings_.value("fet_release_ms", 100).toInt(), 5, 500));
         imager_enabled_->setChecked(settings_.value("imager_enabled", false).toBool());
         imager_low_.slider->setValue(std::clamp(settings_.value("imager_low_width_percent", 100).toInt(), 0, 200));
         imager_mid_.slider->setValue(std::clamp(settings_.value("imager_mid_width_percent", 100).toInt(), 0, 200));
@@ -1548,6 +1573,9 @@ public:
                 this, [this](int){ commitDeqEditorBand(); });
         connect(crossfeed_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(crossfeed_mode_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]{ push(); });
+        connect(fet_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
+        for (const auto& row : {fet_threshold_, fet_ratio_, fet_knee_, fet_gain_, fet_attack_, fet_release_})
+            connect(row.slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
         connect(imager_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         for (const auto& r : {imager_low_, imager_mid_, imager_high_, imager_low_xover_, imager_high_xover_})
             connect(r.slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
@@ -1604,6 +1632,13 @@ public:
             settings_.setValue("preset/analogx_mode", analogx_mode_->currentIndex());
             settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked());
             settings_.setValue("preset/crossfeed_preset", crossfeed_mode_->currentIndex());
+            settings_.setValue("preset/fet_enabled", fet_enabled_->isChecked());
+            settings_.setValue("preset/fet_threshold_db", fet_threshold_.slider->value());
+            settings_.setValue("preset/fet_ratio_tenths", fet_ratio_.slider->value());
+            settings_.setValue("preset/fet_knee_db", fet_knee_.slider->value());
+            settings_.setValue("preset/fet_makeup_db", fet_gain_.slider->value());
+            settings_.setValue("preset/fet_attack_ms", fet_attack_.slider->value());
+            settings_.setValue("preset/fet_release_ms", fet_release_.slider->value());
             settings_.setValue("preset/imager_enabled", imager_enabled_->isChecked());
             settings_.setValue("preset/imager_low_width_percent", imager_low_.slider->value());
             settings_.setValue("preset/imager_mid_width_percent", imager_mid_.slider->value());
@@ -1705,6 +1740,7 @@ public:
                 }
                 updateLabels();
             }
+            restoreFetSettings("preset/");
             restoreDeqPreset();
             {
                 const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
@@ -1743,6 +1779,7 @@ public:
                 }
                 updateLabels();
             }
+            resetFetSettings();
             resetDeq();
             {
                 const QSignalBlocker blockEq(eq_enabled_), blockMode(eq_mode_);
@@ -2215,6 +2252,12 @@ private:
         diff_mix_.value->setText(QString::number(diff_mix_.slider->value()) + "%");
         field_widen_.value->setText(QString::number(field_widen_.slider->value() / 10.0, 'f', 1));
         field_mid_.value->setText(QString::number(field_mid_.slider->value() / 100.0, 'f', 2));
+        fet_threshold_.value->setText(QString::number(fet_threshold_.slider->value()) + " dBFS");
+        fet_ratio_.value->setText(QString::number(fet_ratio_.slider->value() / 10.0, 'f', 1) + ":1");
+        fet_knee_.value->setText(QString::number(fet_knee_.slider->value()) + " dB");
+        fet_gain_.value->setText(QString::number(fet_gain_.slider->value()) + " dB");
+        fet_attack_.value->setText(QString::number(fet_attack_.slider->value()) + " ms");
+        fet_release_.value->setText(QString::number(fet_release_.slider->value()) + " ms");
         for (const auto& row : {imager_low_, imager_mid_, imager_high_})
             row.value->setText(QString::number(row.slider->value()) + "%");
         imager_low_xover_.value->setText(QString::number(imager_low_xover_.slider->value()) + " Hz");
@@ -2607,6 +2650,13 @@ private:
         settings_.setValue("analogx_mode", analogx_mode_->currentIndex());
         settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked());
         settings_.setValue("crossfeed_preset", crossfeed_mode_->currentIndex());
+        settings_.setValue("fet_enabled", fet_enabled_->isChecked());
+        settings_.setValue("fet_threshold_db", fet_threshold_.slider->value());
+        settings_.setValue("fet_ratio_tenths", fet_ratio_.slider->value());
+        settings_.setValue("fet_knee_db", fet_knee_.slider->value());
+        settings_.setValue("fet_makeup_db", fet_gain_.slider->value());
+        settings_.setValue("fet_attack_ms", fet_attack_.slider->value());
+        settings_.setValue("fet_release_ms", fet_release_.slider->value());
         settings_.setValue("imager_enabled", imager_enabled_->isChecked());
         settings_.setValue("imager_low_width_percent", imager_low_.slider->value());
         settings_.setValue("imager_mid_width_percent", imager_mid_.slider->value());
@@ -2752,6 +2802,21 @@ private:
         setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0);
         setCrossfeed(c->crossfeed_preset, crossfeed_mode_->currentIndex());
         if (crossfeed_changed) c->crossfeed_request_serial.fetch_add(1, std::memory_order_release);
+        bool fet_changed = false;
+        const auto setFet = [&fet_changed](std::atomic<std::int32_t>& dst, int value) {
+            if (dst.load(std::memory_order_relaxed) != value) {
+                dst.store(value, std::memory_order_relaxed);
+                fet_changed = true;
+            }
+        };
+        setFet(c->fet_enabled, fet_enabled_->isChecked() ? 1 : 0);
+        setFet(c->fet_threshold_db, fet_threshold_.slider->value());
+        setFet(c->fet_ratio_tenths, fet_ratio_.slider->value());
+        setFet(c->fet_knee_db, fet_knee_.slider->value());
+        setFet(c->fet_makeup_db, fet_gain_.slider->value());
+        setFet(c->fet_attack_ms, fet_attack_.slider->value());
+        setFet(c->fet_release_ms, fet_release_.slider->value());
+        if (fet_changed) c->fet_request_serial.fetch_add(1, std::memory_order_release);
         bool imager_changed = false;
         const auto setImager = [&imager_changed](std::atomic<std::int32_t>& dst, int value) {
             if (dst.load(std::memory_order_relaxed) != value) {
@@ -3075,6 +3140,32 @@ private:
         tube_mix_.slider->setValue(std::clamp(mix, 0, 100));
         updateLabels();
     }
+    void restoreFetSettings(const QString& prefix) {
+        const QSignalBlocker on(fet_enabled_);
+        fet_enabled_->setChecked(settings_.value(prefix + "fet_enabled", false).toBool());
+        for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
+            {fet_threshold_, std::clamp(settings_.value(prefix + "fet_threshold_db", -18).toInt(), -48, 0)},
+            {fet_ratio_, std::clamp(settings_.value(prefix + "fet_ratio_tenths", 20).toInt(), 10, 100)},
+            {fet_knee_, std::clamp(settings_.value(prefix + "fet_knee_db", 6).toInt(), 0, 12)},
+            {fet_gain_, std::clamp(settings_.value(prefix + "fet_makeup_db", 0).toInt(), 0, 24)},
+            {fet_attack_, std::clamp(settings_.value(prefix + "fet_attack_ms", 10).toInt(), 1, 100)},
+            {fet_release_, std::clamp(settings_.value(prefix + "fet_release_ms", 100).toInt(), 5, 500)}}) {
+            const QSignalBlocker block(item.first.slider);
+            item.first.slider->setValue(item.second);
+        }
+        updateLabels();
+    }
+    void resetFetSettings() {
+        const QSignalBlocker on(fet_enabled_);
+        fet_enabled_->setChecked(false);
+        for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
+            {fet_threshold_, -18}, {fet_ratio_, 20}, {fet_knee_, 6},
+            {fet_gain_, 0}, {fet_attack_, 10}, {fet_release_, 100}}) {
+            const QSignalBlocker block(item.first.slider);
+            item.first.slider->setValue(item.second);
+        }
+        updateLabels();
+    }
     void push() {
         persistCurrentSettings();
         publishToBackend();
@@ -3275,6 +3366,7 @@ private:
         const QSignalBlocker blockAnalogX(analogx_enabled_), blockAnalogMode(analogx_mode_);
         const QSignalBlocker blockCrossfeed(crossfeed_enabled_), blockCrossfeedMode(crossfeed_mode_);
         const QSignalBlocker blockImager(imager_enabled_);
+        const QSignalBlocker blockFet(fet_enabled_);
         const QSignalBlocker block5(headphone_enabled_);
         const QSignalBlocker block6(headphone_quality_);
         const QSignalBlocker block7(diff_enabled_);
@@ -3313,6 +3405,19 @@ private:
             const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
             crossfeed_enabled_->setChecked(c->crossfeed_enabled.load() != 0);
             crossfeed_mode_->setCurrentIndex(std::clamp(c->crossfeed_preset.load(), 0, 2));
+        }
+        fet_enabled_->setChecked(c->fet_enabled.load() != 0);
+        for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
+            {fet_threshold_, std::clamp(c->fet_threshold_db.load(), -48, 0)},
+            {fet_ratio_, std::clamp(c->fet_ratio_tenths.load(), 10, 100)},
+            {fet_knee_, std::clamp(c->fet_knee_db.load(), 0, 12)},
+            {fet_gain_, std::clamp(c->fet_makeup_db.load(), 0, 24)},
+            {fet_attack_, std::clamp(c->fet_attack_ms.load(), 1, 100)},
+            {fet_release_, std::clamp(c->fet_release_ms.load(), 5, 500)}}) {
+            if (!item.first.slider->isSliderDown()) {
+                const QSignalBlocker blocker(item.first.slider);
+                item.first.slider->setValue(item.second);
+            }
         }
         imager_enabled_->setChecked(c->imager_enabled.load() != 0);
         for (const auto& item : std::initializer_list<std::pair<SliderRow, int>>{
@@ -3506,6 +3611,8 @@ private:
     std::array<QLabel*, 31> eq_frequencies_{};
     QCheckBox* crossfeed_enabled_{};
     QComboBox* crossfeed_mode_{};
+    QCheckBox* fet_enabled_{};
+    SliderRow fet_threshold_{}, fet_ratio_{}, fet_knee_{}, fet_gain_{}, fet_attack_{}, fet_release_{};
     QCheckBox* imager_enabled_{};
     SliderRow imager_low_{}, imager_mid_{}, imager_high_{};
     SliderRow imager_low_xover_{}, imager_high_xover_{};

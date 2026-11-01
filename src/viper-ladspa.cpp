@@ -139,6 +139,13 @@ void load_saved_settings(viperbass::Controls& state) {
                     }
                 }
             }
+            else if (key == "fet_enabled") state.fet_enabled.store(value == "true" || value == "1");
+            else if (key == "fet_threshold_db") state.fet_threshold_db.store(std::clamp(std::stoi(value), -48, 0));
+            else if (key == "fet_ratio_tenths") state.fet_ratio_tenths.store(std::clamp(std::stoi(value), 10, 100));
+            else if (key == "fet_knee_db") state.fet_knee_db.store(std::clamp(std::stoi(value), 0, 12));
+            else if (key == "fet_makeup_db") state.fet_makeup_db.store(std::clamp(std::stoi(value), 0, 24));
+            else if (key == "fet_attack_ms") state.fet_attack_ms.store(std::clamp(std::stoi(value), 1, 100));
+            else if (key == "fet_release_ms") state.fet_release_ms.store(std::clamp(std::stoi(value), 5, 500));
             else if (key == "crossfeed_enabled") state.crossfeed_enabled.store(value == "true" || value == "1");
             else if (key == "crossfeed_preset") state.crossfeed_preset.store(std::clamp(std::stoi(value), 0, 2));
             else if (key == "imager_enabled") state.imager_enabled.store(value == "true" || value == "1");
@@ -273,6 +280,7 @@ struct Processor {
         configure_tube(false, 0, 0.5f, 0.3f);
         configure_analogx(false, 0);
         configure_crossfeed(false, 0);
+        configure_fet(false, -18, 20, 6, 0, 10, 100);
         configure_imager(false, 100, 100, 100, 200, 4000);
         configure_dynamic_eq(false, 0, {});
         configure_headphone(false, 0);
@@ -291,6 +299,7 @@ struct Processor {
             apply_tube_from_controls();
             apply_analogx_from_controls();
             apply_crossfeed_from_controls();
+            apply_fet_from_controls();
             apply_imager_from_controls();
             apply_dynamic_eq_from_controls();
             const auto path = saved_ir_path();
@@ -333,6 +342,7 @@ struct Processor {
         auto observed_analogx = controls->analogx_request_serial.load(std::memory_order_acquire);
         auto observed_crossfeed = controls->crossfeed_request_serial.load(std::memory_order_acquire);
         auto observed_imager = controls->imager_request_serial.load(std::memory_order_acquire);
+        auto observed_fet = controls->fet_request_serial.load(std::memory_order_acquire);
         auto observed_deq = controls->deq_request_serial.load(std::memory_order_acquire);
         while (!ir_worker_stop.load(std::memory_order_acquire)) {
             const auto requested = controls->convolver_request_serial.load(std::memory_order_acquire);
@@ -407,6 +417,12 @@ struct Processor {
                 observed_crossfeed = crossfeed_request;
                 apply_crossfeed_from_controls();
                 controls->crossfeed_applied_serial.store(observed_crossfeed, std::memory_order_release);
+            }
+            const auto fet_request = controls->fet_request_serial.load(std::memory_order_acquire);
+            if (fet_request != observed_fet) {
+                observed_fet = fet_request;
+                apply_fet_from_controls();
+                controls->fet_applied_serial.store(observed_fet, std::memory_order_release);
             }
             const auto imager_request = controls->imager_request_serial.load(std::memory_order_acquire);
             if (imager_request != observed_imager) {
@@ -537,6 +553,55 @@ struct Processor {
         // Native Crossfeed presets/reset are updated outside the real-time callback.
         std::lock_guard<std::mutex> lock(wet_mutex);
         configure_crossfeed(enabled, preset);
+    }
+
+    // Native FET compressor expects logarithmic amplitude and a signed
+    // compression slope (0 = 1:1, -0.5 = 2:1, -0.9 = 10:1).
+    // Every call happens either at instance creation or under the worker lock.
+    static viper::FetCompressorParams native_fet_params(
+        bool enabled, int threshold_db, int ratio_tenths, int knee_db,
+        int makeup_db, int attack_ms, int release_ms) {
+        constexpr float kDbToNaturalLog = 0.11512925464970229f; // ln(10)/20
+        viper::FetCompressorParams p{};
+        p.enable = enabled;
+        p.threshold = std::clamp(threshold_db, -48, 0) * kDbToNaturalLog;
+        p.ratio = -(1.f - 10.f / std::clamp(ratio_tenths, 10, 100));
+        p.knee = std::clamp(knee_db, 0, 12) * kDbToNaturalLog;
+        p.knee_auto = false;
+        p.gain = std::clamp(makeup_db, 0, 24) * kDbToNaturalLog;
+        p.gain_auto = false;
+        p.attack = std::clamp(attack_ms, 1, 100) / 1000.f;
+        p.attack_auto = false;
+        p.release = std::clamp(release_ms, 5, 500) / 1000.f;
+        p.release_auto = false;
+        p.knee_multi = 2.f;
+        p.max_attack = 0.080f;
+        p.max_release = 0.5f;
+        p.crest = 0.2f;
+        p.adapt = 2.5f;
+        p.no_clip = true;
+        return p;
+    }
+    void configure_fet(bool enabled, int threshold, int ratio, int knee,
+                       int makeup, int attack, int release) {
+        wet.ApplyFetCompressor(native_fet_params(enabled, threshold, ratio, knee,
+                                                  makeup, attack, release));
+        last_fet_enabled = enabled;
+    }
+    void apply_fet_from_controls() {
+        if (!controls) return;
+        const auto serial = controls->fet_request_serial.load(std::memory_order_acquire);
+        const bool enabled = controls->fet_enabled.load(std::memory_order_relaxed) != 0;
+        const int threshold = std::clamp(controls->fet_threshold_db.load(std::memory_order_relaxed), -48, 0);
+        const int ratio = std::clamp(controls->fet_ratio_tenths.load(std::memory_order_relaxed), 10, 100);
+        const int knee = std::clamp(controls->fet_knee_db.load(std::memory_order_relaxed), 0, 12);
+        const int makeup = std::clamp(controls->fet_makeup_db.load(std::memory_order_relaxed), 0, 24);
+        const int attack = std::clamp(controls->fet_attack_ms.load(std::memory_order_relaxed), 1, 100);
+        const int release = std::clamp(controls->fet_release_ms.load(std::memory_order_relaxed), 5, 500);
+        if (serial != controls->fet_request_serial.load(std::memory_order_acquire)) return;
+        if (!enabled && !last_fet_enabled) return;
+        std::lock_guard<std::mutex> lock(wet_mutex);
+        configure_fet(enabled, threshold, ratio, knee, makeup, attack, release);
     }
 
     void configure_imager(bool enabled, int low_width, int mid_width, int high_width,
@@ -884,6 +949,7 @@ struct Processor {
             controls->tube_enabled.load(std::memory_order_relaxed) != 0;
         const bool analogx_enabled = controls &&
             controls->analogx_enabled.load(std::memory_order_relaxed) != 0;
+        const bool fet_enabled = controls && controls->fet_enabled.load(std::memory_order_relaxed) != 0;
         const bool imager_enabled = controls &&
             controls->imager_enabled.load(std::memory_order_relaxed) != 0;
         const bool crossfeed_enabled = controls &&
@@ -955,7 +1021,7 @@ struct Processor {
             controls->convolver_enabled.load(std::memory_order_relaxed) != 0;
         const float convolver_cross = controls ?
             std::clamp(controls->convolver_cross_percent.load(std::memory_order_relaxed), 0, 100) * 0.01f : 0.0f;
-        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
+        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || fet_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
         const float safe_strength = std::clamp(strength, 0.5f, 10.0f);
         const float safe_frequency = std::clamp(frequency, 15.0f, 150.0f);
         // Apply only changed parameters. Avoid resetting an effect on every
@@ -1092,6 +1158,7 @@ struct Processor {
     bool last_analogx_enabled = false;
     bool last_crossfeed_enabled = false;
     int last_crossfeed_preset = 0;
+    bool last_fet_enabled = false;
     bool last_imager_enabled = false;
     int last_imager_low = 100, last_imager_mid = 100, last_imager_high = 100;
     int last_imager_low_xover = 200, last_imager_high_xover = 4000;
