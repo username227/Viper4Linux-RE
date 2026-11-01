@@ -139,6 +139,8 @@ void load_saved_settings(viperbass::Controls& state) {
                     }
                 }
             }
+            else if (key == "crossfeed_enabled") state.crossfeed_enabled.store(value == "true" || value == "1");
+            else if (key == "crossfeed_preset") state.crossfeed_preset.store(std::clamp(std::stoi(value), 0, 2));
             else if (key == "headphone_enabled") state.headphone_enabled.store(value == "true" || value == "1");
             else if (key == "headphone_quality") state.headphone_quality.store(
                 std::clamp(std::stoi(value), 0, 4));
@@ -264,6 +266,7 @@ struct Processor {
         configure_spectrum(false, 7600, 1.0f);
         configure_tube(false, 0, 0.5f, 0.3f);
         configure_analogx(false, 0);
+        configure_crossfeed(false, 0);
         configure_dynamic_eq(false, 0, {});
         configure_headphone(false, 0);
         configure_diff(false, 8, false, 0.5f, 0);
@@ -280,6 +283,7 @@ struct Processor {
             apply_eq_from_controls();
             apply_tube_from_controls();
             apply_analogx_from_controls();
+            apply_crossfeed_from_controls();
             apply_dynamic_eq_from_controls();
             const auto path = saved_ir_path();
             if (!path.empty()) {
@@ -319,6 +323,7 @@ struct Processor {
         auto observed_eq = controls->eq_request_serial.load(std::memory_order_acquire);
         auto observed_tube = controls->tube_request_serial.load(std::memory_order_acquire);
         auto observed_analogx = controls->analogx_request_serial.load(std::memory_order_acquire);
+        auto observed_crossfeed = controls->crossfeed_request_serial.load(std::memory_order_acquire);
         auto observed_deq = controls->deq_request_serial.load(std::memory_order_acquire);
         while (!ir_worker_stop.load(std::memory_order_acquire)) {
             const auto requested = controls->convolver_request_serial.load(std::memory_order_acquire);
@@ -387,6 +392,12 @@ struct Processor {
                 observed_analogx = requested_analogx;
                 apply_analogx_from_controls();
                 controls->analogx_applied_serial.store(observed_analogx, std::memory_order_release);
+            }
+            const auto crossfeed_request = controls->crossfeed_request_serial.load(std::memory_order_acquire);
+            if (crossfeed_request != observed_crossfeed) {
+                observed_crossfeed = crossfeed_request;
+                apply_crossfeed_from_controls();
+                controls->crossfeed_applied_serial.store(observed_crossfeed, std::memory_order_release);
             }
             const auto deq_request = controls->deq_request_serial.load(std::memory_order_acquire);
             if (deq_request != observed_deq) {
@@ -489,6 +500,28 @@ struct Processor {
             configure_analogx(enabled, mode);
         }
         ir_transition.store(false, std::memory_order_release);
+    }
+
+    void configure_crossfeed(bool enabled, int preset) {
+        viper::CureParams p{};
+        p.enable = enabled;
+        p.crossfeed_preset = std::clamp(preset, 0, 2);
+        wet.ApplyCure(p); // The native ViPERDSP Cure crossfeed.
+        last_crossfeed_enabled = p.enable;
+        last_crossfeed_preset = p.crossfeed_preset;
+    }
+    void apply_crossfeed_from_controls() {
+        if (!controls) return;
+        const auto serial = controls->crossfeed_request_serial.load(std::memory_order_acquire);
+        const bool enabled = controls->crossfeed_enabled.load(std::memory_order_relaxed) != 0;
+        const int preset = std::clamp(controls->crossfeed_preset.load(std::memory_order_relaxed), 0, 2);
+        if (serial != controls->crossfeed_request_serial.load(std::memory_order_acquire)) return;
+        // A disabled preset edit changes saved settings but must not interrupt other effects.
+        if (!enabled && !last_crossfeed_enabled) return;
+        if (enabled == last_crossfeed_enabled && preset == last_crossfeed_preset) return;
+        // Native Crossfeed presets/reset are updated outside the real-time callback.
+        std::lock_guard<std::mutex> lock(wet_mutex);
+        configure_crossfeed(enabled, preset);
     }
 
     void configure_dynamic_eq(bool enabled, int band_count,
@@ -799,6 +832,8 @@ struct Processor {
             controls->tube_enabled.load(std::memory_order_relaxed) != 0;
         const bool analogx_enabled = controls &&
             controls->analogx_enabled.load(std::memory_order_relaxed) != 0;
+        const bool crossfeed_enabled = controls &&
+            controls->crossfeed_enabled.load(std::memory_order_relaxed) != 0;
         const bool requested_headphone = controls &&
             controls->headphone_enabled.load(std::memory_order_relaxed) != 0;
         const int headphone_quality = controls
@@ -866,7 +901,7 @@ struct Processor {
             controls->convolver_enabled.load(std::memory_order_relaxed) != 0;
         const float convolver_cross = controls ?
             std::clamp(controls->convolver_cross_percent.load(std::memory_order_relaxed), 0, 100) * 0.01f : 0.0f;
-        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
+        const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
         const float safe_strength = std::clamp(strength, 0.5f, 10.0f);
         const float safe_frequency = std::clamp(frequency, 15.0f, 150.0f);
         // Apply only changed parameters. Avoid resetting an effect on every
@@ -1001,6 +1036,8 @@ struct Processor {
     float last_tube_drive = 0.5f;
     float last_tube_mix = 0.3f;
     bool last_analogx_enabled = false;
+    bool last_crossfeed_enabled = false;
+    int last_crossfeed_preset = 0;
     bool last_deq_enabled = false;
     int last_analogx_mode = 0;
     bool last_spectrum_enabled = false;

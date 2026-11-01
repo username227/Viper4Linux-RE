@@ -15,6 +15,7 @@ struct ClarityParams { bool enable; int mode; float gain; };
 struct SpectrumExtensionParams { bool enable; int strength; float exciter; };
 struct TubeSimulatorParams { bool enable=false; int model=0; float drive=0.5f; float mix=0.3f; };
 struct AnalogXParams { bool enable=false; int mode=0; };
+struct CureParams { bool enable=false; int crossfeed_preset=0; };
 struct DynamicEqBandParams {
     float frequency=0, q=0, gain=0, threshold=0, attack=0, release=0;
     int filter_type=0;
@@ -45,6 +46,7 @@ void ApplyClarity(const viper::ClarityParams&);
 void ApplySpectrumExtension(const viper::SpectrumExtensionParams&);
 void ApplyTubeSimulator(const viper::TubeSimulatorParams&);
 void ApplyAnalogX(const viper::AnalogXParams&);
+void ApplyCure(const viper::CureParams&);
 void ApplyDynamicEq(const viper::DynamicEqParams&);
 void ApplyHeadphoneSurround(const viper::HeadphoneSurroundParams&);
 void ApplyDiffSurround(const viper::DiffSurroundParams&);

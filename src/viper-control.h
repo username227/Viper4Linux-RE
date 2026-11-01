@@ -17,7 +17,7 @@
 
 namespace viperbass {
 constexpr std::uint32_t kMagic = 0x56434C31; // VBPC
-constexpr std::uint32_t kVersion = 20;
+constexpr std::uint32_t kVersion = 21;
 struct alignas(64) Controls {
     std::uint32_t magic = kMagic;
     std::uint32_t version = kVersion;
@@ -67,6 +67,11 @@ struct alignas(64) Controls {
     std::atomic<std::int32_t> analogx_mode{0};
     std::atomic<std::uint32_t> analogx_request_serial{0};
     std::atomic<std::uint32_t> analogx_applied_serial{0};
+    // Native ViPERDSP Cure crossfeed. Off by default; model changes on the worker.
+    std::atomic<std::int32_t> crossfeed_enabled{0};
+    std::atomic<std::int32_t> crossfeed_preset{0}; // 0=Mild, 1=Medium, 2=Strong
+    std::atomic<std::uint32_t> crossfeed_request_serial{0};
+    std::atomic<std::uint32_t> crossfeed_applied_serial{0};
     std::atomic<std::int32_t> headphone_enabled{0}; // independent Headphone Surround+
     std::atomic<std::int32_t> headphone_quality{0}; // 0..4 (five ViPER levels)
     std::atomic<std::int32_t> diff_enabled{0}; // independent Differential Surround

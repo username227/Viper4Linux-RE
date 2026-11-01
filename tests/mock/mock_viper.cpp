@@ -38,6 +38,8 @@ void ViPER::ApplyClarity(const viper::ClarityParams& p) { clarity[this] = p; }
 void ViPER::ApplySpectrumExtension(const viper::SpectrumExtensionParams& p) { spectrum[this] = p; }
 void ViPER::ApplyTubeSimulator(const viper::TubeSimulatorParams& p) { tube[this] = p; }
 void ViPER::ApplyAnalogX(const viper::AnalogXParams& p) { analogx[this] = p; }
+static std::unordered_map<const ViPER*, viper::CureParams> crossfeed;
+void ViPER::ApplyCure(const viper::CureParams& p) { crossfeed[this] = p; }
 void ViPER::ApplyDynamicEq(const viper::DynamicEqParams& p) { deq[this] = p; }
 void ViPER::ApplyHeadphoneSurround(const viper::HeadphoneSurroundParams& p) { headphone[this] = p; }
 void ViPER::ApplyDiffSurround(const viper::DiffSurroundParams& p) { diff[this] = p; }
@@ -101,6 +103,11 @@ void ViPER::Process(std::vector<float>& values, uint32_t frames) {
         // Synthetic output multiplier for control-path validation only.
         const float factor = 1.f + 0.12f * tb.drive * tb.mix * (1.f + 0.2f * tb.model);
         for (uint32_t i = 0; i < 2*frames; ++i) values[i] *= factor;
+    }
+    const auto cf = crossfeed[this];
+    if (cf.enable) {
+        const float factor = 1.03f + cf.crossfeed_preset * .01f; // mock only, not ViPERDSP
+        for (uint32_t i=0;i<2*frames;++i) values[i] *= factor;
     }
     const auto dq = deq[this];
     if (dq.enable) {

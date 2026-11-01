@@ -176,6 +176,12 @@ protected:
             p.drawEllipse(QPointF(6,18),3,3);
             p.drawEllipse(QPointF(18,18),3,3);
             line(9,18,15,18); line(12,10,12,14);
+        } else if (kind_ == "crossfeed") {
+            // Two distinct channels exchanging a small, shaped signal.
+            line(2,5,22,5); line(2,19,22,19);
+            QPainterPath a(QPointF(6,5)); a.cubicTo(9,5,9,19,14,19);
+            QPainterPath b(QPointF(18,19)); b.cubicTo(15,19,15,5,10,5);
+            p.drawPath(a); p.drawPath(b);
         } else if (kind_ == "headphone") {
             p.drawArc(QRectF(3,3,18,18),0,180*16);
             p.drawRoundedRect(QRectF(2,12,5,9),1.5,1.5);
@@ -1162,6 +1168,16 @@ public:
         spectrum_exciter_.slider->setToolTip("Added harmonic enhancement, 0.0–6.0.");
         addEffectPanel(effectLayout, spectrum_group, "spectrum", spectrum_enabled_);
 
+        auto* crossfeed_group = new QGroupBox("Crossfeed (ViPER Cure)", tabs_);
+        auto* crossfeed_form = new QFormLayout(crossfeed_group);
+        crossfeed_enabled_ = new EffectSwitch(crossfeed_group);
+        crossfeed_form->addRow("Speaker-like headphone crossfeed", crossfeed_enabled_);
+        crossfeed_mode_ = new QComboBox(crossfeed_group);
+        crossfeed_mode_->addItems({"Mild", "Medium", "Strong"});
+        crossfeed_mode_->setToolTip("Native ViPERDSP Cure: filtered left/right crossfeed presets.");
+        crossfeed_form->addRow("Crossfeed strength", crossfeed_mode_);
+        addEffectPanel(spatialLayout, crossfeed_group, "crossfeed", crossfeed_enabled_);
+
         auto* headphone_group = new QGroupBox("Headphone Surround+", tabs_);
         auto* headphone_form = new QFormLayout(headphone_group);
         headphone_enabled_ = new EffectSwitch(headphone_group);
@@ -1218,8 +1234,7 @@ public:
         reverb_dry_.slider->setToolTip("Original direct signal level in the reverberation model. Use 50% for unity dry gain (upstream scales dry by 2).");
         addEffectPanel(spatialLayout, reverb_group, "reverb", reverb_enabled_);
         addTabNotice(spatialLayout, "Planned spatial effects",
-            "Stereo Imager and Cure/Crossfeed are not implemented. "
-            "The four cards above are the available spatial processors.");
+            "Stereo Imager remains planned. Crossfeed now uses native ViPERDSP Cure.");
 
         // Tube Simulator is the native ViPERDSP TubeSimulator: no third-party DSP.
         auto* tube_group = new QGroupBox("Tube Simulator", tabs_);
@@ -1398,6 +1413,8 @@ public:
         tube_mix_.slider->setValue(std::clamp(settings_.value("tube_mix_percent", 30).toInt(), 0, 100));
         analogx_enabled_->setChecked(settings_.value("analogx_enabled", false).toBool());
         analogx_mode_->setCurrentIndex(std::clamp(settings_.value("analogx_mode", 0).toInt(), 0, 2));
+        crossfeed_enabled_->setChecked(settings_.value("crossfeed_enabled", false).toBool());
+        crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("crossfeed_preset", 0).toInt(), 0, 2));
         loadDeqSettings();
         headphone_enabled_->setChecked(settings_.value("headphone_enabled", false).toBool());
         headphone_quality_->setCurrentIndex(std::clamp(settings_.value("headphone_quality", 0).toInt(), 0, 4));
@@ -1500,6 +1517,8 @@ public:
             connect(s, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [this](double){ commitDeqEditorBand(); });
         connect(deq_type_, QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this, [this](int){ commitDeqEditorBand(); });
+        connect(crossfeed_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
+        connect(crossfeed_mode_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]{ push(); });
         connect(headphone_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(headphone_quality_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
         connect(diff_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
@@ -1551,6 +1570,8 @@ public:
             settings_.setValue("preset/tube_mix_percent", tube_mix_.slider->value());
             settings_.setValue("preset/analogx_enabled", analogx_enabled_->isChecked());
             settings_.setValue("preset/analogx_mode", analogx_mode_->currentIndex());
+            settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked());
+            settings_.setValue("preset/crossfeed_preset", crossfeed_mode_->currentIndex());
             saveDeqPreset();
             settings_.setValue("preset/spectrum_enabled", spectrum_enabled_->isChecked());
             settings_.setValue("preset/spectrum_frequency_hundreds", spectrum_frequency_.slider->value());
@@ -1627,6 +1648,11 @@ public:
                 settings_.value("preset/tube_mix_percent", 30).toInt());
             applyAnalogXSettings(settings_.value("preset/analogx_enabled", false).toBool(),
                 settings_.value("preset/analogx_mode", 0).toInt());
+            {
+                const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
+                crossfeed_enabled_->setChecked(settings_.value("preset/crossfeed_enabled", false).toBool());
+                crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("preset/crossfeed_preset", 0).toInt(), 0, 2));
+            }
             restoreDeqPreset();
             {
                 const QSignalBlocker b1(convolver_enabled_), b2(convolver_cross_.slider);
@@ -1649,6 +1675,11 @@ public:
             resetNewBassControls();
             applyTubeSettings(false, 0, 50, 30);
             applyAnalogXSettings(false, 0);
+            {
+                const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
+                crossfeed_enabled_->setChecked(false);
+                crossfeed_mode_->setCurrentIndex(0);
+            }
             resetDeq();
             {
                 const QSignalBlocker blockEq(eq_enabled_), blockMode(eq_mode_);
@@ -2252,7 +2283,7 @@ private:
 <p><b>Spectrum Extension:</b> Adds upper-frequency harmonics above a reference frequency.</p>
 <p><b>Tube Simulator:</b> Native ViPERDSP tube-coloration effect with 12AX7, 12AU7 and 6N1P models, drive and wet/dry mix.</p>
 <p><b>AnalogX:</b> Native ViPERDSP harmonic coloration with Mild, Medium and Strong modes. The underlying effect briefly resets its filters when enabled or switched.</p>
-<h3>Spatial</h3><p><b>Headphone Surround+:</b> Headphone-oriented spatial processing.</p>
+<h3>Spatial</h3><p><b>Crossfeed (ViPER Cure):</b> Filters a small portion of each stereo channel into the opposite ear (Mild/Medium/Strong), for more speaker-like headphone listening.</p><p><b>Headphone Surround+:</b> Headphone-oriented spatial processing.</p>
 <p><b>Differential Surround:</b> Uses interchannel delay and filtering to alter stereo width.</p>
 <p><b>Field Surround:</b> Adjusts perceived width, center image and depth.</p>
 <p><b>Reverberation:</b> Adds simulated room reflections and ambience.</p>
@@ -2506,6 +2537,8 @@ private:
         settings_.setValue("tube_mix_percent", tube_mix_.slider->value());
         settings_.setValue("analogx_enabled", analogx_enabled_->isChecked());
         settings_.setValue("analogx_mode", analogx_mode_->currentIndex());
+        settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked());
+        settings_.setValue("crossfeed_preset", crossfeed_mode_->currentIndex());
         settings_.setValue("deq_enabled", deq_enabled_->isChecked());
         settings_.setValue("deq_band_count", deq_active_count_);
         for (int i=0; i<10; ++i) {
@@ -2635,6 +2668,16 @@ private:
         setAnalogXValue(c->analogx_enabled, analogx_enabled_->isChecked() ? 1 : 0);
         setAnalogXValue(c->analogx_mode, analogx_mode_->currentIndex());
         if (analogx_changed) c->analogx_request_serial.fetch_add(1, std::memory_order_release);
+        bool crossfeed_changed = false;
+        const auto setCrossfeed = [&crossfeed_changed](std::atomic<std::int32_t>& dst, int value) {
+            if (dst.load(std::memory_order_relaxed) != value) {
+                dst.store(value, std::memory_order_relaxed);
+                crossfeed_changed = true;
+            }
+        };
+        setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0);
+        setCrossfeed(c->crossfeed_preset, crossfeed_mode_->currentIndex());
+        if (crossfeed_changed) c->crossfeed_request_serial.fetch_add(1, std::memory_order_release);
         bool deq_changed = false;
         const auto setDeq = [&deq_changed](std::atomic<std::int32_t>& dst, int value) {
             if (dst.load(std::memory_order_relaxed)!=value) {
@@ -3142,6 +3185,7 @@ private:
         const QSignalBlocker block4(spectrum_enabled_);
         const QSignalBlocker blockTube(tube_enabled_), blockTubeModel(tube_model_);
         const QSignalBlocker blockAnalogX(analogx_enabled_), blockAnalogMode(analogx_mode_);
+        const QSignalBlocker blockCrossfeed(crossfeed_enabled_), blockCrossfeedMode(crossfeed_mode_);
         const QSignalBlocker block5(headphone_enabled_);
         const QSignalBlocker block6(headphone_quality_);
         const QSignalBlocker block7(diff_enabled_);
@@ -3176,6 +3220,11 @@ private:
         }
         if (eqRemoteEdit) { saveEqLayout(); selectEqPreset("custom"); updateEqOverview(); }
         tube_enabled_->setChecked(c->tube_enabled.load() != 0);
+        {
+            const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
+            crossfeed_enabled_->setChecked(c->crossfeed_enabled.load() != 0);
+            crossfeed_mode_->setCurrentIndex(std::clamp(c->crossfeed_preset.load(), 0, 2));
+        }
         tube_model_->setCurrentIndex(std::clamp(c->tube_model.load(), 0, 2));
         analogx_enabled_->setChecked(c->analogx_enabled.load() != 0);
         analogx_mode_->setCurrentIndex(std::clamp(c->analogx_mode.load(), 0, 2));
@@ -3354,6 +3403,8 @@ private:
     std::array<QSlider*, 31> eq_faders_{};
     std::array<QLabel*, 31> eq_values_{};
     std::array<QLabel*, 31> eq_frequencies_{};
+    QCheckBox* crossfeed_enabled_{};
+    QComboBox* crossfeed_mode_{};
     QCheckBox* deq_enabled_{};
     DynamicEqOverview* deq_overview_{};
     DynamicEqOverview* deq_editor_graph_{};

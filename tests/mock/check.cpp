@@ -601,6 +601,39 @@ int main(int argc, char** argv) {
     assert(p->deq_applied_serial.load() == disabled_edit);
     d->run(h, 2048);
     near(ol[2047], disabled_baseline);
+    // Native Cure/Crossfeed: changing a disabled preset must be a strict audio no-op.
+    assert(p->crossfeed_enabled.load() == 0);
+    assert(p->crossfeed_preset.load() == 0);
+    d->run(h, 2048);
+    const float cure_baseline = ol[2047];
+    p->crossfeed_preset.store(2);
+    auto cure_serial = p->crossfeed_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->crossfeed_applied_serial.load()!=cure_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->crossfeed_applied_serial.load() == cure_serial);
+    d->run(h, 2048);
+    near(ol[2047], cure_baseline);
+    p->crossfeed_enabled.store(1);
+    for(int preset=0; preset<3; ++preset) {
+        p->crossfeed_preset.store(preset);
+        cure_serial = p->crossfeed_request_serial.fetch_add(1, std::memory_order_release) + 1;
+        for (int i=0; i<200 && p->crossfeed_applied_serial.load()!=cure_serial; ++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        assert(p->crossfeed_applied_serial.load() == cure_serial);
+        d->run(h, 2048);
+        near(ol[2047], cure_baseline * (1.03f + preset * .01f));
+    }
+    p->master_enabled.store(0);
+    d->run(h, 2048);
+    near(ol[2047], .2f);
+    p->master_enabled.store(1);
+    p->crossfeed_enabled.store(0);
+    cure_serial = p->crossfeed_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i=0; i<200 && p->crossfeed_applied_serial.load()!=cure_serial; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->crossfeed_applied_serial.load() == cure_serial);
+    d->run(h, 2048);
+    near(ol[2047], cure_baseline);
     d->cleanup(h);
     page.close();
     dlclose(lib);
