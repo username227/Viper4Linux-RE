@@ -4,6 +4,10 @@ from pathlib import Path
 import re
 source = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
 checks = (
+    'theme_selector_->setObjectName("viperThemeSelector")',
+    'QComboBox#viperThemeSelector::drop-down',
+    'border-top-right-radius:7px; border-bottom-right-radius:7px;',
+    'background-color:transparent;',
     'theme_selector_->addItem("Modern teal", "modern")',
     'theme_selector_->addItem("Classic Viper", "classic-v4a")',
     'settings_.value("ui/theme", "modern")',

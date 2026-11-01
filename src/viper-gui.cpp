@@ -634,6 +634,7 @@ public:
         auto* themeLabel = new QLabel("Theme", central);
         titleRow->addWidget(themeLabel);
         theme_selector_ = new QComboBox(central);
+        theme_selector_->setObjectName("viperThemeSelector");
         theme_selector_->setAccessibleName("Interface color scheme");
         theme_selector_->setToolTip("Change only the GUI colors; audio settings are unaffected.");
         theme_selector_->addItem("Modern teal", "modern");
@@ -2072,6 +2073,15 @@ private:
                 color:%2; background-color:%3;
                 border:1px solid %4; border-radius:7px; padding:5px 8px; }
             QPushButton:hover, QComboBox:hover { border-color:%5; }
+            /* Qt otherwise paints the native combo arrow-button as a square
+               subcontrol, despite the rounded outline of the combo itself. */
+            QComboBox#viperThemeSelector { padding-right:28px; }
+            QComboBox#viperThemeSelector::drop-down {
+                subcontrol-origin:padding; subcontrol-position:top right;
+                width:24px; border:0;
+                border-top-right-radius:7px; border-bottom-right-radius:7px;
+                background-color:transparent;
+            }
             QPushButton:pressed { background-color:%6; }
             QPushButton:disabled, QComboBox:disabled { color:%7; }
             QComboBox QAbstractItemView {
