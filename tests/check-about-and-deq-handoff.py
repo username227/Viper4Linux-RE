@@ -23,5 +23,7 @@ assert 'about.setWindowIcon(QIcon(":/viper4linux/blue.png"));' in ui
 cm = (r / 'CMakeLists.txt').read_text()
 assert 'execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --short=12 HEAD' in cm
 assert 'RELEASE-REVISION' in cm
+assert 'set(V4L_BASE_VERSION "0.1.0")' in cm
+assert 'set(V4L_DEV_VERSION "${V4L_BASE_VERSION}-${V4L_REVISION}")' in cm
 assert 'configure_file(src/viper-build-info.h.in' in cm
-print('PASS: Dynamic EQ edits avoid global dry crossfade; native controls and About revision wiring')
+print('PASS: Dynamic EQ edits avoid global dry crossfade; native controls and 0.1.0-hash About revision wiring')

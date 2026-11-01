@@ -21,8 +21,9 @@ target_include_directories(viper_dsp_ladspa PRIVATE src)
 target_link_libraries(viper_dsp_ladspa PRIVATE ViPERDSP Threads::Threads)
 target_compile_options(viper_dsp_ladspa PRIVATE -Wall -Wextra -Wpedantic)
 
-# Development identity is Git HEAD. Release ZIPs ship RELEASE-REVISION so
-# the exact same version appears in the About dialog without an embedded .git.
+# Development identity follows a SemVer placeholder plus the Git revision.
+# The Git checkout determines HEAD; source-only exports may use RELEASE-REVISION.
+set(V4L_BASE_VERSION "0.1.0")
 set(V4L_REVISION "unknown")
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
@@ -41,7 +42,7 @@ if(NOT V4L_REVISION MATCHES "^[0-9a-f]+$"
    OR V4L_REVISION_LENGTH LESS 7 OR V4L_REVISION_LENGTH GREATER 40)
   set(V4L_REVISION "unknown")
 endif()
-set(V4L_DEV_VERSION "dev-${V4L_REVISION}")
+set(V4L_DEV_VERSION "${V4L_BASE_VERSION}-${V4L_REVISION}")
 configure_file(src/viper-build-info.h.in
   "${CMAKE_CURRENT_BINARY_DIR}/generated/viper-build-info.h" @ONLY)
 
