@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 *.o
 *.so
+
+# Source ZIP manifests provide revision information without Git.
+/RELEASE-REVISION
