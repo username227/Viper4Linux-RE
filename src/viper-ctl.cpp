@@ -1,4 +1,5 @@
 #include "viper-control.h"
+#include "viper-cli-report.h"
 #include "viper-backend-state.h"
 #include "viper-cli-settings.h"
 #include <algorithm>
@@ -68,73 +69,10 @@ void workerValue(std::atomic<std::int32_t>& parameter,
     if (parameter.exchange(value, std::memory_order_relaxed) != value)
         serial.fetch_add(1, std::memory_order_release);
 }
-void show(viperbass::Controls& c) {
-    std::cout << "ViPER processing: " << (c.master_enabled.load() ? "ON" : "BYPASSED")
-              << " | Bass: " << (c.enabled.load() ? "ON" : "OFF")
-              << " | Bass mode " << ([&]{ switch (c.bass_mode.load()) { case 0: return "Natural"; case 1: return "Pure Bass+"; case 2: return "Subwoofer"; default: return "Unknown"; } }())
-              << " | strength " << (c.strength_centi.load() / 100.0f)
-              << " | frequency " << c.frequency_hz.load() << " Hz"
-              << " | Bass Mono: " << (c.bass_mono_enabled.load() ? "ON" : "OFF")
-              << " | Psychoacoustic Bass: " << (c.psycho_enabled.load() ? "ON" : "OFF")
-              << " | Dynamic System: " << (c.dynamic_enabled.load() ? "ON" : "OFF")
-              << " | Clarity: " << (c.clarity_enabled.load() ? "ON" : "OFF")
-              << " | Clarity mode " << c.clarity_mode.load()
-              << " | Clarity strength " << (c.clarity_gain_milli.load() / 1000.0f)
-              << " | Spectrum: " << (c.spectrum_enabled.load() ? "ON" : "OFF")
-              << " | Spectrum reference " << c.spectrum_frequency_hz.load() << " Hz"
-              << " | Harmonic strength " << (c.spectrum_exciter_milli.load() / 1000.0f)
-              << " | Headphone Surround+: " << (c.headphone_enabled.load() ? "ON" : "OFF")
-              << " | surround level " << (c.headphone_quality.load() + 1)
-              << " | Differential Surround: " << (c.diff_enabled.load() ? "ON" : "OFF")
-              << " | delay " << c.diff_delay_ms.load() << " ms"
-              << " | reverse " << c.diff_reverse.load()
-              << " | mix " << c.diff_mix_percent.load() << "%"
-              << " | low-pass " << c.diff_lp_hz.load() << " Hz"
-              << " | Field Surround: " << (c.field_enabled.load() ? "ON" : "OFF")
-              << " | widening " << c.field_widen_tenths.load() / 10.0f
-              << " | mid image " << c.field_mid_hundredths.load() / 100.0f
-              << " | depth " << c.field_depth.load()
-              << " | Reverberation: " << (c.reverb_enabled.load() ? "ON" : "OFF")
-              << " | room " << c.reverb_room_percent.load() << "%"
-              << " | width " << c.reverb_width_percent.load() << "%"
-              << " | damp " << c.reverb_damp_percent.load() << "%"
-              << " | wet " << c.reverb_wet_percent.load() << "%"
-              << " | dry " << c.reverb_dry_percent.load() << "%"
-              << " | Limiter: ALWAYS ON | threshold " << c.limiter_threshold_permille.load() / 1000.0f
-              << " | output " << c.limiter_output_percent.load() << "%"
-              << " | pan " << c.limiter_pan_percent.load() << "%"
-              << " | AGC: " << (c.agc_enabled.load() ? "ON" : "OFF")
-              << " | strength " << c.agc_strength_centi.load() / 100.0f
-              << " | max " << c.agc_max_gain_centi.load() / 100.0f
-              << " | threshold " << c.agc_threshold_permille.load() / 1000.0f
-              << " | LUFS: " << (c.lufs_enabled.load() ? "ON" : "OFF")
-              << " | target " << c.lufs_target_tenths.load() / 10.0f
-              << " | max adjustment " << c.lufs_max_gain_tenths.load() / 10.0f << " dB"
-              << " | response speed " << c.lufs_speed.load()
-              << " | EQ: " << (c.eq_enabled.load() ? "ON" : "OFF")
-              << " | EQ bands " << c.eq_band_count.load()
-              << " | EQ applied " << c.eq_applied_serial.load() << "/" << c.eq_request_serial.load()
-              << " | Dynamic EQ: " << (c.deq_enabled.load() ? "ON" : "OFF")
-              << " | Tube: " << (c.tube_enabled.load() ? "ON" : "OFF")
-              << " | AnalogX: " << (c.analogx_enabled.load() ? "ON" : "OFF")
-              << " | Crossfeed: " << (c.crossfeed_enabled.load() ? "ON" : "OFF")
-              << " | Stereo Imager: " << (c.imager_enabled.load() ? "ON" : "OFF")
-              << " | FET: " << (c.fet_enabled.load() ? "ON" : "OFF")
-              << " | Multiband: " << (c.mb_enabled.load() ? "ON" : "OFF")
-              << " | ViPER-DDC: " << (c.ddc_enabled.load() ? "ON" : "OFF")
-              << " | Speaker Correction: " << (c.speaker_enabled.load() ? "ON" : "OFF")
-              << " | Convolver: " << (c.convolver_enabled.load() ? "ON" : "OFF")
-              << " | IR: " << ([&]{ switch(c.convolver_status.load()) {
-                     case 1: return "READY";
-                     case 2: return "LOADING";
-                     case -1: return "INVALID";
-                     case -2: return "RESAMPLE ERROR";
-                     default: return "NONE";
-                 } }())
-              << " | cross " << c.convolver_cross_percent.load() << "%"
-              << " | processing rate " << c.sample_rate_hz.load() << " Hz"
-              << " | backend PID " << c.owner_pid.load()
-              << " | audio blocks " << c.audio_callbacks.load() << '\n';
+void show(viperbass::Controls& c, const std::string& command = "status",
+          const char* bandText = nullptr) {
+    const int band = command == "eq-level" && bandText ? std::atoi(bandText) : -1;
+    viperbass::printCliReport(std::cout, c, command, band);
 }
 }
 int main(int argc, char** argv) {
@@ -359,6 +297,6 @@ int main(int argc, char** argv) {
         std::cerr << "Live DSP controls updated, but the saved CLI settings could not be written.\n";
         return 1;
     }
-    show(c);
+    show(c, cmd, argc > 2 ? argv[2] : nullptr);
     return 0;
 }

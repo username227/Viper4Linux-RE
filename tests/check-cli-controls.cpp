@@ -57,6 +57,24 @@ int main() {
     run("all-on");
     assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
 
+    // Master/status commands print all six categories; individual effect
+    // edits print only that effect's settings (not a single giant status line).
+    std::string displayed;
+    assert(invoke({"bass-on"}, &displayed) == 0);
+    assert(displayed.find("A. ViPER Bass - ON") != std::string::npos);
+    assert(displayed.find("Headphone Surround+") == std::string::npos);
+    assert(invoke({"headphone-on"}, &displayed) == 0);
+    assert(displayed.find("B. Headphone Surround+ - ON") != std::string::npos);
+    assert(displayed.find("ViPER Bass") == std::string::npos);
+    assert(invoke({"status"}, &displayed) == 0);
+    for (const char* tab : {"1. Output", "2. Bass", "3. EQ & Tone", "4. Spatial",
+                             "5. Dynamics", "6. Sound Correction"})
+        assert(displayed.find(tab) != std::string::npos);
+    assert(invoke({"off"}, &displayed) == 0);
+    assert(displayed.find("Master processing: BYPASSED") != std::string::npos);
+    assert(displayed.find("6. Sound Correction") != std::string::npos);
+    assert(invoke({"on"}, &displayed) == 0);
+
     // Scripting interface uses the same numbered levels as the GUI, while
     // shared memory / ViPERDSP retain their existing zero-based indices.
     for (int level = 1; level <= 5; ++level) {
@@ -65,8 +83,8 @@ int main() {
         assert(c.headphone_quality.load() == level - 1);
         std::string status;
         assert(invoke({"status"}, &status) == 0);
-        assert(status.find("Headphone Surround+:") != std::string::npos);
-        assert(status.find("surround level " + value) != std::string::npos);
+        assert(status.find("Headphone Surround+ - ") != std::string::npos);
+        assert(status.find("Surround level: " + value) != std::string::npos);
     }
     // Backward-compatible name, but the argument also follows GUI numbering.
     assert(invoke({"headphone-quality", "2"}) == 0);
