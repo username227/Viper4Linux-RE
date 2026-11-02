@@ -71,6 +71,11 @@ inline const char* lufsSpeed(int x) {
     switch (x) { case 0: return "Slow"; case 1: return "Normal";
                  case 2: return "Fast"; default: return "Unknown"; }
 }
+inline const char* ddcStatus(int x) {
+    switch (x) { case 1: return "READY"; case 2: return "LOADING";
+        case -1: return "INVALID"; case -2: return "UNSUPPORTED AUDIO RATE";
+        default: return "NONE"; }
+}
 inline const char* irStatus(int x) {
     switch(x) { case 1: return "READY"; case 2: return "LOADING";
         case -1: return "INVALID"; case -2: return "RESAMPLE ERROR";
@@ -222,7 +227,7 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full, in
         break;
     case Effect::Ddc:
         heading("A", "ViPER-DDC", enabled(c.ddc_enabled.load()));
-        detail(out, "Profile status", irStatus(c.ddc_status.load()));
+        detail(out, "Profile status", ddcStatus(c.ddc_status.load()));
         break;
     case Effect::Speaker:
         heading("B", "Speaker Correction", enabled(c.speaker_enabled.load()));
