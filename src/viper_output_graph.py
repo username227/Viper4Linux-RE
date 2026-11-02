@@ -9,7 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import re
 from typing import Any
+
+# Accept only complete six-octet Bluetooth hardware addresses.
+_BT_ADDRESS = re.compile(r"^[0-9A-Fa-f]{2}(?:(?:_|:)[0-9A-Fa-f]{2}){5}$")
+_BT_CARD = re.compile(r"^bluez_card\.([0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2}){5})$")
 
 SMART_CAPTURE = 'viperbass.smart.capture'
 SMART_PLAYBACK = 'viperbass.smart.playback'
@@ -95,18 +100,37 @@ class PipeWireGraph:
             return None
         if not isinstance(device_name, str) or not device_name:
             return None  # Fail closed: no stable device association.
-        # Bluetooth adapter/device address is stable across reconnects; node.name
-        # distinguishes different output profiles for an otherwise identical card.
-        # Never use PipeWire's ephemeral object id as part of this key.
-        identity = f'pipewire-device-v1\0{device_name}\0{node_name}'
+        # Bluetooth profiles can change node.name (A2DP, HFP, codec, etc.).
+        # Identify the *hardware*, not the stream profile or display name.
+        # A six-octet address is required: never merge two identical model names.
+        is_bluetooth = (device_name.startswith('bluez_card.') or
+                        device.get('device.api') == 'bluez5')
+        if is_bluetooth:
+            address = device.get('api.bluez5.address') or device.get('bluez5.address')
+            if not isinstance(address, str) or not _BT_ADDRESS.fullmatch(address):
+                card = _BT_CARD.fullmatch(device_name)
+                if card is None:
+                    return None  # Unknown hardware identity: do not guess.
+                address = card.group(1)
+            address = address.replace('_', ':').upper()
+            identity = f'pipewire-bluetooth-v2\0{address}'
+        else:
+            # Keep existing ALSA keys: a physical card can expose independently
+            # configured speaker and headphone outputs through different nodes.
+            identity = f'pipewire-device-v1\0{device_name}\0{node_name}'
         key = hashlib.sha256(identity.encode('utf-8')).hexdigest()
         description = p.get('node.description') or p.get('node.nick') or node_name
         return AudioOutput(key, str(description), node_name, int(node['id']))
 
     def available(self) -> list[AudioOutput]:
+        # A Bluetooth device may briefly expose more than one output profile.
+        # A single hardware identity must appear only once in the picker.
         found = [self.output_for_node(node) for node in self._nodes()]
-        return sorted([output for output in found if output is not None],
-                      key=lambda x: (x.description.casefold(), x.key))
+        unique = {}
+        for output in found:
+            if output is not None:
+                unique.setdefault(output.key, output)
+        return sorted(unique.values(), key=lambda x: (x.description.casefold(), x.key))
 
     def _default_name(self) -> str | None:
         for metadata in self.objects.values():

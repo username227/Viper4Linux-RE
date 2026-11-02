@@ -35,7 +35,7 @@ def link(i, source, dest):
 class OutputTests(unittest.TestCase):
     def setUp(self):
         self.graph = module.PipeWireGraph()
-        self.graph.update([device(3, 'bluez_card.AB_CD_EF'), device(4, 'alsa_card.pci_0000'),
+        self.graph.update([device(3, 'bluez_card.AB_CD_EF_00_11_22'), device(4, 'alsa_card.pci_0000'),
                            node(33, 'bluez_output.AB_CD_EF.a2dp-sink', 3),
                            node(40, 'alsa_output.pci_0000.analog-stereo', 4),
                            node(50, module.SMART_CAPTURE),
@@ -62,6 +62,43 @@ class OutputTests(unittest.TestCase):
     def test_missing_device_identity_is_not_remembered(self):
         self.graph.update([node(90, 'ambiguous_output', 99), metadata('ambiguous_output')])
         self.assertIsNone(self.graph.active())
+
+    def test_identically_named_bluetooth_devices_remain_distinct(self):
+        # Two real headsets may have the same marketing name but distinct MACs.
+        other = node(110, 'bluez_output.B4_E7_B3_65_FE_67.1', 5)
+        other['info']['props']['node.description'] = 'EDIFIER NeoBuds Planar'
+        first = node(33, 'bluez_output.B4_E7_B3_66_04_8C.1', 3)
+        first['info']['props']['node.description'] = 'EDIFIER NeoBuds Planar'
+        self.graph.update([device(3, 'bluez_card.B4_E7_B3_66_04_8C'),
+                           device(5, 'bluez_card.B4_E7_B3_65_FE_67'), first, other])
+        self.assertNotEqual(self.graph.output_for_node(first).key,
+                            self.graph.output_for_node(other).key)
+
+    def test_bluetooth_profile_and_node_changes_preserve_identity(self):
+        initial = self.graph.output_for_node(self.graph.objects[33])
+        self.graph.update([{'id': 33}, node(92, 'bluez_output.AB_CD_EF_00_11_22.a2dp-sink', 3)])
+        self.assertEqual(self.graph.output_for_node(self.graph.objects[92]).key,
+                         initial.key)
+        self.graph.update([{'id': 92}, node(93, 'bluez_output.AB_CD_EF_00_11_22.headset-head-unit', 3)])
+        self.assertEqual(self.graph.output_for_node(self.graph.objects[93]).key,
+                         initial.key)
+
+    def test_same_card_distinct_alsa_outputs(self):
+        speaker = self.graph.output_for_node(self.graph.objects[40])
+        headphone_node = node(75, 'alsa_output.pci_0000.Headphones', 4)
+        self.graph.update([headphone_node])
+        headphones = self.graph.output_for_node(headphone_node)
+        self.assertNotEqual(speaker.key, headphones.key)
+
+    def test_multiple_profiles_of_one_headset_appear_once(self):
+        self.graph.update([node(92, 'bluez_output.AB_CD_EF_00_11_22.a2dp-sink', 3),
+                           node(93, 'bluez_output.AB_CD_EF_00_11_22.headset-head-unit', 3)])
+        self.assertEqual(len(self.graph.available()), 2)  # headset + internal speakers
+
+    def test_ambiguous_bluetooth_card_does_not_store_identity(self):
+        self.graph.update([device(14, 'bluez_card.Unknown'),
+                           node(99, 'bluez_output.Uncertain', 14)])
+        self.assertIsNone(self.graph.output_for_node(self.graph.objects[99]))
 
     def test_stream_parser_handles_nested_json_and_chunks(self):
         stream = module.JsonArrayStream()
