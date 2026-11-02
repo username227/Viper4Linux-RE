@@ -25,9 +25,11 @@ the value must lie within the stated inclusive range, and the command uses
 nearest-integer rounding with halfway values rounded away from zero.
 Some controls use fractional internal units instead; those are described
 individually. Invalid values return exit status 2 and leave the setting
-unchanged. To see compact command help, use
+unchanged. The six numbered command sections follow the GUI tabs in order;
+within each section, letters identify individual effect groups.
+To see compact command help, use
 .BR --help .
-.SH BACKEND AND STATUS
+.SH GLOBAL COMMANDS AND BACKEND STATUS
 .TP
 .B status
 Print live effect settings, sample rate, backend PID, and audio-block counter.
@@ -47,7 +49,56 @@ Backward-compatible aliases for the global
 and
 .B off
 commands, respectively. No arguments.
-.SH BASS
+.SH "1. OUTPUT"
+.SS "A. Master Limiter"
+.TP
+.BI "limiter-threshold " VALUE
+Set limiter threshold. VALUE accepts decimals from 0.3 through 1 inclusive
+as a linear multiplier; the DSP stores thousandths. The limiter itself is
+always present and has no enable/disable command.
+.TP
+.BI "limiter-gain " VALUE
+Set limiter output gain. VALUE accepts decimals from 0.01 through 2
+inclusive as a linear multiplier, stored in hundredths (1.0 is 100%).
+.TP
+.BI "limiter-pan " VALUE
+Set output pan. VALUE accepts decimals from -1 through 1 inclusive,
+where -1 is full left, 0 is centered, and 1 is full right; stored in
+hundredths.
+.SS "B. Playback Gain Control (AGC)"
+.TP
+.BR agc-on " and " agc-off
+Enable or disable Automatic Gain Control. No arguments.
+.TP
+.BI "agc-strength " VALUE
+Set AGC strength. VALUE accepts decimals from 0.5 through 3 inclusive,
+stored in hundredths.
+.TP
+.BI "agc-max " VALUE
+Set AGC maximum gain. VALUE accepts decimals from 1 through 10
+inclusive, stored in hundredths.
+.TP
+.BI "agc-threshold " VALUE
+Set AGC threshold as a linear multiplier. VALUE accepts decimals from
+0.3 through 1 inclusive, stored in thousandths.
+.SS "C. LUFS Targeting"
+.TP
+.BR lufs-on " and " lufs-off
+Enable or disable LUFS Targeting. No arguments.
+.TP
+.BI "lufs-target " VALUE
+Set target loudness. VALUE accepts decimals from -24 through -8 LUFS
+inclusive, stored in tenths.
+.TP
+.BI "lufs-max " VALUE
+Set maximum LUFS gain adjustment. VALUE accepts decimals from 0 through
+12 dB inclusive, stored in tenths.
+.TP
+.BI "lufs-speed " SPEED
+Set loudness adaptation speed. SPEED must be the whole number 0 (Slow),
+1 (Normal), or 2 (Fast); fractions are rejected.
+.SH "2. BASS"
+.SS "A. ViPER Bass"
 .TP
 .BR bass-on " and " bass-off
 Enable or disable ViPER Bass only, without changing the master switch.
@@ -69,14 +120,15 @@ The GUI represents gain in tenths.
 .BI "freq " VALUE
 Set ViPER Bass frequency in hertz. VALUE accepts decimals from 15 through
 150 inclusive and is rounded to the nearest whole hertz.
-.SH BASS MONO
+.SS "B. ViPER Bass Mono"
 .TP
 .BR mono-on " and " mono-off
 Enable or disable the independent Bass Mono effect. No arguments.
 .TP
 .BI "mono-mode " VALUE
-Choose Bass Mono mode. VALUE accepts decimals from 0 through 2 inclusive,
-rounded to the nearest whole-number mode (0, 1, or 2).
+Choose Bass Mono mode. VALUE accepts decimals from 0 through 2 inclusive
+and is rounded to the nearest whole-number mode: 0 = Natural,
+1 = Pure Bass+, or 2 = Subwoofer.
 .TP
 .BI "mono-strength " VALUE
 Set Bass Mono strength. VALUE accepts decimals from 0.5 through 10 inclusive;
@@ -85,7 +137,7 @@ the DSP stores hundredths and the GUI displays tenths.
 .BI "mono-freq " VALUE
 Set Bass Mono frequency. VALUE accepts decimals from 15 through 150 hertz
 inclusive, rounded to the nearest whole hertz.
-.SH PSYCHOACOUSTIC BASS
+.SS "C. Psychoacoustic Bass"
 .TP
 .BR psycho-on " and " psycho-off
 Enable or disable psychoacoustic bass. No arguments.
@@ -107,7 +159,7 @@ rounded to the nearest whole-number order.
 .BI "psycho-original " VALUE
 Set original-signal contribution. VALUE accepts decimals from 0 through
 100 percent inclusive, rounded to the nearest whole percentage point.
-.SH DYNAMIC SYSTEM / BASS
+.SS "D. Dynamic System"
 .TP
 .BR dynamic-on " and " dynamic-off
 Enable or disable Dynamic System bass. No arguments.
@@ -139,7 +191,8 @@ percent inclusive, rounded to the nearest whole percentage point.
 .BI "dynamic-strength " VALUE
 Set Dynamic System strength. VALUE accepts decimals from 0 through 100
 percent inclusive, rounded to the nearest whole percentage point.
-.SH EQUALIZERS
+.SH "3. EQ & TONE"
+.SS "A. Graphic Equalizer"
 .TP
 .BR eq-on " and " eq-off
 Enable or disable the graphic equalizer. No arguments.
@@ -154,11 +207,12 @@ the current number of bands, inclusive. DB accepts decimals from -12 through
 +12 dB inclusive, stored to the nearest hundredth of a decibel.
 Example:
 .B viper4linux-ctl eq-level 3 -1.75
+.SS "B. Dynamic EQ"
 .TP
 .BR deq-on " and " deq-off
 Enable or disable Dynamic EQ. No arguments. Configure individual Dynamic EQ
 bands in the GUI.
-.SH CLARITY AND SPECTRUM
+.SS "C. ViPER Clarity"
 .TP
 .BR clarity-on " and " clarity-off
 Enable or disable ViPER Clarity. No arguments.
@@ -170,6 +224,7 @@ the DSP stores thousandths and the GUI displays tenths.
 .BI "clarity-mode " VALUE
 Select Clarity mode. VALUE accepts decimals from 0 through 2 inclusive,
 rounded to the nearest whole-number mode (0 = Natural, 1 = Ozone, 2 = XHiFi).
+.SS "D. Spectrum Extension"
 .TP
 .BR spectrum-on " and " spectrum-off
 Enable or disable Spectrum Extension. No arguments.
@@ -182,7 +237,7 @@ hundreds of hertz.
 .BI "spectrum-exciter " VALUE
 Set the harmonic exciter. VALUE accepts decimals from 0 through 6
 inclusive; the DSP stores thousandths and the GUI displays tenths.
-.SH TUBE AND ANALOG EFFECTS
+.SS "E. Tube Simulator"
 .TP
 .BR tube-on " and " tube-off
 Enable or disable Tube Simulator. No arguments.
@@ -198,6 +253,7 @@ Set tube drive. VALUE must be a whole-number percentage from 0 through
 .BI "tube-mix " VALUE
 Set tube mix. VALUE must be a whole-number percentage from 0 through
 100 inclusive; fractional values are rejected.
+.SS "F. AnalogX"
 .TP
 .BR analogx-on " and " analogx-off
 Enable or disable AnalogX. No arguments.
@@ -205,7 +261,8 @@ Enable or disable AnalogX. No arguments.
 .BI "analogx-mode " MODE
 Choose AnalogX intensity. MODE must be a whole number: 0 = Mild,
 1 = Medium, or 2 = Strong.
-.SH SPATIAL PROCESSING
+.SH "4. SPATIAL"
+.SS "A. Crossfeed (ViPER Cure)"
 .TP
 .BR crossfeed-on " and " crossfeed-off
 Enable or disable native Cure/Crossfeed. No arguments.
@@ -213,6 +270,7 @@ Enable or disable native Cure/Crossfeed. No arguments.
 .BI "crossfeed-mode " MODE
 Choose crossfeed preset. MODE must be a whole number: 0 = Mild,
 1 = Medium, or 2 = Strong.
+.SS "B. Headphone Surround+"
 .TP
 .BR headphone-on " and " headphone-off
 Enable or disable Headphone Surround+. No arguments.
@@ -226,6 +284,7 @@ Legacy alias for
 .BR headphone-level .
 LEVEL uses the same 1 through 5 whole-number GUI numbering (not the older
 0 through 4 representation).
+.SS "C. Differential Surround"
 .TP
 .BR diff-on " and " diff-off
 Enable or disable Differential Surround. No arguments.
@@ -246,6 +305,7 @@ Set delayed-channel mix. VALUE accepts decimals from 0 through
 Set differential low-pass frequency. VALUE accepts decimals from 0 through
 20000 hertz inclusive, rounded to the nearest whole hertz; 0 disables the
 low-pass. The GUI represents this control in 100 Hz steps.
+.SS "D. Field Surround"
 .TP
 .BR field-on " and " field-off
 Enable or disable Field Surround. No arguments.
@@ -262,7 +322,7 @@ stored in hundredths.
 Set depth. VALUE accepts 0 (off) or decimals from 200 through 950
 inclusive; nonzero values are rounded to the nearest whole unit.
 The GUI exposes coarser 50-unit steps.
-.SH REVERBERATION
+.SS "E. Reverberation"
 .TP
 .BR reverb-on " and " reverb-off
 Enable or disable reverberation. No arguments.
@@ -286,7 +346,7 @@ inclusive, rounded to the nearest whole percentage point.
 .BI "reverb-dry " VALUE
 Set unprocessed (dry) mix. VALUE accepts decimals from 0 through 100
 percent inclusive, rounded to the nearest whole percentage point.
-.SH STEREO IMAGER
+.SS "F. Stereo Imager"
 .TP
 .BR imager-on " and " imager-off
 Enable or disable Stereo Imager. No arguments.
@@ -310,7 +370,8 @@ Set low crossover frequency. VALUE must be a whole number between 80 and
 .BI "imager-xover-high " VALUE
 Set high crossover frequency. VALUE must be a whole number between 2000 and
 8000 hertz inclusive; fractional values are rejected.
-.SH COMPRESSORS
+.SH "5. DYNAMICS"
+.SS "A. FET Compressor"
 .TP
 .BR fet-on " and " fet-off
 Enable or disable FET Compressor. No arguments.
@@ -322,6 +383,7 @@ inclusive; fractional values are rejected.
 .BI "fet-ratio " VALUE
 Set FET compression ratio. VALUE accepts decimals from 1 through 10
 inclusive, stored in tenths, representing ratios from 1:1 through 10:1.
+.SS "B. Multiband Compressor"
 .TP
 .BR mb-on " and " mb-off
 Enable or disable Multiband Compressor. No arguments.
@@ -330,15 +392,18 @@ Enable or disable Multiband Compressor. No arguments.
 Set multiband count. COUNT must be the whole number 3 or 5; fractional
 values and other whole numbers are rejected. Configure individual band
 parameters in the GUI.
-.SH CORRECTION AND CONVOLUTION
+.SH "6. SOUND CORRECTION"
+.SS "A. ViPER-DDC"
 .TP
 .BR ddc-on " and " ddc-off
 Enable or disable ViPER-DDC correction. No arguments. The selected VDC
 profile is managed in the GUI; a valid profile and supported sample rate
 are still required.
+.SS "B. Speaker Correction"
 .TP
 .BR speaker-on " and " speaker-off
 Enable or disable native Speaker Correction. No arguments.
+.SS "C. Convolver"
 .TP
 .BR convolver-on " and " convolver-off
 Enable or disable the convolver. No arguments. Import and select an IRS
@@ -347,52 +412,6 @@ or supported WAV impulse response in the GUI.
 .BI "convolver-cross " VALUE
 Set convolver cross-channel mix. VALUE accepts decimals from 0 through
 100 percent inclusive, rounded to the nearest whole percentage point.
-.SH OUTPUT LIMITER
-.TP
-.BI "limiter-threshold " VALUE
-Set limiter threshold. VALUE accepts decimals from 0.3 through 1 inclusive
-as a linear multiplier; the DSP stores thousandths. The limiter itself is
-always present and has no enable/disable command.
-.TP
-.BI "limiter-gain " VALUE
-Set limiter output gain. VALUE accepts decimals from 0.01 through 2
-inclusive as a linear multiplier, stored in hundredths (1.0 is 100%).
-.TP
-.BI "limiter-pan " VALUE
-Set output pan. VALUE accepts decimals from -1 through 1 inclusive,
-where -1 is full left, 0 is centered, and 1 is full right; stored in
-hundredths.
-.SH AUTOMATIC GAIN AND LOUDNESS
-.TP
-.BR agc-on " and " agc-off
-Enable or disable Automatic Gain Control. No arguments.
-.TP
-.BI "agc-strength " VALUE
-Set AGC strength. VALUE accepts decimals from 0.5 through 3 inclusive,
-stored in hundredths.
-.TP
-.BI "agc-max " VALUE
-Set AGC maximum gain. VALUE accepts decimals from 1 through 10
-inclusive, stored in hundredths.
-.TP
-.BI "agc-threshold " VALUE
-Set AGC threshold as a linear multiplier. VALUE accepts decimals from
-0.3 through 1 inclusive, stored in thousandths.
-.TP
-.BR lufs-on " and " lufs-off
-Enable or disable LUFS Targeting. No arguments.
-.TP
-.BI "lufs-target " VALUE
-Set target loudness. VALUE accepts decimals from -24 through -8 LUFS
-inclusive, stored in tenths.
-.TP
-.BI "lufs-max " VALUE
-Set maximum LUFS gain adjustment. VALUE accepts decimals from 0 through
-12 dB inclusive, stored in tenths.
-.TP
-.BI "lufs-speed " SPEED
-Set loudness adaptation speed. SPEED must be the whole number 0 (Slow),
-1 (Normal), or 2 (Fast); fractions are rejected.
 .SH SETTINGS AND PRECISION
 CLI edits are applied to the live control channel, then saved to the GUI's
 per-user Qt settings store. The short-lived CLI tool reports a nonzero exit
