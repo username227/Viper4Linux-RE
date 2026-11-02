@@ -8,7 +8,7 @@ launcher = (root / 'src/viper_launcher.py').read_text()
 backend = (root / 'packaging/arch/start-backend').read_text()
 for required in ("pkgname=viper4linux-re-git", 'pkgver() {',
                  'git rev-list --count HEAD', 'git rev-parse --short=12 HEAD',
-                 'git+file://', 'Desktop/viper4linux-submodule', 'ViPERDSP::git+https://',
+                 'github.com/username227/viper4linux-re.git', 'ViPERDSP::git+https://',
                  'git submodule init', 'submodule.third_party/ViPERDSP.url',
                  'protocol.file.allow=always submodule update', 'ViPERDSP-patched',
                  'VIPERDSP_SOURCE_DIR=',
@@ -22,6 +22,9 @@ assert 'jamesdsp' not in re.findall(r'^\s*conflicts=.*', pkg, flags=re.M)[0].low
 assert (root / '.gitmodules').read_text().find('path = third_party/ViPERDSP') >= 0
 assert (root / '.gitmodules').read_text().find('https://github.com/likelikeslike/ViPERDSP.git') >= 0
 assert 'ln -sfn' not in pkg
+assert 'usr/share/licenses/$pkgname/LICENSE' in pkg
+assert (root / 'LICENSE').is_file()
+assert (root / 'THIRD-PARTY-NOTICES.md').is_file()
 assert 'git -C third_party/ViPERDSP archive HEAD' in pkg
 assert '-DVIPERDSP_SOURCE_DIR=' in pkg
 assert 'SYSTEM_MODE' in launcher and "Path('/usr/bin/viper4linux-gui')" in launcher

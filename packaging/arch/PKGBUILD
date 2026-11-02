@@ -1,24 +1,21 @@
-# Maintainer: Viper4Linux development (local testing package)
-# This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
-# Store this PKGBUILD OUTSIDE the source repository, e.g. ~/Desktop/viper4linux-package/
-# Run `makepkg -si` from that separate directory.
-# By default, the local Git source checkout is ~/Desktop/viper4linux-submodule.
-# If you move it, override the path with VIPER4LINUX_REPO=/absolute/path makepkg -si.
-# Upstream ViPERDSP is pinned by the Git submodule commit in our repository.
+# Maintainer: ViPER for Linux development
+# Development PKGBUILD: still pending final packaging and licensing review.
+# ViPERDSP revision is pinned by the application's recorded Git submodule.
 
 pkgname=viper4linux-re-git
 pkgver=0.1.0.r48.g000000000000
 pkgrel=1
 pkgdesc='Reverse-engineered ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
 arch=('x86_64')
-url='https://github.com/likelikeslike/ViPERDSP'
-license=('custom')
+url='https://github.com/username227/viper4linux-re'
+license=('MIT' 'LicenseRef-ViPERDSP')
 depends=('glibc' 'gcc-libs' 'qt6-base' 'pipewire' 'ladspa' 'python')
 makedepends=('git' 'cmake' 'pkgconf')
 conflicts=('viper4linux-re' 'viper4linux' 'viper4linux-git')
 provides=('viper4linux-re')
-_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-submodule}"
-source=("viper4linux::git+file://${_local_repo}"
+# Override only for pre-push/local testing: VIPER4LINUX_GIT_URL=file:///absolute/path
+_app_git_url="${VIPER4LINUX_GIT_URL:-https://github.com/username227/viper4linux-re.git}"
+source=("viper4linux::git+${_app_git_url}"
         "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git")
 sha256sums=('SKIP'
             'SKIP')
@@ -92,6 +89,10 @@ package() {
 # Man Pages
     install -Dm644 "$tree/man/viper4linux.1" "$pkgdir/usr/share/man/man1/viper4linux.1"
     install -Dm644 "$tree/man/viper4linux-ctl.1" "$pkgdir/usr/share/man/man1/viper4linux-ctl.1"
+
+# License and Third-Party Notices
+    install -Dm644 "$tree/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "$tree/THIRD-PARTY-NOTICES.md" "$pkgdir/usr/share/licenses/$pkgname/ViPERDSP-NOTICE.md"
 
 # Documentation
     install -Dm644 "$tree/README.md" "$pkgdir/usr/share/doc/viper4linux/README.md"
