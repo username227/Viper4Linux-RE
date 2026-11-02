@@ -15,10 +15,10 @@ int main(int argc, char** argv) {
     assert(server.create_server());
     auto* c = server.get();
     QSettings settings("ViPERforLinux", "ViPERClean");
-    QTemporaryDir paths;
-    assert(paths.isValid());
-    const QString ddc = paths.path() + "/device.vdc";
-    const QString ir = paths.path() + "/device.irs";
+    QTemporaryDir profileDirectory;
+    assert(profileDirectory.isValid());
+    const QString ddc = profileDirectory.path() + "/device.vdc";
+    const QString ir = profileDirectory.path() + "/device.irs";
     for (const auto& path : {ddc, ir}) {
         QFile file(path);
         assert(file.open(QIODevice::WriteOnly));
