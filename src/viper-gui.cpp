@@ -4326,9 +4326,29 @@ private:
     void resetOutputControls() {
         applyOutputSettings(500, 100, 0, false, 100, 300, 900, false, -140, 60, 1);
     }
+    // Compare the widgets before/after a backend read. Signal blockers are
+    // intentional: reflecting CLI changes must not republish a stale GUI
+    // snapshot over them. We then persist the resulting live settings without
+    // sending a second change to the DSP. This is GUI-thread-only code.
+    std::vector<int> liveUiSnapshot() const {
+        std::vector<int> values;
+        for (const auto* widget : findChildren<QCheckBox*>())
+            values.push_back(widget->isChecked() ? 1 : 0);
+        for (const auto* widget : findChildren<QComboBox*>())
+            values.push_back(widget->currentIndex());
+        for (const auto* widget : findChildren<QSlider*>())
+            values.push_back(widget->value());
+        values.push_back(deq_active_count_);
+        for (const auto& b : deq_bands_) {
+            values.insert(values.end(), {b.frequency, b.q, b.gain, b.threshold,
+                                         b.attack, b.release, b.type});
+        }
+        return values;
+    }
     void readBackend() {
         if (!viperbass::running(mapping_.get())) return;
         auto* c = mapping_.get();
+        const auto before = liveUiSnapshot();
         // Reflect changes made from the CLI; avoid tug-of-war while dragging sliders.
         const QSignalBlocker block0(global_);
         const QSignalBlocker block1(enabled_);
@@ -4354,6 +4374,8 @@ private:
         const QSignalBlocker blockAgc(agc_enabled_), blockLufs(lufs_enabled_);
         const QSignalBlocker blockSpeed(lufs_speed_);
         const QSignalBlocker blockConv(convolver_enabled_);
+        const QSignalBlocker blockDdc(ddc_enabled_), blockSpeaker(speaker_enabled_);
+        const QSignalBlocker blockDeq(deq_enabled_);
         const QSignalBlocker blockEq(eq_enabled_);
         eq_enabled_->setChecked(c->eq_enabled.load() != 0);
         const int remoteEqBands = validEqBands(c->eq_band_count.load());
@@ -4415,6 +4437,8 @@ private:
             }
         }
         fet_enabled_->setChecked(c->fet_enabled.load() != 0);
+        deq_enabled_->setChecked(c->deq_enabled.load() != 0);
+        updateDeqOverview();
         for (const auto& item : std::initializer_list<std::pair<SliderRow,int>>{
             {fet_threshold_, std::clamp(c->fet_threshold_db.load(), -48, 0)},
             {fet_ratio_, std::clamp(c->fet_ratio_tenths.load(), 10, 100)},
@@ -4588,6 +4612,11 @@ private:
             frequency_.slider->setValue(std::clamp(c->frequency_hz.load(), 15, 150));
         }
         updateLabels();
+        // CLI edits become visible within the polling interval and are also
+        // retained in QSettings for the next backend startup. Persist only on
+        // actual UI changes: otherwise the 500ms poll would keep resetting the
+        // batched disk-save timer and prevent it from ever firing.
+        if (before != liveUiSnapshot()) persistCurrentSettings();
     }
     void pollBackend() {
         if (!ensureBackend()) {

@@ -323,3 +323,17 @@ assert 'addTabNotice(correctionLayout, "Device correction"' not in source
 assert 'addEffectPanel(correctionLayout, ddc_group, "ddc", ddc_enabled_)' in source
 assert 'addEffectPanel(correctionLayout, speaker_group, "speaker_correction", speaker_enabled_)' in source
 print('PASS: compact Sound Correction tab without redundant notice')
+
+# CLI-to-GUI readback: worker-managed effect switches must not trigger a
+# stale GUI push while polling. Persist only actual readback changes, not every
+# 500 ms tick (which would starve QSettings' 300 ms write timer).
+for token in (
+    'const auto before = liveUiSnapshot();',
+    'const QSignalBlocker blockDdc(ddc_enabled_), blockSpeaker(speaker_enabled_);',
+    'const QSignalBlocker blockDeq(deq_enabled_);',
+    'deq_enabled_->setChecked(c->deq_enabled.load() != 0);',
+    'if (before != liveUiSnapshot()) persistCurrentSettings();',
+):
+    assert token in source, token
+assert 'if (before != liveUiSnapshot()) publishToBackend();' not in source
+print('PASS: CLI readback blocks feedback and persists GUI-observed backend edits')
