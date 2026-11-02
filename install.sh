@@ -3,7 +3,7 @@
 # This script never touches ~/Desktop/viper-for-linux or user PipeWire services.
 set -Eeuo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
-for tool in git cmake g++ gcc pkg-config pipewire python3 nm; do
+for tool in cmake g++ gcc pkg-config pipewire python3 nm; do
     command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 1; }
 done
 [[ -r /usr/include/ladspa.h ]] || { echo 'Install Arch package ladspa' >&2; exit 1; }
@@ -21,25 +21,24 @@ fi
 echo '== Isolated DSP and native Convolver regression tests =='
 bash ./tests/check-mock.sh
 python3 ./tests/check-launcher.py
-# Fetch the exact pinned upstream engine. The independent source tree contains
-# all OUR code, scripts, tests and configuration; ViPERDSP is a third-party dep.
-readonly revision=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
-if [[ ! -e third_party/ViPERDSP/.git ]]; then
-  if [[ -e third_party/ViPERDSP ]]; then
-    echo 'Unexpected non-git third_party/ViPERDSP; will not overwrite.' >&2; exit 1
-  fi
-  git clone --depth 50 https://github.com/likelikeslike/ViPERDSP.git third_party/ViPERDSP
+# Git checkouts use the recorded submodule commit. Unified release archives
+# already contain the pinned source and do not need Git to compile.
+if [[ -d .git || -f .git ]]; then
+  command -v git >/dev/null || { echo 'Missing tool: git' >&2; exit 1; }
+  git submodule update --init --checkout -- third_party/ViPERDSP
+  expected=$(git rev-parse HEAD:third_party/ViPERDSP)
+  actual=$(git -C third_party/ViPERDSP rev-parse HEAD)
+  [[ $actual == "$expected" ]] || {
+    echo "ViPERDSP submodule mismatch: expected $expected, found $actual" >&2
+    exit 1
+  }
+else
+  [[ -f third_party/ViPERDSP/CMakeLists.txt && -f third_party/ViPERDSP/viper/ViPER.cpp ]] || {
+    echo 'ViPERDSP missing: use git clone --recurse-submodules or a unified source archive.' >&2
+    exit 1
+  }
+  echo 'Using bundled ViPERDSP source from unified release archive.'
 fi
-if ! git -C third_party/ViPERDSP cat-file -e "${revision}^{commit}" 2>/dev/null; then
-  git -C third_party/ViPERDSP fetch --unshallow origin 2>/dev/null || git -C third_party/ViPERDSP fetch origin
-fi
-git -C third_party/ViPERDSP cat-file -e "${revision}^{commit}" || {
-    echo 'Pinned ViPERDSP commit not found; refusing to use an unverified release.' >&2; exit 1;
-}
-git -C third_party/ViPERDSP checkout --detach "$revision"
-[[ $(git -C third_party/ViPERDSP rev-parse HEAD) == "$revision" ]] || {
-    echo 'Upstream engine revision mismatch.' >&2; exit 1;
-}
 # Correct the pinned library's LUFS speed-setting logic only in this local
 # dependency checkout; refuse any unexpected upstream source.
 python3 patches/fix_lufs_speed.py

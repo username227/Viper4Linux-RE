@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ViPERDSP/CMakeLists.txt")
-  message(FATAL_ERROR "ViPERDSP missing: run ./install.sh to fetch the pinned upstream revision")
+  message(FATAL_ERROR "ViPERDSP source missing: initialize the Git submodule or use a unified release source archive")
 endif()
 
 # Upstream static DSP library, built as PIC for the LADSPA plugin.
