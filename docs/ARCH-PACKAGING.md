@@ -76,12 +76,16 @@ GitHub release, binary distribution, or AUR commit.
    application and DSP sources are not downloaded during this build.
 4. Download the `viper4linux-re-1.0.0-release-candidate` Actions artifact. It
    contains the unified tarball, `SHA256SUMS`, versioned `PKGBUILD`, `.SRCINFO`,
-   and `SOURCE-COMMIT`. Review the test logs and source before publication.
+   `SOURCE-COMMIT`, the built main `viper4linux-re` Arch package, and
+   `ARCH-SHA256SUMS` for that package. The optional `-debug` package is not
+   uploaded or included in the release.
+   Review the test logs and source before publication.
 5. Ensure the release tag `v1.0.0` refers to **exactly** the tested
    `SOURCE-COMMIT`. Create the GitHub release manually, upload the unified
    tarball and checksum file as release assets, and verify the stable PKGBUILD
-   URL and checksum. GitHub's auto-generated archive is **not** the unified
-   source archive.
+   URL and checksum. Attach the tested main Arch package and its
+   `ARCH-SHA256SUMS` as separate GitHub release assets.
+   GitHub's auto-generated archive is **not** the unified source archive.
 6. Publish/update the AUR checkouts **manually**. The stable AUR PKGBUILD may
    use the generated version and SHA-256; regenerate `.SRCINFO` before pushing.
 

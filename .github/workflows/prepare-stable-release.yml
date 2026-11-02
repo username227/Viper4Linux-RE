@@ -53,8 +53,12 @@ jobs:
           python3 tests/check-release-artifacts.py "$VERSION" "$GITHUB_WORKSPACE/dist"
           (cd dist && sha256sum --check SHA256SUMS)
           test -s dist/.SRCINFO
+          test -s dist/ARCH-SHA256SUMS
+          (cd dist && sha256sum --check ARCH-SHA256SUMS)
+          compgen -G "dist/viper4linux-re-${VERSION}-*.pkg.tar.zst" > /dev/null
+          ! compgen -G 'dist/viper4linux-re-debug-*.pkg.tar.zst' > /dev/null
 
-      - name: Upload reviewable release assets (no publication)
+      - name: Upload source and main Arch package (no publication)
         uses: actions/upload-artifact@v4
         with:
           name: viper4linux-re-${{ inputs.version }}-release-candidate
@@ -66,4 +70,6 @@ jobs:
             dist/PKGBUILD
             dist/.SRCINFO
             dist/SOURCE-COMMIT
+            dist/ARCH-SHA256SUMS
+            dist/viper4linux-re-${{ inputs.version }}-*.pkg.tar.zst
           include-hidden-files: true

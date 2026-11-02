@@ -24,8 +24,15 @@ runuser -u builder -- env SRCDEST="$release_dir" bash -c '
     makepkg --noconfirm --cleanbuild --nodeps
     makepkg --printsrcinfo > "$1/.SRCINFO"
 ' bash "$release_dir"
-package=$(find "$release_dir/arch-build" -maxdepth 1 -name "viper4linux-re-${version}-*.pkg.tar.*" -print -quit)
-[[ -f $package ]] || { echo 'No Arch package was generated.' >&2; exit 1; }
+# Only the main application package is a release asset. makepkg may also
+# produce a debug-symbol package, which is deliberately not distributed here.
+shopt -s nullglob
+main_packages=("$release_dir"/arch-build/viper4linux-re-"${version}"-*.pkg.tar.zst)
+(( ${#main_packages[@]} == 1 )) || {
+    echo "Expected exactly one main Arch package; found ${#main_packages[@]}." >&2
+    exit 1
+}
+package=${main_packages[0]}
 pacman -Qip "$package"
 listing=$(pacman -Qlp "$package")
 for installed in usr/bin/viper4linux usr/bin/viper4linux-gui \
@@ -36,4 +43,13 @@ for installed in usr/bin/viper4linux usr/bin/viper4linux-gui \
         echo "Missing expected package entry: $installed" >&2; exit 1;
     }
 done
+# Stage only the tested application package, never the optional debug symbols.
+name=$(basename -- "$package")
+install -m644 -- "$package" "$release_dir/$name"
+(
+    cd "$release_dir"
+    sha256sum -- "$name" > ARCH-SHA256SUMS
+    sha256sum --check ARCH-SHA256SUMS
+)
 echo "PASS: Built verified stable Arch package from local unified archive: $package"
+echo "PASS: Staged main Arch package and ARCH-SHA256SUMS for release review."

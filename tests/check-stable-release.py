@@ -17,6 +17,19 @@ def run(*args, cwd=None):
     return result.stdout
 
 
+# Release packaging must preserve the main Arch package from makepkg and
+# upload it alongside the unified source. The debug-symbol package is not a
+# release asset; these checks guard against accidentally distributing it.
+workflow = (root / '.github/workflows/prepare-stable-release.yml').read_text()
+arch_build = (root / 'scripts/test-stable-arch.sh').read_text()
+assert 'dist/viper4linux-re-${{ inputs.version }}-*.pkg.tar.zst' in workflow, 'Main Arch package missing from upload-artifact'
+assert 'dist/*.pkg.tar.zst' not in workflow, 'Wildcard would upload debug package'
+assert 'dist/ARCH-SHA256SUMS' in workflow, 'Arch binary checksums missing from upload-artifact'
+assert 'sha256sum --check ARCH-SHA256SUMS' in workflow, 'Arch checksum validation missing'
+assert 'ARCH-SHA256SUMS' in arch_build, 'Arch job does not generate checksum file'
+assert 'install -m644 -- "$package" "$release_dir/$name"' in arch_build, 'Main Arch package not staged'
+assert '"${debug_packages[@]}"' not in arch_build, 'Debug package must not be staged'
+
 with tempfile.TemporaryDirectory(prefix='viper-release-e2e-') as temp:
     temp = Path(temp)
     app, dsp, out = (temp / x for x in ('app', 'ViPERDSP', 'out'))
