@@ -765,6 +765,37 @@ int main(int argc, char** argv) {
     near(ol[2047], compressor_baseline);
     d->cleanup(h);
     page.close();
+
+    // Reproduce worker-startup race deterministically. Old code seeded
+    // observed_* from the latest request and lost these queued commands.
+    // The new code seeds from *applied* serials and processes them correctly.
+    assert(setenv("VIPER_MOCK_WORKER_START_DELAY_MS", "400", 1) == 0);
+    h = d->instantiate(d, 48000);
+    assert(h);
+    assert(page.attach());
+    p = page.get();
+    p->eq_enabled.store(1);
+    p->eq_band_count.store(31);
+    p->eq_levels_hundredths[0].store(375);
+    p->tube_enabled.store(1);
+    p->tube_model.store(1);
+    const auto pending_eq = p->eq_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    const auto pending_tube = p->tube_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    const auto pending_ir = p->convolver_request_serial.fetch_add(1, std::memory_order_release) + 1;
+    for (int i = 0; i < 200 &&
+         (p->eq_applied_serial.load() != pending_eq ||
+          p->tube_applied_serial.load() != pending_tube ||
+          p->convolver_applied_serial.load() != pending_ir); ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    assert(p->eq_applied_serial.load() == pending_eq &&
+           "EQ request queued before worker startup was lost");
+    assert(p->tube_applied_serial.load() == pending_tube &&
+           "Tube request queued before worker startup was lost");
+    assert(p->convolver_applied_serial.load() == pending_ir &&
+           "Convolver request queued before worker startup was lost");
+    d->cleanup(h);
+    page.close();
+    assert(unsetenv("VIPER_MOCK_WORKER_START_DELAY_MS") == 0);
     dlclose(lib);
     std::puts("PASS: mock LADSPA, native FET/Multiband Compressor/Stereo Imager/Dynamic EQ/AnalogX/Tube Simulator/Graphic EQ/Convolver forwarding, limiter/AGC/LUFS, bypass, IPC isolation, rates, cleanup");
 }

@@ -387,17 +387,28 @@ struct Processor {
     }
 
     void ir_worker_loop() {
-        auto observed = controls->convolver_request_serial.load(std::memory_order_acquire);
-        auto observed_eq = controls->eq_request_serial.load(std::memory_order_acquire);
-        auto observed_tube = controls->tube_request_serial.load(std::memory_order_acquire);
-        auto observed_analogx = controls->analogx_request_serial.load(std::memory_order_acquire);
-        auto observed_crossfeed = controls->crossfeed_request_serial.load(std::memory_order_acquire);
-        auto observed_imager = controls->imager_request_serial.load(std::memory_order_acquire);
-        auto observed_speaker = controls->speaker_request_serial.load(std::memory_order_acquire);
-        auto observed_ddc = controls->ddc_request_serial.load(std::memory_order_acquire);
-        auto observed_fet = controls->fet_request_serial.load(std::memory_order_acquire);
-        auto observed_multiband = controls->mb_request_serial.load(std::memory_order_acquire);
-        auto observed_deq = controls->deq_request_serial.load(std::memory_order_acquire);
+#ifdef VIPER_MOCK_TEST_IPC
+        // Regression hook: delay worker initialization so the mock can queue
+        // requests first. Production builds do not contain this code.
+        if (const char* delay = std::getenv("VIPER_MOCK_WORKER_START_DELAY_MS")) {
+            const int ms = std::clamp(std::atoi(delay), 0, 1000);
+            std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+        }
+#endif
+        // Start at the last acknowledged request, NOT the newest request.
+        // Otherwise a command queued after instantiate() but before this
+        // thread is scheduled can be silently mistaken for completed work.
+        auto observed = controls->convolver_applied_serial.load(std::memory_order_acquire);
+        auto observed_eq = controls->eq_applied_serial.load(std::memory_order_acquire);
+        auto observed_tube = controls->tube_applied_serial.load(std::memory_order_acquire);
+        auto observed_analogx = controls->analogx_applied_serial.load(std::memory_order_acquire);
+        auto observed_crossfeed = controls->crossfeed_applied_serial.load(std::memory_order_acquire);
+        auto observed_imager = controls->imager_applied_serial.load(std::memory_order_acquire);
+        auto observed_speaker = controls->speaker_applied_serial.load(std::memory_order_acquire);
+        auto observed_ddc = controls->ddc_applied_serial.load(std::memory_order_acquire);
+        auto observed_fet = controls->fet_applied_serial.load(std::memory_order_acquire);
+        auto observed_multiband = controls->mb_applied_serial.load(std::memory_order_acquire);
+        auto observed_deq = controls->deq_applied_serial.load(std::memory_order_acquire);
         while (!ir_worker_stop.load(std::memory_order_acquire)) {
             const auto requested = controls->convolver_request_serial.load(std::memory_order_acquire);
             if (requested != observed) {
