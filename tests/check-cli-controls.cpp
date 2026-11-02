@@ -57,8 +57,8 @@ int main() {
     run("all-on");
     assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
 
-    // Master/status commands print all six categories; individual effect
-    // edits print only that effect's settings (not a single giant status line).
+    // Only an explicit status query prints all six categories. Master switch
+    // commands show one confirmation line; effect edits remain scoped.
     std::string displayed;
     assert(invoke({"bass-on"}, &displayed) == 0);
     assert(displayed.find("A. ViPER Bass - ON") != std::string::npos);
@@ -71,9 +71,13 @@ int main() {
                              "5. Dynamics", "6. Sound Correction"})
         assert(displayed.find(tab) != std::string::npos);
     assert(invoke({"off"}, &displayed) == 0);
-    assert(displayed.find("Master processing: BYPASSED") != std::string::npos);
-    assert(displayed.find("6. Sound Correction") != std::string::npos);
+    assert(displayed == "Master processing: BYPASSED\n");
     assert(invoke({"on"}, &displayed) == 0);
+    assert(displayed == "Master processing: ON\n");
+    assert(invoke({"all-off"}, &displayed) == 0);
+    assert(displayed == "Master processing: BYPASSED\n");
+    assert(invoke({"all-on"}, &displayed) == 0);
+    assert(displayed == "Master processing: ON\n");
 
     // Scripting interface uses the same numbered levels as the GUI, while
     // shared memory / ViPERDSP retain their existing zero-based indices.

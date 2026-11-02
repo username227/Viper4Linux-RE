@@ -39,23 +39,30 @@ To see compact command help, use
 .SH GLOBAL COMMANDS AND BACKEND STATUS
 .TP
 .B status
-Print live effect settings, sample rate, backend PID, and audio-block counter.
+Print the complete DSP report, grouped into the same six sections as the GUI.
+It includes all effect settings, sample rate, backend PID, and audio-block
+counter. Only this command prints the full configuration.
 The status command never changes or saves settings. A started backend with no
 DSP channel reports READY TO PROCESS AUDIO. A connected channel does not prove
 that audible music is playing; compare the counter between repeated queries.
 .TP
 .B on
-Enable master DSP processing. No arguments. The limiter remains in the path.
+Enable master DSP processing. No arguments. Prints only the confirmation
+.B "Master processing: ON"
+instead of the complete status report. The limiter remains in the path.
 .TP
 .B off
-Bypass master DSP processing. No arguments. The limiter remains in the path.
+Bypass master DSP processing. No arguments. Prints only the confirmation
+.B "Master processing: BYPASSED"
+instead of the complete status report. The limiter remains in the path.
 .TP
 .BR all-on " and " all-off
 Backward-compatible aliases for the global
 .B on
 and
 .B off
-commands, respectively. No arguments.
+commands, respectively. No arguments. They also print only the one-line
+master-processing confirmation.
 .SH "1. OUTPUT"
 .SS "A. Master Limiter"
 .TP

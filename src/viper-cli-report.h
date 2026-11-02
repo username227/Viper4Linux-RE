@@ -248,8 +248,13 @@ inline void section(std::ostream& out, const Controls& c, const char* name,
 inline void printCliReport(std::ostream& out, const Controls& c,
                            const std::string& cmd, int eqBand = -1) {
     using namespace cli_report;
-    if (cmd != "status" && cmd != "on" && cmd != "off" &&
-        cmd != "all-on" && cmd != "all-off") {
+    // Only an explicit status query prints the complete six-tab report.
+    // The master switch and its legacy aliases confirm the new state briefly.
+    if (cmd == "on" || cmd == "off" || cmd == "all-on" || cmd == "all-off") {
+        effect(out, c, Effect::Master, false);
+        return;
+    }
+    if (cmd != "status") {
         effect(out, c, fromCommand(cmd), false, eqBand);
         return;
     }
