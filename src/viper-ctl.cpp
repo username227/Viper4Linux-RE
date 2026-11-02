@@ -250,7 +250,7 @@ int executeOne(int argc, char** argv) {
             c.spectrum_exciter_milli.store(static_cast<int>(std::lround(number(argv[2], 0.f, 6.f) * 1000.f)));
         else if (cmd == "headphone-on" && argc == 2) c.headphone_enabled.store(1);
         else if (cmd == "headphone-off" && argc == 2) c.headphone_enabled.store(0);
-        else if ((cmd == "headphone-level" || cmd == "headphone-quality") && argc == 3) {
+        else if (cmd == "headphone-level" && argc == 3) {
             // CLI and GUI both use Levels 1..5. The shared DSP control uses
             // 0..4 internally; keep that representation unchanged for presets.
             const float level = number(argv[2], 1.f, 5.f);

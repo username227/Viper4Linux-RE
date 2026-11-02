@@ -44,7 +44,7 @@ inline const ArgSpec* withArgs(const std::string& cmd) {
         {"tube-model",1,Kind::Whole,0,2}, {"tube-drive",1,Kind::Whole,0,100},
         {"tube-mix",1,Kind::Whole,0,100}, {"analogx-mode",1,Kind::Whole,0,2},
         {"crossfeed-mode",1,Kind::Whole,0,2},
-        {"headphone-level",1,Kind::Whole,1,5}, {"headphone-quality",1,Kind::Whole,1,5},
+        {"headphone-level",1,Kind::Whole,1,5},
         {"diff-delay",1,Kind::Decimal,1,20}, {"diff-reverse",1,Kind::Whole,0,1},
         {"diff-mix",1,Kind::Decimal,0,100}, {"diff-lowpass",1,Kind::Decimal,0,20000},
         {"field-widen",1,Kind::Decimal,0,8}, {"field-mid",1,Kind::Decimal,1,2},

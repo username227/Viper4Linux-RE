@@ -119,19 +119,17 @@ int main() {
         assert(status.find("Headphone Surround+ - ") != std::string::npos);
         assert(status.find("Surround level: " + value) != std::string::npos);
     }
-    // Backward-compatible name, but the argument also follows GUI numbering.
-    assert(invoke({"headphone-quality", "2"}) == 0);
-    assert(c.headphone_quality.load() == 1);
+    // Retired generic name must be rejected without modifying the live level.
+    assert(invoke({"headphone-quality", "2"}) == 2);
+    assert(c.headphone_quality.load() == 4);
     for (const char* invalid : {"0", "6", "-1", "2.5", "3.25", "abc", "2x", "nan"}) {
         const int before = c.headphone_quality.load();
         assert(invoke({"headphone-level", invalid}) == 2);
         assert(c.headphone_quality.load() == before);
-        assert(invoke({"headphone-quality", invalid}) == 2);
-        assert(c.headphone_quality.load() == before);
     }
     assert(invoke({"headphone-level"}) == 2);
     assert(invoke({"headphone-level", "2", "unexpected"}) == 2);
-    assert(c.headphone_quality.load() == 1);
+    assert(c.headphone_quality.load() == 4);
 
     // All 24 native effect groups have a basic, scriptable switch (the
     // limiter is built into the output path and has parameters, not an on/off).

@@ -1399,12 +1399,8 @@ public:
         headphone_form->addRow("Surround processing", headphone_enabled_);
         headphone_quality_ = new QComboBox(headphone_group);
         headphone_quality_->addItems({"Level 1", "Level 2", "Level 3", "Level 4", "Level 5"});
-        headphone_quality_->setToolTip("Five distinct upstream VHE surround profiles; higher levels are not necessarily better. Changes may rebuild convolution filters.");
+        headphone_quality_->setToolTip("Five distinct upstream VHE surround profiles; higher levels are not necessarily better. Supported at 44.1 and 48 kHz.");
         headphone_form->addRow("Surround level", headphone_quality_);
-        headphone_note_ = new QLabel("Convolution-based spatial effect. Supported at 44.1 and 48 kHz.", headphone_group);
-        headphone_note_->setWordWrap(true);
-        headphone_note_->setStyleSheet("color: palette(mid);");
-        headphone_form->addRow(headphone_note_);
         addEffectPanel(spatialLayout, headphone_group, "headphone", headphone_enabled_);
 
         auto* diff_group = new QGroupBox("Differential Surround", tabs_);
@@ -4597,9 +4593,19 @@ private:
             diff_lowpass_.slider->setValue(std::clamp(c->diff_lp_hz.load() / 100, 0, 200));
         }
         const int rate = c->sample_rate_hz.load();
-        headphone_note_->setText((rate != 0 && rate != 44100 && rate != 48000)
-            ? QString("Warning: current processing rate %1 Hz is unsupported by upstream VHE; surround is inactive.").arg(rate)
-            : QString("Convolution-based spatial effect. Supported at 44.1 and 48 kHz."));
+        if (rate != 0 && rate != 44100 && rate != 48000) {
+            const QString warning = QString(
+                "Current processing rate %1 Hz is unsupported by upstream VHE; "
+                "Headphone Surround+ is inactive. Supported rates: 44.1 and 48 kHz.").arg(rate);
+            headphone_quality_->setToolTip(warning);
+            headphone_enabled_->setToolTip(warning);
+        } else {
+            const QString details =
+                "Five distinct upstream VHE surround profiles, not a quality ranking. "
+                "Supported at 44.1 and 48 kHz; switching levels may rebuild filters.";
+            headphone_quality_->setToolTip(details);
+            headphone_enabled_->setToolTip(details);
+        }
         global_->setChecked(c->master_enabled.load() != 0);
         enabled_->setChecked(c->enabled.load() != 0);
         bass_mode_->setCurrentIndex(std::clamp(c->bass_mode.load(), 0, 2));
@@ -4781,7 +4787,7 @@ private:
     SliderRow clarity_gain_{};
     QCheckBox* headphone_enabled_{};
     QComboBox* headphone_quality_{};
-    QLabel* headphone_note_{};
+
     QCheckBox* field_enabled_{};
     SliderRow field_widen_{};
     SliderRow field_mid_{};

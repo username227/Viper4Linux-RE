@@ -37,12 +37,23 @@ Three documented downstream patches are listed in [Development](DEVELOPMENT.md).
 
 | Effect | Purpose and cautions |
 |---|---|
-| Headphone Surround+ | Native headphone spatial effect with five selectable surround levels (different filter profiles, not a quality ranking); especially audible on headphones. |
+| Headphone Surround+ | Native VHE convolution-based headphone spatial effect, with five distinct selectable profiles rather than a quality ranking; especially audible on headphones. |
 | Differential Surround | Delay, wet/dry mix, polarity and low-pass processing. |
 | Field Surround | Width, central image, and depth controls. |
 | Reverberation | Room, width, damping, wet and dry levels. |
 | Cure / Crossfeed | Blends filtered left/right content; may narrow apparent stereo width. |
 | Stereo Imager | Independent low/mid/high side-channel width (100% = unchanged width) and crossover frequencies; widening can weaken mono compatibility. |
+
+### Headphone Surround+ details
+
+Headphone Surround+ uses five upstream VHE surround profiles, labeled
+**Level 1** through **Level 5**. Higher numbers do not necessarily mean
+better audio: each level gives a different spatial presentation. Switching
+levels can rebuild the convolution filters. The effect supports native
+processing at **44.1 and 48 kHz**; when the PipeWire processing rate is
+different, this effect is inactive. The GUI keeps the level selector compact
+and reports a sample-rate incompatibility in the selector/switch tooltip,
+rather than displaying a permanent description in the expanded panel.
 
 ## Dynamics (2)
 
