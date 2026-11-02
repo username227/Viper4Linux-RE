@@ -28,6 +28,16 @@ python3 -m unittest discover -s tests -p 'test_output_*.py' -v
 under `$XDG_DATA_HOME/viper4linux/outputs/` for remembered outputs and their
 settings snapshots, isolated from the named preset library.
 
+## Stage 2: tested transition rules, still offline
+
+`src/viper_output_memory.py` implements the policy using an injected DSP
+adapter. On first use of a new output, it *keeps the current sound* and makes
+an independent snapshot; later output changes restore previously remembered
+settings. Opting out retains the saved memories; ambiguous/disappeared PipeWire
+outputs never trigger an unexpected change. A failed restore is reported,
+not silently committed as success. Unit tests use a fake effect adapter and
+do not touch real audio.
+
 ## Not implemented in this stage
 
 Automatic capture and restoration of **all** DSP effect values, an output
