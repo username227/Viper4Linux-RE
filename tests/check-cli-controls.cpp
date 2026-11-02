@@ -190,7 +190,7 @@ int main() {
 
     std::ostringstream help;
     usage(help);
-    assert(help.str().find("Global:        status, on, off") != std::string::npos);
+    assert(help.str().find("Global:        status [--full], on, off") != std::string::npos);
     assert(help.str().find("bass-on/off") != std::string::npos);
     assert(help.str().find("all-on") == std::string::npos);
     assert(help.str().find("headphone-level <1..5>") != std::string::npos);
