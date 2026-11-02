@@ -7,9 +7,16 @@ viper4linux-ctl \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP control
 .RI [ ARGUMENTS ...]
 .br
 .B viper4linux-ctl --help
+.br
+.B v4l-cli
+.I COMMAND
+.RI [ ARGUMENTS ...]
 .SH DESCRIPTION
 .B viper4linux-ctl
 operates the active per-user ViPER4Linux-RE DSP control channel.
+The shorter
+.B v4l-cli
+command is a symlink for viper4linux-ctl and accepts identical arguments.
 Effect commands require an active channel; they do not start PipeWire.
 Successful edits are written to the same per-user settings used by the GUI,
 including when the GUI is closed. The GUI also reads the live controls while it

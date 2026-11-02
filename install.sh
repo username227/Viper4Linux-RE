@@ -87,8 +87,19 @@ elif [[ -L $launcher_link ]]; then
 else
     echo "Launcher already exists at $launcher_link; not replacing a user-owned command." >&2
 fi
+# Install the short CLI command alongside the source-checkout launcher.
+# Do not overwrite an unrelated executable or symlink in the user's bin dir.
+cli_link=$launcher_dir/v4l-cli
+if [[ ! -e $cli_link && ! -L $cli_link ]]; then
+    ln -s -- "$PWD/build/viper-ctl" "$cli_link"
+elif [[ -L $cli_link && $(readlink -f -- "$cli_link" 2>/dev/null || true) == "$PWD/build/viper-ctl" ]]; then
+    ln -sfn -- "$PWD/build/viper-ctl" "$cli_link"
+else
+    echo "CLI shortcut already exists at $cli_link; not replacing an unrelated command." >&2
+fi
 if [[ :$PATH: != *:$launcher_dir:* ]]; then
     echo "Note: $launcher_dir is not on PATH; use ./viper4linux or add that directory to PATH." >&2
 fi
 printf 'Launch with viper4linux (or ./viper4linux from the source directory).\n'
 printf 'Use ./verify.sh while Rhythmbox is playing.\n'
+printf 'Short CLI command: v4l-cli (same controls as viper4linux-ctl).\n'

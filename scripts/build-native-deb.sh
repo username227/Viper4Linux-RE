@@ -68,6 +68,7 @@ mkdir -p "$pkgroot/DEBIAN"
 # Keep installation paths identical to the working Arch package and launcher.
 install -Dm755 "$built/viper-gui" "$pkgroot/usr/bin/viper4linux-gui"
 install -Dm755 "$built/viper-ctl" "$pkgroot/usr/bin/viper4linux-ctl"
+ln -s -- viper4linux-ctl "$pkgroot/usr/bin/v4l-cli"
 install -Dm755 "$built/viper_dsp_ladspa.so" "$pkgroot/usr/lib/ladspa/viper_dsp_ladspa.so"
 install -Dm644 "$tree/src/viper_launcher.py" "$pkgroot/usr/lib/viper4linux/viper_launcher.py"
 install -Dm755 "$tree/packaging/arch/start-backend" "$pkgroot/usr/lib/viper4linux/start-backend"
@@ -83,6 +84,7 @@ install -Dm644 "$tree/resources/viper4linux-blue.svg" \
 install -Dm644 "$tree/man/viper4linux.1" "$pkgroot/usr/share/man/man1/viper4linux.1"
 install -Dm644 "$tree/man/viper4linux-ctl.1" "$pkgroot/usr/share/man/man1/viper4linux-ctl.1"
 gzip -n -9 "$pkgroot/usr/share/man/man1/"*.1
+ln -s -- viper4linux-ctl.1.gz "$pkgroot/usr/share/man/man1/v4l-cli.1.gz"
 install -Dm644 "$tree/README.md" "$pkgroot/usr/share/doc/viper4linux-re/README.md"
 install -Dm644 "$tree/LICENSE" "$pkgroot/usr/share/doc/viper4linux-re/LICENSE"
 install -Dm644 "$tree/THIRD-PARTY-NOTICES.md" \
@@ -140,6 +142,7 @@ dpkg-deb --contents "$package" | grep -F 'usr/lib/ladspa/viper_dsp_ladspa.so'
 # Exercise dependency resolution and the installed command-line/launcher paths.
 apt-get install -y --no-install-recommends "$package"
 viper4linux-ctl --help >/dev/null
+v4l-cli --help >/dev/null
 python3 /usr/lib/viper4linux/viper_launcher.py --fingerprint >/dev/null
 (cd "$out" && sha256sum -- "$(basename "$package")" > SHA256SUMS && sha256sum --check SHA256SUMS)
 echo "PASS: $target native Debian package built, installed, and smoke-tested: $package"

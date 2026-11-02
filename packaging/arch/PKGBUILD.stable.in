@@ -54,6 +54,7 @@ package() {
 # Executables
     install -Dm755 "$built/viper-gui" "$pkgdir/usr/bin/viper4linux-gui"
     install -Dm755 "$built/viper-ctl" "$pkgdir/usr/bin/viper4linux-ctl"
+    ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"
 
 # Libraries
     install -Dm755 "$built/viper_dsp_ladspa.so" "$pkgdir/usr/lib/ladspa/viper_dsp_ladspa.so"
@@ -76,6 +77,7 @@ package() {
 # Man Pages
     install -Dm644 "$tree/man/viper4linux.1" "$pkgdir/usr/share/man/man1/viper4linux.1"
     install -Dm644 "$tree/man/viper4linux-ctl.1" "$pkgdir/usr/share/man/man1/viper4linux-ctl.1"
+    ln -s -- viper4linux-ctl.1 "$pkgdir/usr/share/man/man1/v4l-cli.1"
 
 # License and Third-Party Notices
     install -Dm644 "$tree/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"

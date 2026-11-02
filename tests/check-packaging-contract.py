@@ -22,6 +22,8 @@ assert 'jamesdsp' not in re.findall(r'^\s*conflicts=.*', pkg, flags=re.M)[0].low
 assert (root / '.gitmodules').read_text().find('path = third_party/ViPERDSP') >= 0
 assert (root / '.gitmodules').read_text().find('https://github.com/likelikeslike/ViPERDSP.git') >= 0
 assert 'ln -sfn' not in pkg
+assert 'ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"' in pkg
+assert 'ln -s -- viper4linux-ctl.1 "$pkgdir/usr/share/man/man1/v4l-cli.1"' in pkg
 assert 'usr/share/licenses/$pkgname/LICENSE' in pkg
 assert (root / 'LICENSE').is_file()
 assert (root / 'THIRD-PARTY-NOTICES.md').is_file()

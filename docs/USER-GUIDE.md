@@ -37,10 +37,12 @@ login autostart you only need to log out and back in, not reboot.
 
 ## CLI and troubleshooting
 
-The installed command is `viper4linux-ctl`. Try:
+The installed CLI command is `viper4linux-ctl`, with the shorter `v4l-cli`
+symlink providing the same commands and options. Try:
 
 ```bash
 viper4linux-ctl status
+v4l-cli status
 viper4linux-ctl off
 viper4linux-ctl on
 viper4linux-ctl bass-off
@@ -122,11 +124,10 @@ viper4linux-ctl imager-mid 149
 ```
 
 The interface applies changes to the **running** backend. An open GUI reflects
-them on its 500 ms polling cycle and saves changed controls. When the GUI is
-closed, the CLI does **not** write Qt preferences: reopen the GUI before the
-backend restarts if you want those CLI changes saved for later sessions. For
-settings such as a DDC file or convolver impulse response, select the file in
-the GUI; the CLI can toggle the effect after it is loaded.
+them on its 500 ms polling cycle and saves changed controls. When the GUI is closed, successful CLI changes still save directly to the
+GUI's Qt preferences; they survive a backend restart without reopening the
+GUI. For settings such as a DDC file or convolver impulse response, select
+the file in the GUI; the CLI can toggle the effect after it is loaded.
 
 The CLI returns status `0` for a successful command, `1` if no backend is
 running, and `2` for invalid commands or arguments. See
