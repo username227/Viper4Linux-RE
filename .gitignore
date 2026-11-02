@@ -1,6 +1,5 @@
-# Local build output and upstream checkout (fetched by install.sh)
+# Local build output (the upstream DSP is a tracked Git submodule)
 /build/
-/third_party/
 __pycache__/
 *.pyc
 *.o
