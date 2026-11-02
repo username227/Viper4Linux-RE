@@ -214,7 +214,10 @@ static void persistState(QSettings& settings, const QJsonObject& state) {
         const QString key = "eq_levels_" + QString::number(n);
         if (n != bands && ui.contains(key)) settings.setValue(key, ui.value(key).toString());
     }
-    settings.setValue("eq/selected_preset", "custom");
+    // Preserve the EQ preset identity alongside its actual DSP curve.
+    // Legacy output snapshots have no name; they remain Custom as before.
+    settings.setValue("eq/selected_preset",
+        ui.value("eq_selected_preset").toString("custom"));
     const auto mb = state.value("mb_bands").toArray();
     const auto crossovers = state.value("mb_crossovers").toArray();
     for (int i = 0; i < 4; ++i)
@@ -268,6 +271,7 @@ static QJsonObject captureState(const Controls& controls, QSettings& settings) {
     paths.insert("convolver_kernel", settings.value("convolver_kernel").toString());
     result.insert("files", paths);
     QJsonObject ui;
+    ui.insert("eq_selected_preset", settings.value("eq/selected_preset", "custom").toString());
     for (const int n : {10, 15, 25, 31}) {
         const QString key = "eq_levels_" + QString::number(n);
         if (n != count) ui.insert(key, settings.value(key).toString());
@@ -311,7 +315,22 @@ static bool validateState(const QJsonObject& state) {
         if (!value.isString() || value.toString().size() > 4096) return false;
     }
     const auto ui = state.value("ui");
-    if (!ui.isObject() || ui.toObject().size() != 13) return false;
+    if (!ui.isObject()) return false;
+    const QJsonObject uiValues = ui.toObject();
+    // The fourteenth field is optional to support already-saved output
+    // profiles. Reject unknown metadata rather than silently accepting it.
+    const bool hasEqPresetName = uiValues.contains("eq_selected_preset");
+    if (uiValues.size() != (hasEqPresetName ? 14 : 13)) return false;
+    if (hasEqPresetName) {
+        const QJsonValue name = uiValues.value("eq_selected_preset");
+        if (!name.isString()) return false;
+        const QString text = name.toString();
+        const bool validName = text == "custom" ||
+            ((text.startsWith("builtin:") || text.startsWith("user:")) &&
+             text.size() > (text.startsWith("builtin:") ? 8 : 5) &&
+             text.size() <= 80);
+        if (!validName) return false;
+    }
     for (const int n : {10, 15, 25, 31}) {
         const QString key = "eq_levels_" + QString::number(n);
         if (n == state.value("values").toObject().value("eq_band_count").toInt()) continue;
