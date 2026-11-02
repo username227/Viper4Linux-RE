@@ -213,6 +213,7 @@ changes. Releases and subsequent improvements will be documented in this reposit
 | [Effects reference](docs/EFFECTS.md) | All 24 effect groups, parameters and cautions |
 | [Presets and libraries](docs/PRESETS-AND-LIBRARIES.md) | Named presets, IRS, VDC, file locations |
 | [Arch packaging](docs/ARCH-PACKAGING.md) | `-git` builds and stable source-distribution plan |
+| [Debian/Ubuntu/Mint packaging](docs/DEB-PACKAGING.md) | Native `.deb` builds, supported release bases and manual publication |
 | [Developer guide](docs/DEVELOPMENT.md) | Architecture, patch inventory, tests, outstanding work |
 
 **Project:** [username227/viper4linux-re](https://github.com/username227/viper4linux-re)

@@ -73,3 +73,71 @@ jobs:
             dist/ARCH-SHA256SUMS
             dist/viper4linux-re-${{ inputs.version }}-*.pkg.tar.zst
           include-hidden-files: true
+
+  deb:
+    name: Native .deb — ${{ matrix.audience }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: ubuntu24.04-mint22
+            image: ubuntu:24.04
+            audience: 'Ubuntu 24.04 and Mint 22.x'
+          - target: debian13-lmde7
+            image: debian:trixie
+            audience: 'Debian 13 and LMDE 7'
+    steps:
+      - name: Checkout packaging tools
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the exact source archive validated by the Arch job
+        uses: actions/download-artifact@v4
+        with:
+          name: viper4linux-re-${{ inputs.version }}-release-candidate
+          path: dist/release
+
+      - name: Verify source checksum from the prepared release
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          (cd dist/release && sha256sum --check SHA256SUMS)
+
+      - name: Compile and install-test native .deb
+        env:
+          VERSION: ${{ inputs.version }}
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "dist/${TARGET}"
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace:rw" -w /workspace \
+            -e DEBIAN_FRONTEND=noninteractive \
+            '${{ matrix.image }}' \
+            bash scripts/build-native-deb.sh "$VERSION" "$TARGET" \
+              "/workspace/dist/release/viper4linux-re-${VERSION}-unified-source.tar.xz" \
+              "/workspace/dist/${TARGET}"
+
+      - name: Verify Debian package checksum
+        env:
+          TARGET: ${{ matrix.target }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          (cd "dist/$TARGET" && sha256sum --check SHA256SUMS)
+          test "$(find "dist/$TARGET" -maxdepth 1 -name '*.deb' | wc -l)" -eq 1
+
+      - name: Upload tested .deb (no publication)
+        uses: actions/upload-artifact@v4
+        with:
+          name: viper4linux-re-${{ inputs.version }}-${{ matrix.target }}-deb
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            dist/${{ matrix.target }}/*.deb
+            dist/${{ matrix.target }}/SHA256SUMS
