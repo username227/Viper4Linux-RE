@@ -31,20 +31,19 @@ if command -v pw-link >/dev/null; then
 fi
 cat <<'EOF'
 
-Manual tests:
-  [ ] GUI launches and shows Enhancements, Surround, and Output tabs
-  [ ] Four Surround effects and three Enhancements have working controls
-  [ ] Collapsing a panel does not disable the effect; state persists on GUI reopen
-  [ ] Master Limiter shows greyed ON switch but its card expands/collapses
-  [ ] With AGC/LUFS OFF, test threshold at quiet listening volume; limiter stays active
-  [ ] AGC alone changes output level and preserves other effect settings
-  [ ] LUFS alone follows target (check pw-top for CPU/xruns); keep off when not testing
-  [ ] Enabling both AGC and LUFS shows warning; disable both afterward
-  [ ] Master on/off bypasses effects without disabling the output limiter
-  [ ] Master on/off audibly changes sound; input is not adjusted unintentionally
-  [ ] Save and Restore preset, then reopen GUI
-  [ ] With GUI OPEN: ./stop.sh ; ./start.sh in backend terminal ; GUI reconnects
-  [ ] During playback: audio blocks count increments; Rhythmbox -> ViPER -> EDIFIER
-  [ ] JamesDSP fully quit, not just bypassed
-  [ ] Previously working source directory untouched until new build validated
+Manual acceptance checks (system installation or source checkout):
+  [ ] Six tabs: Output, Bass, EQ & Tone, Spatial, Dynamics, Sound Correction
+  [ ] Every effect switch is independent of its panel's expanded state
+  [ ] Master bypass and Native Master Limiter work independently as documented
+  [ ] FET and Multiband compressors are disabled by default; compact band editor works
+  [ ] Graphic EQ and Dynamic EQ editors open; changes restore correctly
+  [ ] IRS/VDC library selectors import and load; invalid profiles fail safely
+  [ ] Named presets Save/Load/Rename/Delete and Reset-to-Defaults confirmation work
+  [ ] Theme selector, dropdown arrows, menu and tray behavior render correctly
+  [ ] Minimize to tray leaves no black taskbar-listed window on Cinnamon X11
+  [ ] GUI Quit leaves backend playback active; restart GUI reconnects
+  [ ] Auto-start/login and absent-tray fallback behave correctly
+  [ ] CLI 'status' shows advancing audio blocks while music plays
+  [ ] Bluetooth reconnection and stream changes maintain PipeWire routing
+  [ ] JamesDSP routing interactions, if present, tested independently
 EOF

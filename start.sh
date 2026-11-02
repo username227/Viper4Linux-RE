@@ -21,7 +21,7 @@ fi
 printf 'Running ViPER for Linux smart filter (one foreground client, current default physical output).\n'
 printf 'Saved preferences are read from ~/.config/ViPERforLinux/ViPERClean.conf.\n'
 printf 'Settings can be changed in the Qt6 GUI without restarting the filter.\n'
-printf 'Quit with your terminal interrupt shortcut (Ctrl+X on your system).\n\n'
+printf 'Stop this foreground backend with your terminal interrupt shortcut.\n\n'
 
 # Identify the actual compiled DSP/control/config so a future launcher can
 # safely replace an outdated backend, even when installed from another tree.
