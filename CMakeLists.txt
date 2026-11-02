@@ -56,6 +56,13 @@ target_include_directories(viper-gui PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/ge
 target_link_libraries(viper-gui PRIVATE Qt6::Widgets)
 target_compile_options(viper-gui PRIVATE -Wall -Wextra -Wpedantic)
 
+# Non-realtime native DSP snapshot transport for per-output settings.
+# No Qt Widgets dependency and no work on PipeWire's audio thread.
+add_executable(viper-output-state src/viper-output-state.cpp)
+target_include_directories(viper-output-state PRIVATE src)
+target_link_libraries(viper-output-state PRIVATE Qt6::Core)
+target_compile_options(viper-output-state PRIVATE -Wall -Wextra -Wpedantic)
+
 add_executable(viper-ctl src/viper-ctl.cpp)
 target_include_directories(viper-ctl PRIVATE src)
 target_link_libraries(viper-ctl PRIVATE Qt6::Core)

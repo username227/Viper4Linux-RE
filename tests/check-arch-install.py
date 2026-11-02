@@ -27,6 +27,7 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
         'src/viper_output_monitor.py', 'src/viper_output_info.py',
         'src/viper_future_feature.py',  # Must be installed without editing a recipe.
         'packaging/arch/start-backend', 'packaging/arch/viper4linux',
+        'packaging/arch/viper4linux-output',
         'packaging/arch/viper4linux.desktop',
         'routing-config/filter-chain.conf.d/99-viper-smart.conf',
         'resources/viper4linux-blue.png', 'resources/viper4linux-blue.svg',
@@ -37,7 +38,7 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
         file = tree / name
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(f'marker for {name}\n')
-    for name in ['viper-gui', 'viper-ctl', 'viper_dsp_ladspa.so']:
+    for name in ['viper-gui', 'viper-ctl', 'viper-output-state', 'viper_dsp_ladspa.so']:
         (build / name).write_bytes(b'example binary')
 
     result = invoke(tree, build, dest)
@@ -49,6 +50,8 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
         output = dest / 'usr/lib/viper4linux' / name
         assert output.read_bytes() == (tree / 'src' / name).read_bytes(), name
         assert output.stat().st_mode & 0o777 == 0o644
+    assert (dest / 'usr/bin/viper4linux-output-state').is_file()
+    assert (dest / 'usr/bin/viper4linux-output').is_file()
     assert os.readlink(dest / 'usr/bin/v4l-cli') == 'viper4linux-ctl'
     assert os.readlink(dest / 'usr/share/man/man1/v4l-cli.1') == 'viper4linux-ctl.1'
     assert (dest / 'usr/lib/ladspa/viper_dsp_ladspa.so').stat().st_mode & 0o777 == 0o755

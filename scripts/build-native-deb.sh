@@ -68,9 +68,14 @@ mkdir -p "$pkgroot/DEBIAN"
 # Keep installation paths identical to the working Arch package and launcher.
 install -Dm755 "$built/viper-gui" "$pkgroot/usr/bin/viper4linux-gui"
 install -Dm755 "$built/viper-ctl" "$pkgroot/usr/bin/viper4linux-ctl"
+install -Dm755 "$built/viper-output-state" "$pkgroot/usr/bin/viper4linux-output-state"
+install -Dm755 "$tree/packaging/arch/viper4linux-output" "$pkgroot/usr/bin/viper4linux-output"
 ln -s -- viper4linux-ctl "$pkgroot/usr/bin/v4l-cli"
 install -Dm755 "$built/viper_dsp_ladspa.so" "$pkgroot/usr/lib/ladspa/viper_dsp_ladspa.so"
 install -Dm644 "$tree/src/viper_launcher.py" "$pkgroot/usr/lib/viper4linux/viper_launcher.py"
+for module in "$tree"/src/viper_*.py; do
+    install -Dm644 "$module" "$pkgroot/usr/lib/viper4linux/${module##*/}"
+done
 install -Dm755 "$tree/packaging/arch/start-backend" "$pkgroot/usr/lib/viper4linux/start-backend"
 install -Dm755 "$tree/packaging/arch/viper4linux" "$pkgroot/usr/bin/viper4linux"
 install -Dm644 "$tree/routing-config/filter-chain.conf.d/99-viper-smart.conf" \

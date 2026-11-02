@@ -56,7 +56,7 @@ mkdir -p build
 echo '== Fresh native CMake configure and compile =='
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DVIPERDSP_SOURCE_DIR="$VIPERDSP_SOURCE_DIR"
-cmake --build build --target viper_dsp_ladspa viper-ctl viper-gui -j4
+cmake --build build --target viper_dsp_ladspa viper-ctl viper-gui viper-output-state -j4
 for item in build/viper_dsp_ladspa.so build/viper-ctl build/viper-gui; do
     [[ -s "$item" ]] || { echo "Missing expected compiled binary: $item" >&2; exit 1; }
 done

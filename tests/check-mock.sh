@@ -126,3 +126,9 @@ g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -I
   $(pkg-config --cflags Qt6Core) tests/check-cli-eq-presets.cpp \
   -o "$work/check-cli-eq-presets" $(pkg-config --libs Qt6Core)
 XDG_CONFIG_HOME="$config/cli-presets" "$work/check-cli-eq-presets"
+
+# Native per-output DSP round-trip tests use a PID-isolated mock IPC page.
+g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
+  $(pkg-config --cflags Qt6Core) tests/check-output-state.cpp \
+  -o "$work/check-output-state" $(pkg-config --libs Qt6Core)
+XDG_CONFIG_HOME="$config/output-state" "$work/check-output-state"

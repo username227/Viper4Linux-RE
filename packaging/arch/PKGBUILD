@@ -52,6 +52,7 @@ check() {
     bash tests/check-mock.sh
     python3 tests/check-launcher.py
     python3 tests/check-arch-install.py
+    python3 tests/check-native-state-contract.py
     python3 tests/check-theme-contract.py
     python3 tests/check-ui-contract.py
     python3 tests/check-tray-contract.py

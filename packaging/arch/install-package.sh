@@ -31,6 +31,7 @@ required_sources=(
     "$source_tree/src/viper_output_monitor.py"
     "$source_tree/packaging/arch/start-backend"
     "$source_tree/packaging/arch/viper4linux"
+    "$source_tree/packaging/arch/viper4linux-output"
     "$source_tree/packaging/arch/viper4linux.desktop"
     "$source_tree/routing-config/filter-chain.conf.d/99-viper-smart.conf"
     "$source_tree/resources/viper4linux-blue.png"
@@ -45,7 +46,7 @@ for file in "${required_sources[@]}"; do
     [[ -f $file ]] || { echo "Missing package source: $file" >&2; exit 1; }
 done
 [[ -d $source_tree/docs ]] || { echo "Missing docs directory: $source_tree/docs" >&2; exit 1; }
-for file in "$build_dir/viper-gui" "$build_dir/viper-ctl" "$build_dir/viper_dsp_ladspa.so"; do
+for file in "$build_dir/viper-gui" "$build_dir/viper-ctl" "$build_dir/viper-output-state" "$build_dir/viper_dsp_ladspa.so"; do
     [[ -s $file ]] || { echo "Missing built artifact: $file" >&2; exit 1; }
 done
 
@@ -57,6 +58,7 @@ python_modules=("$source_tree"/src/viper_*.py)
 
 install -Dm755 "$build_dir/viper-gui" "$pkgdir/usr/bin/viper4linux-gui"
 install -Dm755 "$build_dir/viper-ctl" "$pkgdir/usr/bin/viper4linux-ctl"
+install -Dm755 "$build_dir/viper-output-state" "$pkgdir/usr/bin/viper4linux-output-state"
 ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"
 install -Dm755 "$build_dir/viper_dsp_ladspa.so" "$pkgdir/usr/lib/ladspa/viper_dsp_ladspa.so"
 
@@ -65,6 +67,7 @@ for file in "${python_modules[@]}"; do
 done
 install -Dm755 "$source_tree/packaging/arch/start-backend" "$pkgdir/usr/lib/viper4linux/start-backend"
 install -Dm755 "$source_tree/packaging/arch/viper4linux" "$pkgdir/usr/bin/viper4linux"
+install -Dm755 "$source_tree/packaging/arch/viper4linux-output" "$pkgdir/usr/bin/viper4linux-output"
 install -Dm644 "$source_tree/routing-config/filter-chain.conf.d/99-viper-smart.conf" \
     "$pkgdir/usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf"
 install -Dm644 "$source_tree/packaging/arch/viper4linux.desktop" \
@@ -93,6 +96,7 @@ for file in "${python_modules[@]}"; do
 done
 for file in \
     usr/bin/viper4linux-gui usr/bin/viper4linux-ctl usr/bin/viper4linux \
+    usr/bin/viper4linux-output-state usr/bin/viper4linux-output \
     usr/lib/ladspa/viper_dsp_ladspa.so usr/lib/viper4linux/start-backend \
     usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf \
     usr/share/applications/viper4linux.desktop \

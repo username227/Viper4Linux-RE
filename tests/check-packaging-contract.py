@@ -34,6 +34,11 @@ assert 'ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"' in installer
 assert 'ln -s -- viper4linux-ctl.1 "$pkgdir/usr/share/man/man1/v4l-cli.1"' in installer
 assert 'usr/share/licenses/$pkgname/LICENSE' in installer
 assert 'usr/lib/ladspa/viper_dsp_ladspa.so' in installer
+assert 'viper-output-state' in (root / 'CMakeLists.txt').read_text()
+assert 'viper4linux-output-state' in installer
+assert 'viper4linux-output' in installer
+assert 'python3 tests/check-native-state-contract.py' in pkg
+assert 'python3 tests/check-native-state-contract.py' in stable
 assert 'src/viper_*.py' in installer
 assert 'viper_output_monitor.py' in installer
 assert 'Missing package source:' in installer
