@@ -9,7 +9,7 @@
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
-    out << "Usage: viper-ctl status | on | off | toggle | "
+    out << "Usage: viper4linux-ctl status | on | off | toggle | "
                  "all-on | all-off | bass-mode <0..2> | gain <0.5..10> | freq <15..150 Hz> | "
                  "mono-on | mono-off | mono-mode <0..2> | mono-strength <0.5..10> | mono-freq <15..150> | "
                  "psycho-on | psycho-off | psycho-cutoff <60..150> | psycho-intensity <0..100> | psycho-order <2..5> | psycho-original <0..100> | "
