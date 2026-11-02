@@ -31,17 +31,20 @@ class OutputMemory:
         """
         if output is None:
             return 'unknown'
-        self.store.remember(output)
         if self.current and self.current.key == output.key:
+            if (self.current.description != output.description or
+                    self.current.node_name != output.node_name):
+                self.store.remember(output)
             self.current = output  # refresh connection label/ephemeral graph id
             return 'same'
+        self.store.remember(output)
         if not self.store.enabled():
             self.current = output
             return 'disabled'
         # Capture before the state switch, while the old output's settings are
         # still present in shared memory. The snapshot must be complete.
         original = self.effects.capture()
-        if self.current:
+        if self.current and self.store.settings(self.current.key) != original:
             self.store.save_settings(self.current.key, original)
         destination = self.store.settings(output.key)
         if destination is None:
@@ -62,7 +65,9 @@ class OutputMemory:
     def checkpoint(self) -> None:
         """Remember live edits, but only with a stable identified active output."""
         if self.store.enabled() and self.current is not None:
-            self.store.save_settings(self.current.key, self.effects.capture())
+            live = self.effects.capture()
+            if self.store.settings(self.current.key) != live:
+                self.store.save_settings(self.current.key, live)
 
     def enable(self) -> None:
         """Opt in without modifying the current audio or saved named presets."""

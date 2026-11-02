@@ -1814,8 +1814,8 @@ public:
         connect(lufs_speed_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
         auto* timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, [this]{
-            pollBackend();
             updateAudioOutputDisplay();
+            pollBackend();
         });
         timer->start(500);
         // Theme selection changes only the GUI, never DSP settings.
@@ -3090,6 +3090,38 @@ private:
         if (file.write(desktop) != desktop.size()) { file.cancelWriting(); return false; }
         return file.commit();
     }
+    QString outputMemoryDirectory() const {
+        return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+               + "/viper4linux/outputs";
+    }
+    bool outputMemoryEnabled() const {
+        QFile file(outputMemoryDirectory() + "/options.json");
+        if (!file.open(QIODevice::ReadOnly)) return false;
+        const auto doc = QJsonDocument::fromJson(file.readAll());
+        return doc.isObject() && doc.object().value("format").toInt() == 1 &&
+               doc.object().value("remember_outputs").toBool(false);
+    }
+    bool setOutputMemoryEnabled(bool enabled, QString* error) {
+        const QString directory = outputMemoryDirectory();
+        if (!QDir().mkpath(directory)) {
+            *error = "Could not create Audio Output settings directory.";
+            return false;
+        }
+        QSaveFile file(directory + "/options.json");
+        if (!file.open(QIODevice::WriteOnly)) {
+            *error = file.errorString();
+            return false;
+        }
+        QJsonObject options;
+        options.insert("format", 1);
+        options.insert("remember_outputs", enabled);
+        const QByteArray content = QJsonDocument(options).toJson(QJsonDocument::Indented);
+        if (file.write(content) != content.size() || !file.commit()) {
+            *error = "Could not save Audio Output preferences.";
+            return false;
+        }
+        return true;
+    }
     void updateAudioOutputDisplay() {
         const QString runtime = qEnvironmentVariable("XDG_RUNTIME_DIR");
         if (runtime.isEmpty()) {
@@ -3116,13 +3148,29 @@ private:
             return;
         }
         audio_output_label_->setText("Audio Output: " + description);
+        const bool memoryEnabled = status.object().value("memory_enabled").toBool(false);
         audio_output_label_->setToolTip("Audio Output identity: " + identity.left(12) +
-            "\nThe full per-output settings feature is not enabled yet.");
+            (memoryEnabled ? "\nAutomatic per-output effect restoration enabled."
+                           : "\nAutomatic per-output effect restoration disabled."));
+        const int revision = status.object().value("memory_revision").toInt();
+        const QString session = QString::number(status.object().value("manager_pid").toInt());
+        const QString token = session + ":" + QString::number(revision);
+        if (revision > 0 && token != last_output_memory_revision_) {
+            last_output_memory_revision_ = token;
+            settings_.sync();
+            // These controls have their own editor-side arrays. Basic sliders
+            // and switches already follow the live IPC through readBackend().
+            loadDeqSettings();
+            loadMultibandSettings("");
+            updateDdcFileName(settings_.value("ddc_profile").toString());
+            refreshDdcLibrary();
+            refreshIrsLibrary();
+        }
     }
 
     void showPreferences() {
         QDialog dialog(this);
-        dialog.setWindowTitle("Viper4Linux — Window & Tray");
+        dialog.setWindowTitle("Viper4Linux — Preferences");
         dialog.setMinimumWidth(395);
         auto* body = new QVBoxLayout(&dialog);
         auto* startup = new QGroupBox("When Viper4Linux starts", &dialog);
@@ -3164,6 +3212,20 @@ private:
         auto* autostart = new QCheckBox("Launch automatically when I log in", &dialog);
         autostart->setChecked(QFile::exists(autostartFile()));
         body->addWidget(autostart);
+        auto* memoryGroup = new QGroupBox("Audio Output", &dialog);
+        auto* memoryLayout = new QVBoxLayout(memoryGroup);
+        auto* rememberOutputs = new QCheckBox("Remember effects separately for each Audio Output",
+                                             memoryGroup);
+        rememberOutputs->setChecked(outputMemoryEnabled());
+        memoryLayout->addWidget(rememberOutputs);
+        auto* memoryExplanation = new QLabel(
+            "When enabled, changes are saved for each physical output and restored "
+            "when you switch back. Works while the GUI is closed. "
+            "The current sound is retained when enabling; named presets are independent.",
+            memoryGroup);
+        memoryExplanation->setWordWrap(true);
+        memoryLayout->addWidget(memoryExplanation);
+        body->addWidget(memoryGroup);
         auto* notice = new QLabel(
             "If the desktop tray is unavailable, Viper4Linux stays accessible\n"
             "as an ordinary window or taskbar application.", &dialog);
@@ -3183,6 +3245,19 @@ private:
         if (!setAutostart(autostart->isChecked())) {
             QMessageBox::warning(this, "Autostart",
                 "Could not update the XDG autostart entry:\n" + autostartFile());
+        }
+        if (rememberOutputs->isChecked() != outputMemoryEnabled()) {
+            // Enabling while the native channel is unavailable cannot capture
+            // the current sound. Never claim to remember an unknown state.
+            if (rememberOutputs->isChecked() && !ensureBackend()) {
+                QMessageBox::warning(this, "Audio Output Settings",
+                    "Audio processing must be ready before enabling per-output memory. "
+                    "Start playback and try again.");
+            } else {
+                QString error;
+                if (!setOutputMemoryEnabled(rememberOutputs->isChecked(), &error))
+                    QMessageBox::warning(this, "Audio Output Settings", error);
+            }
         }
     }
     QMenu* makeApplicationMenu(QWidget* parent) {
@@ -4727,6 +4802,7 @@ private:
     bool cinnamon_theme_dark_ = false;
     QLabel* header_icon_{};
     QLabel* audio_output_label_{};
+    QString last_output_memory_revision_;
     QComboBox* theme_selector_{};
     QCheckBox* eq_enabled_{};
     QComboBox* eq_mode_{};

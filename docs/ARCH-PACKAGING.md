@@ -34,7 +34,10 @@ to bypass conflicts.
 
 The package installs the launcher, GUI, controller, LADSPA module, desktop
 entry, icons, man pages, maintained docs, and all `src/viper_*.py` Python
-modules. Both Arch VCS and stable PKGBUILDs call
+modules. The package also provides the native
+`viper4linux-output-state` helper (complete shared-memory capture/restore),
+plus `viper4linux-output` for listing and enabling/disabling memory.
+Both Arch VCS and stable PKGBUILDs call
 `packaging/arch/install-package.sh` in `package()`; the script inventories
 runtime Python modules automatically, checks required files before staging,
 then verifies the package contents. When new runtime Python modules are added,
@@ -49,6 +52,15 @@ package() {
     bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
 }
 ```
+
+The per-output feature is initially **disabled**, and enabling it in the GUI
+Preferences does not reset the current sound. It remembers distinct physical
+hardware (including two same-model Bluetooth headsets), restores the exact
+DSP state when returning to an output, and continues working after Quit GUI
+through the launcher-supervised monitor. The native state helper validates
+complete snapshots and filesystem-dependent IRS/VDC paths before applying
+anything. Use `viper4linux-output --enable-memory` and
+`viper4linux-output --disable-memory` for command-line control.
 
 After updating an AUR checkout, regenerate `.SRCINFO` with
 `makepkg --printsrcinfo > .SRCINFO` and push both files. Stable AUR
