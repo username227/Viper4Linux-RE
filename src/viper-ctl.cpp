@@ -16,7 +16,7 @@ void usage(std::ostream& out = std::cerr) {
                  "dynamic-on | dynamic-off | dynamic-x-low <0..2400> | dynamic-x-high <0..12000> | dynamic-y-low <0..200> | dynamic-y-high <0..300> | dynamic-side-low <0..100> | dynamic-side-high <0..100> | dynamic-strength <0..100> | "
                  "clarity-on | clarity-off | clarity-gain <0..4.5> | clarity-mode <0..2> | "
                  "spectrum-on | spectrum-off | spectrum-freq <2200..8200 Hz> | spectrum-exciter <0..6> | "
-                 "headphone-on | headphone-off | headphone-quality <0..4> | "
+                 "headphone-on | headphone-off | headphone-level <1..5> | "
                  "diff-on | diff-off | diff-delay <1..20 ms> | diff-reverse <0|1> | "
                  "diff-mix <0..100 percent> | diff-lowpass <0..20000 Hz> | "
                  "field-on | field-off | field-widen <0..8> | "
@@ -53,7 +53,7 @@ void show(viperbass::Controls& c) {
               << " | Spectrum reference " << c.spectrum_frequency_hz.load() << " Hz"
               << " | Harmonic strength " << (c.spectrum_exciter_milli.load() / 1000.0f)
               << " | Headphone Surround+: " << (c.headphone_enabled.load() ? "ON" : "OFF")
-              << " | quality level " << c.headphone_quality.load()
+              << " | surround level " << (c.headphone_quality.load() + 1)
               << " | Differential Surround: " << (c.diff_enabled.load() ? "ON" : "OFF")
               << " | delay " << c.diff_delay_ms.load() << " ms"
               << " | reverse " << c.diff_reverse.load()
@@ -190,8 +190,14 @@ int main(int argc, char** argv) {
             c.spectrum_exciter_milli.store(static_cast<int>(std::lround(number(argv[2], 0.f, 6.f) * 1000.f)));
         else if (cmd == "headphone-on" && argc == 2) c.headphone_enabled.store(1);
         else if (cmd == "headphone-off" && argc == 2) c.headphone_enabled.store(0);
-        else if (cmd == "headphone-quality" && argc == 3)
-            c.headphone_quality.store(static_cast<int>(std::lround(number(argv[2], 0.f, 4.f))));
+        else if ((cmd == "headphone-level" || cmd == "headphone-quality") && argc == 3) {
+            // CLI and GUI both use Levels 1..5. The shared DSP control uses
+            // 0..4 internally; keep that representation unchanged for presets.
+            const float level = number(argv[2], 1.f, 5.f);
+            if (std::trunc(level) != level)
+                throw std::invalid_argument("Headphone Surround+ level must be an integer from 1 to 5");
+            c.headphone_quality.store(static_cast<int>(level) - 1);
+        }
         else if (cmd == "diff-on" && argc == 2) c.diff_enabled.store(1);
         else if (cmd == "diff-off" && argc == 2) c.diff_enabled.store(0);
         else if (cmd == "diff-delay" && argc == 3)

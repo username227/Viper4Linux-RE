@@ -122,7 +122,7 @@ struct alignas(64) Controls {
     std::atomic<std::uint32_t> imager_request_serial{0};
     std::atomic<std::uint32_t> imager_applied_serial{0};
     std::atomic<std::int32_t> headphone_enabled{0}; // independent Headphone Surround+
-    std::atomic<std::int32_t> headphone_quality{0}; // 0..4 (five ViPER levels)
+    std::atomic<std::int32_t> headphone_quality{0}; // INTERNAL 0..4; GUI/CLI display Levels 1..5
     std::atomic<std::int32_t> diff_enabled{0}; // independent Differential Surround
     std::atomic<std::int32_t> diff_delay_ms{8}; // 1..20 milliseconds
     std::atomic<std::int32_t> diff_reverse{0}; // delay left rather than right

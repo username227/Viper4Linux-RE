@@ -55,6 +55,14 @@ each other. The commands `on` and `off` control the **global ViPER bypass**;
 `bass-on`, `bass-off`, and `bass-toggle` control only **ViPER Bass**.
 Legacy `all-on`/`all-off` and `toggle` aliases remain accepted for scripts.
 
+For Headphone Surround+, the CLI uses the **same Level 1 through Level 5**
+numbering shown by the GUI. For instance, `viper4linux-ctl headphone-level 2`
+selects GUI Level 2 (the backend stores index 1). The historical command name
+`headphone-quality` is accepted as an alias, but its argument **also uses 1..5**:
+existing scripts using its former 0..4 values must add one. Invalid values
+return exit status 2 without changing the current level. Use `status` to
+inspect the live level before and after setting it.
+
 For a direct-source development build, useful scripts are `./status.sh`,
 `./verify.sh`, `./stop.sh` and `./start.sh`. The source installer builds
 `build/viper-ctl`, `build/viper-gui`, and `build/viper_dsp_ladspa.so`.

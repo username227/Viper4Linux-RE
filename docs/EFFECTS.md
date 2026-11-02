@@ -37,7 +37,7 @@ Three documented downstream patches are listed in [Development](DEVELOPMENT.md).
 
 | Effect | Purpose and cautions |
 |---|---|
-| Headphone Surround+ | Native headphone spatial effect with quality setting; especially audible on headphones. |
+| Headphone Surround+ | Native headphone spatial effect with five selectable surround levels (different filter profiles, not a quality ranking); especially audible on headphones. |
 | Differential Surround | Delay, wet/dry mix, polarity and low-pass processing. |
 | Field Surround | Width, central image, and depth controls. |
 | Reverberation | Room, width, damping, wet and dry levels. |

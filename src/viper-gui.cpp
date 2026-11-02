@@ -1398,7 +1398,7 @@ public:
         headphone_form->addRow("Surround processing", headphone_enabled_);
         headphone_quality_ = new QComboBox(headphone_group);
         headphone_quality_->addItems({"Level 1", "Level 2", "Level 3", "Level 4", "Level 5"});
-        headphone_quality_->setToolTip("Five upstream VHE processing levels (0–4); changes may rebuild convolution filters.");
+        headphone_quality_->setToolTip("Five distinct upstream VHE surround profiles; higher levels are not necessarily better. Changes may rebuild convolution filters.");
         headphone_form->addRow("Surround level", headphone_quality_);
         headphone_note_ = new QLabel("Convolution-based spatial effect. Supported at 44.1 and 48 kHz.", headphone_group);
         headphone_note_->setWordWrap(true);

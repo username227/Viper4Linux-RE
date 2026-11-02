@@ -145,8 +145,23 @@ Cross-channel mix, percent.
 .BR headphone-on " | " headphone-off
 Enable or disable Headphone Surround+.
 .TP
-.BI "headphone-quality " 0..4
-Headphone Surround+ quality level.
+.BI "headphone-level " 1..5
+Select Headphone Surround+ Level 1 through Level 5, matching the GUI exactly.
+These are five distinct built-in surround filter profiles, not an objective
+quality ranking. The backend stores levels as 0 through 4 internally, but
+this internal numbering is not used for CLI arguments or status output.
+For example,
+.B viper4linux-ctl headphone-level 2
+selects the GUI's Level 2. Only whole numbers 1 through 5 are accepted;
+zero, fractions and out-of-range values return exit status 2 without changing
+the setting.
+.TP
+.BI "headphone-quality " 1..5
+Backward-compatible command-name alias for
+.BR headphone-level .
+The argument now follows the same 1 through 5 GUI numbering, not the old
+0 through 4 scale. Scripts written for the previous CLI should increase the
+argument by one when migrating.
 .TP
 .BR diff-on " | " diff-off
 Enable or disable Differential Surround.
