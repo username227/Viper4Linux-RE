@@ -2,49 +2,42 @@
 # This is a LOCAL VCS PKGBUILD until the project has a public Git remote.
 # Store this PKGBUILD OUTSIDE the source repository, e.g. ~/Desktop/viper4linux-package/
 # Run `makepkg -si` from that separate directory.
-# By default, the local Git source checkout is ~/Desktop/viper4linux-presets.
+# By default, the local Git source checkout is ~/Desktop/viper4linux-submodule.
 # If you move it, override the path with VIPER4LINUX_REPO=/absolute/path makepkg -si.
-# Upstream ViPERDSP is intentionally pinned to the tested revision.
+# Upstream ViPERDSP is pinned by the Git submodule commit in our repository.
 
 pkgname=viper4linux-re-git
-pkgver=0.1.0.r38.g000000000000 # pkgver() updates from the local Git checkout.
+pkgver=0.1.0.r48.g000000000000
 pkgrel=1
 pkgdesc='Reverse-engineered ViPERDSP effects for PipeWire with a Qt6 interface (development VCS build)'
 arch=('x86_64')
 url='https://github.com/likelikeslike/ViPERDSP'
-license=('custom') # Project redistribution license not yet finalized; local testing only.
+license=('custom')
 depends=('glibc' 'gcc-libs' 'qt6-base' 'pipewire' 'ladspa' 'python')
 makedepends=('git' 'cmake' 'pkgconf')
-# This package is an alternative to the earlier test package and Noah's
-# original ViPER4Linux packages. pacman will offer to remove the installed
-# conflicting package during installation, before any files are replaced.
 conflicts=('viper4linux-re' 'viper4linux' 'viper4linux-git')
 provides=('viper4linux-re')
-# Deliberately no replaces=(); do not force migration during sync updates.
-# JamesDSP is not listed: it may coexist when the PipeWire routing is isolated.
-
-# This is independent of startdir: the PKGBUILD can live in any separate
-# directory; the source comes from the local Git checkout on the Desktop.
-_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-presets}"
-_viperdsp_commit=6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933
+_local_repo="${VIPER4LINUX_REPO:-${HOME}/Desktop/viper4linux-submodule}"
 source=("viper4linux::git+file://${_local_repo}"
-        "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git#commit=${_viperdsp_commit}")
-sha256sums=('SKIP' 'SKIP')  # Moving VCS sources, per ArchWiki VCS package guidelines.
+        "ViPERDSP::git+https://github.com/likelikeslike/ViPERDSP.git")
+sha256sums=('SKIP'
+            'SKIP')
 
 pkgver() {
     cd "$srcdir/viper4linux"
-    # No release tags: use the actual monotonically increasing commit count
-    # and abbreviated hash. The r delimiter preserves pacman version ordering.
     printf '0.1.0.r%s.g%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short=12 HEAD)"
 }
 
 prepare() {
-    mkdir -p "$srcdir/viper4linux/third_party"
-    ln -sfn -- "$srcdir/ViPERDSP" "$srcdir/viper4linux/third_party/ViPERDSP"
-    # Verified downstream fixes in this private, pinned ViPERDSP checkout.
-    python3 "$srcdir/viper4linux/patches/fix_lufs_speed.py"
-    python3 "$srcdir/viper4linux/patches/preallocate_stereo_imager.py"
-    python3 "$srcdir/viper4linux/patches/preallocate_multiband_compressor.py"
+    cd "$srcdir/viper4linux"
+    git submodule init -- third_party/ViPERDSP
+    git config 'submodule.third_party/ViPERDSP.url' "$srcdir/ViPERDSP"
+    git -c protocol.file.allow=always submodule update --init --checkout -- third_party/ViPERDSP
+    test "$(git -C third_party/ViPERDSP rev-parse HEAD)" = "$(git rev-parse HEAD:third_party/ViPERDSP)" || return 1
+
+    python3 patches/fix_lufs_speed.py
+    python3 patches/preallocate_stereo_imager.py
+    python3 patches/preallocate_multiband_compressor.py
 }
 
 build() {
@@ -69,22 +62,34 @@ check() {
 package() {
     local tree="$srcdir/viper4linux"
     local built="$srcdir/viper4linux-build"
+
+# Executables
     install -Dm755 "$built/viper-gui" "$pkgdir/usr/bin/viper4linux-gui"
     install -Dm755 "$built/viper-ctl" "$pkgdir/usr/bin/viper4linux-ctl"
+
+# Libraries
     install -Dm755 "$built/viper_dsp_ladspa.so" "$pkgdir/usr/lib/ladspa/viper_dsp_ladspa.so"
+
+# Launchers
     install -Dm644 "$tree/src/viper_launcher.py" "$pkgdir/usr/lib/viper4linux/viper_launcher.py"
     install -Dm755 "$tree/packaging/arch/start-backend" "$pkgdir/usr/lib/viper4linux/start-backend"
     install -Dm755 "$tree/packaging/arch/viper4linux" "$pkgdir/usr/bin/viper4linux"
-    install -Dm644 "$tree/routing-config/filter-chain.conf.d/99-viper-smart.conf" \
-        "$pkgdir/usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf"
-    install -Dm644 "$tree/packaging/arch/viper4linux.desktop" \
-        "$pkgdir/usr/share/applications/viper4linux.desktop"
-    install -Dm644 "$tree/resources/viper4linux-blue.png" \
-        "$pkgdir/usr/share/icons/hicolor/256x256/apps/viper4linux.png"
-    install -Dm644 "$tree/resources/viper4linux-blue.svg" \
-        "$pkgdir/usr/share/icons/hicolor/scalable/apps/viper4linux.svg"
+
+# Pipewire Routing Configuration
+    install -Dm644 "$tree/routing-config/filter-chain.conf.d/99-viper-smart.conf" "$pkgdir/usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf"
+
+# Desktop File
+    install -Dm644 "$tree/packaging/arch/viper4linux.desktop" "$pkgdir/usr/share/applications/viper4linux.desktop"
+
+# Icons
+    install -Dm644 "$tree/resources/viper4linux-blue.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/viper4linux.png"
+    install -Dm644 "$tree/resources/viper4linux-blue.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/viper4linux.svg"
+
+# Man Pages
     install -Dm644 "$tree/man/viper4linux.1" "$pkgdir/usr/share/man/man1/viper4linux.1"
     install -Dm644 "$tree/man/viper4linux-ctl.1" "$pkgdir/usr/share/man/man1/viper4linux-ctl.1"
+
+# Documentation
     install -Dm644 "$tree/README.md" "$pkgdir/usr/share/doc/viper4linux/README.md"
     install -d "$pkgdir/usr/share/doc/viper4linux/docs"
     cp -a "$tree/docs/." "$pkgdir/usr/share/doc/viper4linux/docs/"
