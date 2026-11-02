@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
     assert(c->convolver_request_serial.load() > oldConvolverSerial);
     assert(c->speaker_request_serial.load() > oldSpeakerSerial);
     settings.sync();
-    assert(settings.value("mb_x0_hz").toInt() == 200);
+    assert(settings.value("mb_x0_hz").toInt() == 350);
     assert(settings.value("eq_levels_15").toString().startsWith("-145,"));
     assert(settings.value("eq/selected_preset").toString() == "builtin:Acoustic");
     assert(c->tube_model.load() == 2 && c->tube_drive_percent.load() == 73);
