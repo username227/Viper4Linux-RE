@@ -47,7 +47,7 @@ int main() {
 
     assert(invoke({"eq-preset", "Flat"}) == 0);
     for (int i=0; i<15; ++i) assert(c.eq_levels_hundredths[i].load() == 0);
-    const int serial = c.eq_request_serial.load();
+    const auto serial = c.eq_request_serial.load();
     assert(invoke({"eq-preset", "No such preset"}) == 2);
     assert(c.eq_request_serial.load() == serial);
     // An invalid preset later in a batch must not apply earlier edits.
