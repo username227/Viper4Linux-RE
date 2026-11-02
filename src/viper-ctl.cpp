@@ -3,12 +3,13 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 
 namespace {
-void usage() {
-    std::cerr << "Usage: viper-ctl status | on | off | toggle | "
+void usage(std::ostream& out = std::cerr) {
+    out << "Usage: viper-ctl status | on | off | toggle | "
                  "all-on | all-off | bass-mode <0..2> | gain <0.5..10> | freq <15..150 Hz> | "
                  "mono-on | mono-off | mono-mode <0..2> | mono-strength <0.5..10> | mono-freq <15..150> | "
                  "psycho-on | psycho-off | psycho-cutoff <60..150> | psycho-intensity <0..100> | psycho-order <2..5> | psycho-original <0..100> | "
@@ -97,10 +98,14 @@ void show(viperbass::Controls& c) {
 }
 }
 int main(int argc, char** argv) {
+    if (argc == 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) {
+        usage(std::cout);
+        return 0;
+    }
     if (argc < 2) { usage(); return 2; }
     viperbass::Mapping mapping;
     if (!mapping.attach()) {
-        std::cerr << "No clean ViPER control channel. If ./start.sh is running, start audio playback and see ./status.sh.\n";
+        std::cerr << "No running ViPER control channel. Start viper4linux and play audio, then retry.\n";
         return 1;
     }
     auto& c = *mapping.get();

@@ -1,0 +1,42 @@
+.TH VIPER4LINUX 1 "November 2026" "ViPER for Linux" "User Commands"
+.SH NAME
+viper4linux \- launch the ViPER for Linux PipeWire backend and Qt6 GUI
+.SH SYNOPSIS
+.B viper4linux
+.RI [ --fingerprint ]
+.SH DESCRIPTION
+Starts the matching ViPER for Linux PipeWire filter-chain backend if needed,
+then launches the Qt6 GUI. A compatible running backend is reused. If an older
+marked ViPER backend is present, the launcher attempts to replace only that
+instance; it does not restart PipeWire itself. Quit GUI leaves backend audio
+processing running.
+.SH OPTIONS
+.TP
+.B --fingerprint
+Print the fingerprint of the installed DSP binary, controller and PipeWire
+routing configuration; do not launch the backend or GUI.
+.SH FILES
+.TP
+.I $XDG_CONFIG_HOME/ViPERforLinux/ViPERClean.conf
+Current effect settings and UI preferences (usual location under ~/.config).
+.TP
+.I $XDG_DATA_HOME/viper4linux/presets/
+Named effect presets (usual location under ~/.local/share).
+.TP
+.I $XDG_DATA_HOME/viper4linux/IRS/
+Convolver impulse-response files.
+.TP
+.I $XDG_DATA_HOME/viper4linux/VDC/
+ViPER-DDC profile files.
+.TP
+.I $XDG_STATE_HOME/viper4linux/backend.log
+Backend startup diagnostics (usual location under ~/.local/state).
+.TP
+.I $XDG_CONFIG_HOME/autostart/viper4linux-re.desktop
+Optional user-session autostart created by the GUI.
+.SH NOTES
+Window/tray behavior and named presets are configured in the GUI.
+The backend's virtual sink and routing are PipeWire-specific; audio effects
+may continue after the GUI is closed. Start at a safe listening volume.
+.SH SEE ALSO
+.BR viper4linux-ctl (1)

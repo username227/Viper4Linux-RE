@@ -83,6 +83,8 @@ package() {
         "$pkgdir/usr/share/icons/hicolor/256x256/apps/viper4linux.png"
     install -Dm644 "$tree/resources/viper4linux-blue.svg" \
         "$pkgdir/usr/share/icons/hicolor/scalable/apps/viper4linux.svg"
+    install -Dm644 "$tree/man/viper4linux.1" "$pkgdir/usr/share/man/man1/viper4linux.1"
+    install -Dm644 "$tree/man/viper4linux-ctl.1" "$pkgdir/usr/share/man/man1/viper4linux-ctl.1"
     install -Dm644 "$tree/README.md" "$pkgdir/usr/share/doc/viper4linux/README.md"
     install -d "$pkgdir/usr/share/doc/viper4linux/docs"
     cp -a "$tree/docs/." "$pkgdir/usr/share/doc/viper4linux/docs/"

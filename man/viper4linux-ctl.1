@@ -1,0 +1,246 @@
+.TH VIPER4LINUX-CTL 1 "November 2026" "ViPER for Linux" "User Commands"
+.SH NAME
+viper4linux-ctl \- inspect and change live ViPER for Linux PipeWire processing controls
+.SH SYNOPSIS
+.B viper4linux-ctl
+.I command
+.RI [ arguments ]
+.br
+.B viper4linux-ctl --help
+.SH DESCRIPTION
+Controls the currently running ViPER for Linux audio backend using its
+shared-memory control channel. The backend must be running for commands other
+than
+.B --help
+and
+.BR -h .
+Commands change the live processing controls; they are not a substitute for
+the GUI's persistent settings, named effect presets, IRS/VDC libraries, or
+application/window preferences. GUI changes and CLI changes can override each
+other. Exit status 0 indicates a successful command, 1 a missing backend, and
+2 a usage or invalid-value error.
+.PP
+.B Important:
+.B all-on
+and
+.B all-off
+control the global processing bypass.
+.B on
+and
+.B off
+control only ViPER Bass; neither command starts or stops PipeWire.
+.SH COMMANDS
+.SS Status and global processing
+.TP
+.B status
+Print live control status, backend PID, sample rate, and audio block counter.
+.TP
+.BR all-on " | " all-off
+Enable or bypass global effects. The native output limiter remains in the signal path.
+.SS ViPER Bass and Bass Mono
+.TP
+.BR on " | " off " | " toggle
+Enable, disable, or toggle ViPER Bass (not the master bypass).
+.TP
+.BI "bass-mode " 0..2
+0 Natural, 1 Pure Bass+, 2 Subwoofer.
+.TP
+.BI "gain " 0.5..10
+Bass strength.
+.TP
+.BI "freq " 15..150
+Bass frequency in Hz.
+.TP
+.BR mono-on " | " mono-off
+Enable or disable Bass Mono.
+.TP
+.BI "mono-mode " 0..2
+Bass Mono mode.
+.TP
+.BI "mono-strength " 0.5..10
+Bass Mono strength.
+.TP
+.BI "mono-freq " 15..150
+Bass Mono frequency in Hz.
+.SS Psychoacoustic Bass and Dynamic System
+.TP
+.BR psycho-on " | " psycho-off
+Enable or disable psychoacoustic bass.
+.TP
+.BI "psycho-cutoff " 60..150
+Cutoff frequency, Hz.
+.TP
+.BI "psycho-intensity " 0..100
+Effect intensity, percent.
+.TP
+.BI "psycho-order " 2..5
+Harmonic order.
+.TP
+.BI "psycho-original " 0..100
+Original-signal contribution, percent.
+.TP
+.BR dynamic-on " | " dynamic-off
+Enable or disable Dynamic System.
+.TP
+.BI "dynamic-x-low " 0..2400
+Low X crossover parameter.
+.TP
+.BI "dynamic-x-high " 0..12000
+High X crossover parameter.
+.TP
+.BI "dynamic-y-low " 0..200
+Low Y parameter.
+.TP
+.BI "dynamic-y-high " 0..300
+High Y parameter.
+.TP
+.BI "dynamic-side-low " 0..100
+Low-side gain, percent.
+.TP
+.BI "dynamic-side-high " 0..100
+High-side gain, percent.
+.TP
+.BI "dynamic-strength " 0..100
+Dynamic System strength, percent.
+.SS Clarity and Spectrum Extension
+.TP
+.BR clarity-on " | " clarity-off
+Enable or disable Clarity.
+.TP
+.BI "clarity-mode " 0..2
+Native Clarity mode.
+.TP
+.BI "clarity-gain " 0..4.5
+Clarity gain.
+.TP
+.BR spectrum-on " | " spectrum-off
+Enable or disable Spectrum Extension.
+.TP
+.BI "spectrum-freq " 2200..8200
+Spectrum reference frequency, Hz.
+.TP
+.BI "spectrum-exciter " 0..6
+Exciter strength.
+.SS Graphic equalizer and Convolver
+.TP
+.BR eq-on " | " eq-off
+Enable or disable the native graphic EQ.
+.TP
+.BI "eq-bands " "10|15|25|31"
+Select the active number of EQ bands. Unlike the GUI, the CLI does not maintain
+separate saved EQ layouts per band count.
+.TP
+.BI "eq-level " "index dB"
+Set a one-based band
+.I index
+(1 through the currently active band count) to a level from -12 to +12 dB.
+.TP
+.BR convolver-on " | " convolver-off
+Enable or disable the Convolver; an actual impulse response must be loaded
+through the GUI.
+.TP
+.BI "convolver-cross " 0..100
+Cross-channel mix, percent.
+.SS Spatial effects
+.TP
+.BR headphone-on " | " headphone-off
+Enable or disable Headphone Surround+.
+.TP
+.BI "headphone-quality " 0..4
+Headphone Surround+ quality level.
+.TP
+.BR diff-on " | " diff-off
+Enable or disable Differential Surround.
+.TP
+.BI "diff-delay " 1..20
+Delay in milliseconds.
+.TP
+.BI "diff-reverse " 0|1
+Reverse setting; integer 0 or 1.
+.TP
+.BI "diff-mix " 0..100
+Wet mix, percent.
+.TP
+.BI "diff-lowpass " 0..20000
+Low-pass cutoff in Hz.
+.TP
+.BR field-on " | " field-off
+Enable or disable Field Surround.
+.TP
+.BI "field-widen " 0..8
+Widening amount.
+.TP
+.BI "field-mid " 1..2
+Mid image setting.
+.TP
+.BI "field-depth " "0|200..950"
+Depth setting; 0 or 200 through 950.
+.TP
+.BR reverb-on " | " reverb-off
+Enable or disable Reverberation.
+.TP
+.BI "reverb-room " 0..100
+Room size, percent.
+.TP
+.BI "reverb-width " 0..100
+Stereo width, percent.
+.TP
+.BI "reverb-damp " 0..100
+Damping, percent.
+.TP
+.BI "reverb-wet " 0..100
+Wet amount, percent.
+.TP
+.BI "reverb-dry " 0..100
+Dry amount, percent.
+.SS Output processing
+.TP
+.BI "limiter-threshold " 0.3..1
+Native master limiter threshold, linear units.
+.TP
+.BI "limiter-gain " 0.01..2
+Master output gain as a multiplier (1 = 100%).
+.TP
+.BI "limiter-pan " -1..1
+Stereo balance; 0 centered.
+.TP
+.BR agc-on " | " agc-off
+Enable or disable playback gain control (AGC).
+.TP
+.BI "agc-strength " 0.5..3
+AGC strength.
+.TP
+.BI "agc-max " 1..10
+Maximum AGC gain.
+.TP
+.BI "agc-threshold " 0.3..1
+AGC output threshold.
+.TP
+.BR lufs-on " | " lufs-off
+Enable or disable LUFS targeting.
+.TP
+.BI "lufs-target " -24..-8
+Target loudness (LUFS).
+.TP
+.BI "lufs-max " 0..12
+Maximum adjustment (dB).
+.TP
+.BI "lufs-speed " 0..2
+LUFS response speed; integer 0, 1, or 2.
+.SH LIMITATIONS
+The CLI does not currently provide controls for Stereo Imager, FET Compressor,
+Multiband Compressor, Dynamic EQ, Tube Simulator, AnalogX, Cure/Crossfeed,
+Speaker Correction, ViPER-DDC, IRS/VDC profile import and selection, named
+presets, themes, or window/tray preferences. Some effects are controllable
+through their live shared-memory interface but not through this CLI parser.
+.SH EXAMPLES
+.nf
+viper4linux-ctl status
+viper4linux-ctl all-off
+viper4linux-ctl all-on
+viper4linux-ctl on
+viper4linux-ctl gain 2
+viper4linux-ctl eq-level 1 -2.5
+.fi
+.SH SEE ALSO
+.BR viper4linux (1)
