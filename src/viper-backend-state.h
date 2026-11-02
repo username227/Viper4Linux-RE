@@ -6,6 +6,7 @@
 // Called from the GUI event loop/CLI only, never from an audio callback.
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cerrno>
 #include <cstdlib>
 #include <dirent.h>
@@ -96,4 +97,39 @@ inline pid_t detected_backend_pid() {
 #endif
     return running_backend_pid();
 }
+// A GUI-local sampler of the already-published DSP callback counter.
+// No added shared-memory fields or audio-thread work is required.
+// "Active" means callbacks are advancing; a callback may process silence.
+enum class BackendAudioActivity { Checking, Active, Idle };
+
+class AudioActivityTracker {
+public:
+    void reset() noexcept {
+        have_sample_ = false;
+        backend_pid_ = 0;
+        last_callbacks_ = 0;
+    }
+
+    BackendAudioActivity sample(pid_t pid, std::uint32_t callbacks) noexcept {
+        if (pid <= 0) {
+            reset();
+            return BackendAudioActivity::Checking;
+        }
+        if (!have_sample_ || pid != backend_pid_) {
+            have_sample_ = true;
+            backend_pid_ = pid;
+            last_callbacks_ = callbacks;
+            return BackendAudioActivity::Checking;
+        }
+        const auto result = callbacks != last_callbacks_
+            ? BackendAudioActivity::Active : BackendAudioActivity::Idle;
+        last_callbacks_ = callbacks;
+        return result;
+    }
+
+private:
+    pid_t backend_pid_ = 0;
+    std::uint32_t last_callbacks_ = 0;
+    bool have_sample_ = false;
+};
 } // namespace viperbass

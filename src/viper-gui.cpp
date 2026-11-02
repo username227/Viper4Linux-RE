@@ -3569,6 +3569,7 @@ private:
         return mapping_.attach();
     }
     void showOffline() {
+        audio_activity_.reset();
         if (viperbass::detected_backend_pid() > 0) {
             status_->setText(pending_edit_
                 ? "○ Ready to process audio — changes queued until DSP activates"
@@ -4639,10 +4640,29 @@ private:
             // modifications made with the command-line control utility.
             readBackend();
         }
-        status_->setText("● Connected — effects processor ready");
-        status_->setStyleSheet("color: #209454;");
+        // Merely having shared memory does not mean the DSP is receiving audio.
+        // Compare two consecutive 500ms polls without touching the audio thread.
+        const auto* control = mapping_.get();
+        const auto state = audio_activity_.sample(
+            static_cast<pid_t>(control->owner_pid.load(std::memory_order_relaxed)),
+            control->audio_callbacks.load(std::memory_order_relaxed));
+        switch (state) {
+        case viperbass::BackendAudioActivity::Active:
+            status_->setText("● Processing audio — DSP callbacks active");
+            status_->setStyleSheet("color: #209454;");
+            break;
+        case viperbass::BackendAudioActivity::Idle:
+            status_->setText("○ Connected — idle (effects processor ready)");
+            status_->setStyleSheet(QString("color:%1;").arg(theme_muted_color_));
+            break;
+        case viperbass::BackendAudioActivity::Checking:
+            status_->setText("○ Connected — checking audio activity…");
+            status_->setStyleSheet(QString("color:%1;").arg(theme_muted_color_));
+            break;
+        }
     }
     QSettings settings_;
+    viperbass::AudioActivityTracker audio_activity_;
     QSystemTrayIcon* tray_icon_{};
     QAction* tray_processing_action_{};
     bool force_taskbar_minimize_ = false;
