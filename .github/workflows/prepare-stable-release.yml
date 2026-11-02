@@ -141,3 +141,37 @@ jobs:
           path: |
             dist/${{ matrix.target }}/*.deb
             dist/${{ matrix.target }}/SHA256SUMS
+
+  assemble:
+    name: Assemble all verified native release assets
+    needs: [prepare, deb]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout release verification script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download Arch/source and both Debian-family artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: viper4linux-re-${{ inputs.version }}-*
+          path: collected
+
+      - name: Verify source and native packages, assemble one release bundle
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash scripts/assemble-release-assets.sh "$VERSION" "$GITHUB_SHA" collected release-candidate
+
+      - name: Upload complete release candidate (no publication)
+        uses: actions/upload-artifact@v4
+        with:
+          name: viper4linux-re-${{ inputs.version }}-complete-release-candidate
+          retention-days: 30
+          if-no-files-found: error
+          path: release-candidate/
+          include-hidden-files: true

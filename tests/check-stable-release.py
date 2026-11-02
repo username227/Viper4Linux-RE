@@ -29,6 +29,10 @@ assert 'sha256sum --check ARCH-SHA256SUMS' in workflow, 'Arch checksum validatio
 assert 'ARCH-SHA256SUMS' in arch_build, 'Arch job does not generate checksum file'
 assert 'install -m644 -- "$package" "$release_dir/$name"' in arch_build, 'Main Arch package not staged'
 assert '"${debug_packages[@]}"' not in arch_build, 'Debug package must not be staged'
+assert '  assemble:' in workflow and 'needs: [prepare, deb]' in workflow, 'Unified release assembly missing'
+assert 'viper4linux-re-${{ inputs.version }}-complete-release-candidate' in workflow
+assert 'scripts/assemble-release-assets.sh' in workflow
+assert 'scripts/assemble-release-assets.sh "$VERSION" "$GITHUB_SHA"' in workflow
 
 with tempfile.TemporaryDirectory(prefix='viper-release-e2e-') as temp:
     temp = Path(temp)

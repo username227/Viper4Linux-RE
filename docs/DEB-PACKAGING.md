@@ -1,14 +1,11 @@
 # Native Debian-family packages
 
-Our normal distributable remains the unified-source archive. The workflows
-build two independently compiled `.deb` packages from that same source archive. The main [Prepare stable release](../.github/workflows/prepare-stable-release.yml)
-workflow creates the unified source, builds Arch, then builds the `.deb` packages
-from **that exact source archive before publication**. The separate manual
-[Prepare native Debian-family packages](../.github/workflows/prepare-deb-release.yml)
-workflow is for an **already published, tagged release** such as 1.0.0.
-For an existing release, it checks GitHub's recorded SHA-256 digest and
-verifies the source manifest's application commit against the Git tag. A newer
-commit on `main` cannot silently change the packaged DSP or application source.
+Our normal distributable remains the unified-source archive. The single
+[Prepare stable release](../.github/workflows/prepare-stable-release.yml)
+workflow builds the Arch package and two independently compiled native `.deb`
+packages from **the same pinned, unified source archive** before publication.
+The 1.0.0 Debian-family backfill was completed separately; the one-off backfill
+workflow is no longer used for future releases.
 
 | Native binary build | Intended distributions | Validation scope |
 | --- | --- | --- |
@@ -25,24 +22,29 @@ plugins at runtime.
 
 ## Prepare release assets
 
-For **future releases**, run **Prepare stable release** as before: the Arch
-job produces the release-candidate archive and the two Debian-family jobs
-build from that same source. All three jobs must succeed before tagging and
-publishing. Download the source/Arch artifact and both `.deb` artifacts for
-the manual GitHub release. No job publishes files automatically.
+For each new version, manually dispatch **Actions → Prepare stable release**
+and enter the version without the `v` prefix (for example, `1.1.0`).
 
-For **the already published 1.0.0 release**, use the separate action:
+1. The `prepare` job exports the recorded submodule into the unified source,
+   generates the checksum and stable PKGBUILD, then compiles and tests the Arch
+   package against **the generated archive**, not a Git checkout.
+2. The two Debian-family jobs build from the **same downloaded artifact** in
+   their distribution-specific containers and verify dependencies and installation.
+3. The `assemble` job runs only after all three builds pass. It checks the
+   `SOURCE-COMMIT` against the workflow's commit, verifies the unified source
+   manifest and all three package checksums, and uploads one
+   `viper4linux-re-VERSION-complete-release-candidate` artifact.
+4. Download that ZIP, review its contents, and ensure the `vVERSION` tag points
+   to the recorded `SOURCE-COMMIT`. Attach the unified source archive, the
+   main Arch package, and the two `.deb` files to the GitHub release manually.
+   The `-debug` Arch package is intentionally excluded.
+5. The stable and VCS AUR packages are updated in your **separate local AUR
+   checkouts**, not by the workflow. Regenerate `.SRCINFO` before pushing.
 
-1. Open Actions → **Prepare native Debian-family packages** → Run workflow.
-   Enter `1.0.0` (without `v`).
-2. The jobs retrieve the *published* 1.0.0 unified-source tarball, validate its
-   SHA-256 digest and manifest against the `v1.0.0` tag, and build inside
-   Ubuntu Noble and Debian Trixie containers.
-3. After both jobs succeed, download their artifacts. Each contains one
-   native `.deb` and its `SHA256SUMS`.
-4. **Manually** attach the validated `.deb` files to the *existing* GitHub
-   release. Label Mint 22.x as targeted by the Ubuntu 24.04 build (and LMDE 7
-   by the Debian 13 build). Neither workflow publishes anything.
+No workflow creates a tag, publishes a release, pushes an AUR package, or
+builds Flatpak. The automatically generated GitHub source archive is not a
+substitute for the uploaded unified source archive. Use the checksum files
+included in the complete release candidate to verify the downloaded files.
 
 For a desktop install, users can open the matching `.deb` in their graphical
 package manager or use `sudo apt install ./filename.deb` to resolve runtime
@@ -53,8 +55,8 @@ PulseAudio-only setups are not supported. The GUI can be started with
 This package deliberately uses the same `viper4linux-re` package name and
 filesystem paths as the native Arch release. The published 1.0.0 source and
 all three downstream DSP patches are preserved; no DSP changes are made to
-create a Debian-family package. Until these workflows succeed on GitHub,
-there is **no claim of tested Debian/Mint binaries**.
+create a Debian-family package. The two `.deb` packages successfully built in GitHub Actions for 1.0.0;
+Mint-specific GUI, routing and tray behavior still requires direct testing.
 
 ## Extending support
 

@@ -10,21 +10,25 @@ import tempfile
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-workflow = (root / '.github/workflows/prepare-deb-release.yml').read_text()
 main_workflow = (root / '.github/workflows/prepare-stable-release.yml').read_text()
 build_script = (root / 'scripts/build-native-deb.sh').read_text()
 verify = root / 'scripts/verify-deb-release-source.py'
-assert 'ubuntu:24.04' in workflow and 'ubuntu24.04-mint22' in workflow
-assert 'debian:trixie' in workflow and 'debian13-lmde7' in workflow
-assert 'actions/upload-artifact@v4' in workflow
+assert not (root / '.github/workflows/prepare-deb-release.yml').exists(), 'Separate Debian-only workflow must not reappear'
+assert 'ubuntu:24.04' in main_workflow and 'ubuntu24.04-mint22' in main_workflow
+assert 'debian:trixie' in main_workflow and 'debian13-lmde7' in main_workflow
+assert 'actions/upload-artifact@v4' in main_workflow
 assert 'needs: prepare' in main_workflow, 'Main stable release must build .deb after Arch source preparation'
 assert 'actions/download-artifact@v4' in main_workflow
 assert 'debian:trixie' in main_workflow and 'ubuntu:24.04' in main_workflow
 assert 'scripts/build-native-deb.sh' in main_workflow
-assert 'actions/checkout@v4' in workflow
-assert 'release.json' in workflow and 'EXPECTED-SHA256' in workflow
-assert 'download/v${VERSION}' in workflow, 'Must build from published unified source'
-assert 'gh release create' not in workflow and 'git push' not in workflow
+assert 'actions/checkout@v4' in main_workflow
+assert '  assemble:' in main_workflow and 'needs: [prepare, deb]' in main_workflow
+assert 'SOURCE-COMMIT' in main_workflow and 'GITHUB_SHA' in main_workflow
+assert 'complete-release-candidate' in main_workflow
+assert 'scripts/assemble-release-assets.sh' in main_workflow
+assert 'sha256sum --check ARCH-SHA256SUMS' in main_workflow
+assert 'sha256sum --check SHA256SUMS' in main_workflow
+assert 'gh release create' not in main_workflow and 'git push' not in main_workflow
 assert 'dpkg-shlibdeps -O' in build_script
 assert 'dpkg-deb --build --root-owner-group' in build_script
 assert 'apt-get install -y --no-install-recommends "$package"' in build_script
