@@ -9,7 +9,7 @@ if [[ $# -lt 1 || $# -gt 2 ]]; then
 fi
 version=$1
 if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9.-]+)?$ ]]; then
-    echo 'VERSION must be a release version such as 0.1.0' >&2
+    echo 'VERSION must be a release version such as 1.0.0' >&2
     exit 2
 fi
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)

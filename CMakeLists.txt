@@ -26,7 +26,7 @@ target_compile_options(viper_dsp_ladspa PRIVATE -Wall -Wextra -Wpedantic)
 
 # Development identity follows a SemVer placeholder plus the Git revision.
 # The Git checkout determines HEAD; source-only exports may use RELEASE-REVISION.
-set(V4L_BASE_VERSION "0.1.0")
+set(V4L_BASE_VERSION "1.0.0")
 set(V4L_REVISION "unknown")
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
