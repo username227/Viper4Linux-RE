@@ -5,6 +5,9 @@
 #undef main
 
 #include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -146,5 +149,36 @@ int main() {
     assert(help.str().find("ddc-on/off") != std::string::npos);
     assert(help.str().find("speaker-on/off") != std::string::npos);
     server.stop_server();
-    std::cout << "PASS: CLI effect switches, serials, parameters, headphone levels, and aliases\n";
+
+    // Exercise the no-audio case without touching /proc or live PipeWire.
+    // A marked filter-chain process exists, but there is no DSP IPC page yet.
+    char temp[] = "/tmp/viper-status-test-XXXXXX";
+    const auto* directory = mkdtemp(temp);
+    assert(directory != nullptr);
+    const auto proc_root = std::filesystem::path(directory);
+    std::filesystem::create_directories(proc_root / "12345");
+    const auto put = [&](const std::filesystem::path& file, const std::string& value) {
+        std::ofstream out(file, std::ios::binary);
+        out.write(value.data(), static_cast<std::streamsize>(value.size()));
+    };
+    put(proc_root / "12345/cmdline", std::string("/usr/bin/pipewire\0-c\0filter-chain.conf\0", sizeof("/usr/bin/pipewire\0-c\0filter-chain.conf\0")-1));
+    put(proc_root / "12345/environ", std::string("VIPER_CLEAN_INSTANCE=viperlinux-unified-v1\0", sizeof("VIPER_CLEAN_INSTANCE=viperlinux-unified-v1\0")-1));
+    assert(setenv("VIPER_TEST_PROC_ROOT", directory, 1) == 0);
+    std::string result;
+    assert(invoke({"status"}, &result) == 0);
+    assert(result.find("READY TO PROCESS AUDIO") != std::string::npos);
+    assert(result.find("PID 12345") != std::string::npos);
+    assert(invoke({"off"}) == 1); // No silent success for disconnected effects.
+    // A marked process that isn't PipeWire must never be treated as our backend.
+    put(proc_root / "12345/cmdline", std::string("/usr/bin/not-pipewire\0-c\0filter-chain.conf\0", sizeof("/usr/bin/not-pipewire\0-c\0filter-chain.conf\0")-1));
+    assert(viperbass::detected_backend_pid() == 0);
+    assert(invoke({"status"}) == 1);
+    put(proc_root / "12345/cmdline", std::string("/usr/bin/pipewire\0-c\0filter-chain.conf\0", sizeof("/usr/bin/pipewire\0-c\0filter-chain.conf\0")-1));
+    put(proc_root / "12345/environ", std::string("OTHER_INSTANCE=1\0", sizeof("OTHER_INSTANCE=1\0")-1));
+    assert(viperbass::detected_backend_pid() == 0);
+    assert(invoke({"status"}) == 1);
+    assert(unsetenv("VIPER_TEST_PROC_ROOT") == 0);
+    std::filesystem::remove_all(proc_root);
+
+    std::cout << "PASS: CLI effect controls and ready/idle/offline detection\n";
 }

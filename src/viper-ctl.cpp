@@ -1,4 +1,5 @@
 #include "viper-control.h"
+#include "viper-backend-state.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -143,8 +144,20 @@ int main(int argc, char** argv) {
     if (argc < 2) { usage(); return 2; }
     viperbass::Mapping mapping;
     if (!mapping.attach()) {
-        std::cerr << "No running ViPER control channel. Start viper4linux and play audio, then retry.\n";
-        return 1;
+        const auto pid = viperbass::detected_backend_pid();
+        if (argc == 2 && std::string(argv[1]) == "status" && pid > 0) {
+            std::cout << "ViPER backend: READY TO PROCESS AUDIO (PID " << pid
+                      << ") | DSP control channel: not active yet\n";
+            return 0; // Process is running; a script can distinguish ready from offline.
+        }
+        if (pid > 0) {
+            std::cerr << "ViPER backend is ready to process audio (PID " << pid
+                      << "), but the DSP control channel is not active yet. "
+                         "Play audio and retry the effect command.\n";
+        } else {
+            std::cerr << "ViPER backend: OFFLINE. Start viper4linux and retry.\n";
+        }
+        return 1; // An effect command must never claim success without a live channel.
     }
     auto& c = *mapping.get();
     const std::string cmd(argv[1]);

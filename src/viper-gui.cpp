@@ -1,6 +1,7 @@
 // ViPER for Linux — Qt6 control surface.
 // Audio runs in PipeWire's independent filter-chain, not inside this GUI.
 #include "viper-control.h"
+#include "viper-backend-state.h"
 #include "viper-eq-presets.h"
 #include "viper-build-info.h"
 #include <QApplication>
@@ -3568,9 +3569,15 @@ private:
         return mapping_.attach();
     }
     void showOffline() {
-        status_->setText(pending_edit_
-            ? "○ Offline — your changes are queued until ViPER reconnects"
-            : "○ Offline — start ./start.sh");
+        if (viperbass::detected_backend_pid() > 0) {
+            status_->setText(pending_edit_
+                ? "○ Ready to process audio — changes queued until DSP activates"
+                : "○ Ready to process audio — backend started; DSP not active yet");
+        } else {
+            status_->setText(pending_edit_
+                ? "○ Offline — changes queued until ViPER reconnects"
+                : "○ Offline — start viper4linux");
+        }
         status_->setStyleSheet(QString("color:%1;").arg(theme_muted_color_));
     }
     bool publishToBackend() {

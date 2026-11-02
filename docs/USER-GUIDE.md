@@ -49,6 +49,21 @@ viper4linux-ctl --help
 man viper4linux-ctl
 ```
 
+Backend connection status has three useful meanings:
+
+- **Ready to process audio:** the dedicated, marked PipeWire backend process is
+  running, but its DSP control channel is not active yet. This is expected
+  before the first audio stream activates the filter-chain processor. GUI and
+  `viper4linux-ctl status` show this state instead of inaccurately saying the
+  backend is offline. The status command returns success (exit code 0), but
+  effect-setting commands fail (exit code 1) until the control channel exists.
+- **Connected:** the DSP control channel is available and CLI/GUI effect
+  controls are operational. This does not necessarily mean music is playing.
+- **Offline:** no marked ViPER backend process is detected. Start `viper4linux`.
+
+If audio is playing but the status remains **Ready to process audio**, inspect
+routing and the backend log: a process can be alive without a working DSP.
+
 The CLI writes **live shared-memory controls**. It does not yet offer full GUI
 parity or persistent named presets; GUI changes and CLI changes may supersede
 each other. The commands `on` and `off` control the **global ViPER bypass**;

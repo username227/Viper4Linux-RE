@@ -8,20 +8,30 @@ viper4linux-ctl \- inspect and change live ViPER for Linux PipeWire processing c
 .br
 .B viper4linux-ctl --help
 .SH DESCRIPTION
-Controls the currently running ViPER for Linux audio backend using its
-shared-memory control channel. The backend must be running for commands other
-than
+Controls ViPER for Linux using its shared-memory DSP control channel.
+.B status
+also detects whether the dedicated PipeWire process is running before that
+channel has been created. With a running process but no active DSP channel,
+it reports "READY TO PROCESS AUDIO" (for example before playback starts);
+this does not guarantee an audio stream is present or routed correctly.
+"OFFLINE" indicates that no marked ViPER backend process was found.
+Effect-changing commands require an active control channel and do not start
+PipeWire or queue changes while the channel is unavailable.
 .B --help
 and
-.BR -h .
-Commands change the live processing controls. The GUI polls the shared
+.B -h
+are available without the backend. Commands change the live processing controls. The GUI polls the shared
 backend every 500 milliseconds and reflects CLI edits without restarting
 audio. While the GUI is open, those edits are saved with its normal effect
 settings. When the GUI is closed, CLI edits remain live in the backend, but
 are not persisted until the GUI is reopened while that backend is still
 running. A backend restart before then discards unsaved CLI changes. The CLI
-does not manage named presets, IRS/VDC file selection, or window preferences. Exit status 0 indicates a successful command, 1 a missing backend, and
-2 a usage or invalid-value error.
+does not manage named presets, IRS/VDC file selection, or window
+preferences. Exit status 0 indicates a successful command (including
+.B status
+when the backend is ready but DSP controls are not yet active), 1 a backend
+or control channel not available for the requested operation, and 2 a usage
+or invalid-value error.
 .PP
 .B on
 and
@@ -35,7 +45,10 @@ control only ViPER Bass. None of these commands starts or stops PipeWire.
 .SS Status and global processing
 .TP
 .B status
-Print live control status, backend PID, sample rate, and audio block counter.
+If the DSP channel is active, print live control status, backend PID, sample
+rate, and audio block counter. If the marked PipeWire backend is started but
+the DSP channel is inactive, print "READY TO PROCESS AUDIO" and the PID;
+return exit status 0. With no detected backend, print "OFFLINE" and return 1.
 .TP
 .BR on " | " off
 Enable or bypass global effects. The native output limiter remains in the signal path.
