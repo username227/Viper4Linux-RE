@@ -14,6 +14,7 @@ assert 'bass-gain' in commands and 'bass-freq' in commands
 assert not {'gain', 'freq'} & commands
 assert '.BI "bass-gain " VALUE' in man and '.BI "bass-freq " VALUE' in man
 assert not re.search(r'^\.BI "(gain|freq) "', man, re.M)
+assert '.SH COMMAND SEQUENCES' in man and 'not transactions' in man
 expected = [
     ('1. OUTPUT', ['Master Limiter', 'Playback Gain Control (AGC)', 'LUFS Targeting']),
     ('2. BASS', ['ViPER Bass', 'ViPER Bass Mono', 'Psychoacoustic Bass', 'Dynamic System']),

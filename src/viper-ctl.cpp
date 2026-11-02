@@ -3,6 +3,7 @@
 #include "viper-backend-state.h"
 #include "viper-cli-settings.h"
 #include "viper-cli-eq.h"
+#include "viper-cli-batch.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -11,12 +12,13 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
     out << "Usage: viper4linux-ctl COMMAND [ARGUMENTS...]\n"
            "\n"
-           "Global:        status [--full], on, off\n"
+           "Global:        status [--full], on, off (commands may be chained)\n"
            "Bass:          bass-on/off, bass-toggle, bass-mode <0..2>, bass-gain <0.5..10>, bass-freq <15..150 Hz>\n"
            "Bass Mono:     mono-on/off, mono-mode <0..2>, mono-strength <0.5..10>, mono-freq <15..150>\n"
            "Psycho Bass:   psycho-on/off, psycho-cutoff/intensity/order/original <value>\n"
@@ -45,7 +47,8 @@ void usage(std::ostream& out = std::cerr) {
            "               lufs-target/max/speed <value>\n"
            "\n"
            "All on/off pairs are individual commands (for example, tube-on and tube-off).\n"
-           "Use 'man viper4linux-ctl' for exact argument ranges and units.\n";
+           "Use 'man viper4linux-ctl' for exact argument ranges and units.\n"
+           "Multiple commands may follow one another, each with its own arguments.\n";
 }
 
 float number(const char* value, float lower, float upper) {
@@ -85,7 +88,7 @@ void show(viperbass::Controls& c, const std::string& command = "status",
     viperbass::printCliReport(std::cout, c, command, band, expanded, info);
 }
 }
-int main(int argc, char** argv) {
+int executeOne(int argc, char** argv) {
     if (argc == 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) {
         usage(std::cout);
         return 0;
@@ -330,6 +333,46 @@ int main(int argc, char** argv) {
         QSettings settings("ViPERforLinux", "ViPERClean");
         std::cout << "Selected EQ preset: "
                   << settings.value("eq/selected_preset").toString().toStdString() << '\n';
+    }
+    return 0;
+}
+
+// Single and chained invocations share executeOne(). A read-only preflight
+// validates the entire command sequence before the first edit. Runtime/backend
+// failures can still interrupt a partially executed sequence (not atomic).
+int main(int argc, char** argv) {
+    if (argc < 2 || (argc == 2 &&
+        (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")))
+        return executeOne(argc, argv);
+
+    viperbass::Mapping inspection;
+    const bool attached = inspection.attach();
+    const int eqBands = attached ? inspection.get()->eq_band_count.load() : 10;
+    std::vector<viperbass::cli_batch::Command> commands;
+    std::string error;
+    if (!viperbass::cli_batch::parse(argc - 1, argv + 1, eqBands, commands, error)) {
+        std::cerr << "Invalid command sequence: " << error << '\n';
+        return 2;
+    }
+    if (attached) {
+        QSettings settings("ViPERforLinux", "ViPERClean");
+        for (const auto& command : commands) {
+            if (command.args[0] == "eq-preset" &&
+                !viperbass::cli_eq::choose(settings, *inspection.get(),
+                    QString::fromUtf8(command.args[1].c_str()), error,
+                    true, command.eqBandsAfter)) {
+                std::cerr << "EQ preset: " << error << '\n';
+                return 2;
+            }
+        }
+    }
+    for (auto& command : commands) {
+        std::vector<char*> single;
+        single.reserve(command.args.size() + 1);
+        single.push_back(argv[0]);
+        for (auto& argument : command.args) single.push_back(argument.data());
+        const int result = executeOne(static_cast<int>(single.size()), single.data());
+        if (result != 0) return result;
     }
     return 0;
 }

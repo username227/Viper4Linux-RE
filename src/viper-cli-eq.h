@@ -25,7 +25,8 @@ inline QStringList presets(QSettings& settings) {
     return names;
 }
 
-inline bool choose(QSettings& s, Controls& c, const QString& requested, std::string& error) {
+inline bool choose(QSettings& s, Controls& c, const QString& requested,
+                   std::string& error, bool validateOnly = false, int bandsOverride = -1) {
     s.sync();
     const QStringList all = presets(s);
     QString selected;
@@ -52,7 +53,8 @@ inline bool choose(QSettings& s, Controls& c, const QString& requested, std::str
         return false;
     }
 
-    const int bands = viper_eq::validBands(c.eq_band_count.load());
+    const int bands = viper_eq::validBands(
+        bandsOverride < 0 ? c.eq_band_count.load() : bandsOverride);
     std::vector<int> values;
     if (selected.startsWith("builtin:")) {
         const auto name = selected.mid(8);
@@ -105,6 +107,8 @@ inline bool choose(QSettings& s, Controls& c, const QString& requested, std::str
         error = "Preset did not provide a valid EQ curve.";
         return false;
     }
+
+    if (validateOnly) return true; // No shared-memory or settings changes.
 
     // Commit the settings first so an open GUI sees the correct preset label
     // when it notices the new shared-memory band values.

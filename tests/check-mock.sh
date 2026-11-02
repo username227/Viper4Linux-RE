@@ -110,6 +110,11 @@ g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -I
   -o "$work/check-cli-controls" $(pkg-config --libs Qt6Core)
 XDG_CONFIG_HOME="$config/cli-basic" "$work/check-cli-controls"
 
+# The command tokenizer and whole-sequence validator are independent of Qt.
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc \
+  tests/check-cli-batch.cpp -o "$work/check-cli-batch"
+"$work/check-cli-batch"
+
 # CLI persistence is tested in its own temporary config home.
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
   $(pkg-config --cflags Qt6Core) tests/check-cli-settings.cpp \

@@ -67,6 +67,25 @@ int main() {
     assert(c.strength_centi.load() == 235);
     assert(c.frequency_hz.load() == 73);
 
+    // Validate complete multi-command sequences before executing any part.
+    c.master_enabled.store(0);
+    c.enabled.store(0);
+    c.psycho_enabled.store(1);
+    std::string multiOutput;
+    assert(invoke({"on", "bass-on", "psycho-off"}, &multiOutput) == 0);
+    assert(c.master_enabled.load() == 1 && c.enabled.load() == 1 &&
+           c.psycho_enabled.load() == 0);
+    assert(multiOutput.find("Master processing: ON") != std::string::npos);
+    assert(multiOutput.find("ViPER Bass - ON") != std::string::npos);
+    assert(invoke({"off", "bass-gain", "bad"}, &multiOutput) == 2);
+    assert(c.master_enabled.load() == 1); // Invalid later token did not bypass.
+    assert(invoke({"off", "bass-gain", "2.5", "unknown-command"}) == 2);
+    assert(c.master_enabled.load() == 1);
+    assert(invoke({"eq-bands", "15", "eq-level", "12", "-1.5"}) == 0);
+    assert(c.eq_band_count.load() == 15 && c.eq_levels_hundredths[11].load() == -150);
+    assert(invoke({"eq-bands", "10", "eq-level", "12", "-1.5"}) == 2);
+    assert(c.eq_band_count.load() == 15);
+
     // Only an explicit status query prints all six categories. Master switch
     // commands show one confirmation line; effect edits remain scoped.
     std::string displayed;

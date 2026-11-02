@@ -36,6 +36,25 @@ unchanged. The six numbered command sections follow the GUI tabs in order;
 within each section, letters identify individual effect groups.
 To see compact command help, use
 .BR --help .
+.SH COMMAND SEQUENCES
+Multiple CLI commands may be supplied in one invocation, separated by spaces.
+Each command consumes its documented number of arguments; quote names with
+spaces as usual in the shell. Example:
+.PP
+.B v4l-cli on bass-on psycho-off bass-gain 2.5
+.PP
+All commands and numeric arguments are validated before any changes are
+applied; an invalid argument anywhere in the sequence prevents earlier
+changes from being applied. Preset names and saved curves are also validated
+before an attached DSP channel is modified. Valid commands execute in their
+listed order using the same handlers as standalone commands, and each prints
+its usual output. Runtime errors (such as a settings-write failure or backend
+shutdown) can still stop the sequence after earlier commands have succeeded:
+command sequences are not transactions and do not support rollback.
+.PP
+.B status --full
+may appear in a sequence, as may
+.BR eq-presets .
 .SH GLOBAL COMMANDS AND BACKEND STATUS
 .TP
 .B status
