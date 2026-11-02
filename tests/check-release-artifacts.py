@@ -27,6 +27,7 @@ def verify(version: str, dest: Path):
         required = {'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md',
                     'CMakeLists.txt', 'SOURCE-MANIFEST.txt', 'RELEASE-REVISION',
                     'third_party/ViPERDSP/CMakeLists.txt', 'src/viper-gui.cpp',
+                    'src/viper_output_monitor.py', 'packaging/arch/install-package.sh',
                     'man/viper4linux.1', 'man/viper4linux-ctl.1'}
         missing = sorted(prefix + path for path in required if prefix + path not in members)
         assert not missing, f'Missing source files: {missing}'

@@ -4,6 +4,8 @@ from pathlib import Path
 import re
 root = Path(__file__).resolve().parents[1]
 pkg = (root / 'packaging/arch/PKGBUILD').read_text()
+stable = (root / 'packaging/arch/PKGBUILD.stable.in').read_text()
+installer = (root / 'packaging/arch/install-package.sh').read_text()
 launcher = (root / 'src/viper_launcher.py').read_text()
 backend = (root / 'packaging/arch/start-backend').read_text()
 for required in ("pkgname=viper4linux-re-git", 'pkgver() {',
@@ -13,7 +15,7 @@ for required in ("pkgname=viper4linux-re-git", 'pkgver() {',
                  'protocol.file.allow=always submodule update', 'ViPERDSP-patched',
                  'VIPERDSP_SOURCE_DIR=',
                  'sha256sums=(\'SKIP\'', 'package() {',
-                 'check() {', 'install -Dm755', 'usr/lib/ladspa/viper_dsp_ladspa.so'):
+                 'check() {', 'packaging/arch/install-package.sh'):
     assert required in pkg, required
 assert "conflicts=('viper4linux-re' 'viper4linux' 'viper4linux-git')" in pkg
 assert "provides=('viper4linux-re')" in pkg
@@ -22,9 +24,19 @@ assert 'jamesdsp' not in re.findall(r'^\s*conflicts=.*', pkg, flags=re.M)[0].low
 assert (root / '.gitmodules').read_text().find('path = third_party/ViPERDSP') >= 0
 assert (root / '.gitmodules').read_text().find('https://github.com/likelikeslike/ViPERDSP.git') >= 0
 assert 'ln -sfn' not in pkg
-assert 'ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"' in pkg
-assert 'ln -s -- viper4linux-ctl.1 "$pkgdir/usr/share/man/man1/v4l-cli.1"' in pkg
-assert 'usr/share/licenses/$pkgname/LICENSE' in pkg
+assert 'install -Dm' not in pkg, 'PKGBUILD must delegate file layout to install script'
+assert pkg.count('bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"') == 1
+assert stable.count('bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"') == 1
+assert 'install -Dm' not in stable
+assert 'python3 tests/check-arch-install.py' in pkg
+assert 'python3 tests/check-arch-install.py' in stable
+assert 'ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"' in installer
+assert 'ln -s -- viper4linux-ctl.1 "$pkgdir/usr/share/man/man1/v4l-cli.1"' in installer
+assert 'usr/share/licenses/$pkgname/LICENSE' in installer
+assert 'usr/lib/ladspa/viper_dsp_ladspa.so' in installer
+assert 'src/viper_*.py' in installer
+assert 'viper_output_monitor.py' in installer
+assert 'Missing package source:' in installer
 assert (root / 'LICENSE').is_file()
 assert (root / 'THIRD-PARTY-NOTICES.md').is_file()
 assert 'git -C third_party/ViPERDSP archive HEAD' in pkg
@@ -37,4 +49,4 @@ assert 'PIPEWIRE_CONFIG_DIR="$config"' in backend
 assert '/usr/share/pipewire/filter-chain.conf' in backend
 assert '/usr/share/viper4linux/routing-config/filter-chain.conf.d' in backend
 assert (root/'packaging/arch/viper4linux.desktop').is_file()
-print('PASS: Arch VCS PKGBUILD, system layout, fingerprinted launcher and session config')
+print('PASS: unified Arch VCS/stable installation, source checks, fingerprinted launcher and session config')

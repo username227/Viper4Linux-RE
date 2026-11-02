@@ -33,10 +33,31 @@ not declared a package conflict. Do not use pacman's `--overwrite` merely
 to bypass conflicts.
 
 The package installs the launcher, GUI, controller, LADSPA module, desktop
-entry, icons, man pages, and maintained docs. Personal settings, presets,
-and IRS/VDC files remain in user directories and should survive package
-replacement. If an old source checkout installed a launcher symlink,
-use `type -a viper4linux` to ensure it does not shadow `/usr/bin/viper4linux`.
+entry, icons, man pages, maintained docs, and all `src/viper_*.py` Python
+modules. Both Arch VCS and stable PKGBUILDs call
+`packaging/arch/install-package.sh` in `package()`; the script inventories
+runtime Python modules automatically, checks required files before staging,
+then verifies the package contents. When new runtime Python modules are added,
+there is no need to edit the AUR `package()` file list.
+
+For the AUR VCS recipe, the package function is now:
+
+```bash
+package() {
+    local tree="$srcdir/viper4linux"
+    local built="$srcdir/viper4linux-build"
+    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
+}
+```
+
+After updating an AUR checkout, regenerate `.SRCINFO` with
+`makepkg --printsrcinfo > .SRCINFO` and push both files. Stable AUR
+publication happens separately with the next release.
+
+Personal settings, presets, and IRS/VDC files remain in user directories and
+should survive package replacement. If an old source checkout installed a
+launcher symlink, use `type -a viper4linux` to ensure it does not shadow
+`/usr/bin/viper4linux`.
 
 ## Intended public packages
 
