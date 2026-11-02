@@ -6,8 +6,9 @@ first active PipeWire callback. The adapter deliberately caps chunks at 2048
 frames, so 4096 interleaved samples per band are sufficient. Fail closed on
 unexpected upstream revisions. This modifies only the private dependency copy.
 """
+import os
 from pathlib import Path
-p = Path(__file__).resolve().parent.parent / 'third_party/ViPERDSP/viper/effects/StereoImager.cpp'
+p = Path(os.environ.get('VIPERDSP_SOURCE_DIR', str(Path(__file__).resolve().parent.parent / 'third_party/ViPERDSP'))) / 'viper/effects/StereoImager.cpp'
 s = p.read_text()
 old = '''StereoImager::StereoImager() :
     enable_(false),

@@ -4,8 +4,9 @@
 The LADSPA bridge caps processing at 2048 stereo frames. Apply only to the
 verified pinned upstream constructor; fail if upstream changes unexpectedly.
 """
+import os
 from pathlib import Path
-p = Path(__file__).resolve().parent.parent / 'third_party/ViPERDSP/viper/effects/MultibandCompressor.cpp'
+p = Path(os.environ.get('VIPERDSP_SOURCE_DIR', str(Path(__file__).resolve().parent.parent / 'third_party/ViPERDSP'))) / 'viper/effects/MultibandCompressor.cpp'
 s = p.read_text()
 old = '''    crossover_freqs_[0] = kDefault3BandFreqs[0];
 '''

@@ -39,8 +39,12 @@ else
   }
   echo 'Using bundled ViPERDSP source from unified release archive.'
 fi
-# Correct the pinned library's LUFS speed-setting logic only in this local
-# dependency checkout; refuse any unexpected upstream source.
+# The three downstream patches apply to a private build copy, never to the
+# tracked upstream submodule. Unified source archives work the same way.
+mkdir -p build/ViPERDSP-patched
+cp -a -- third_party/ViPERDSP/. build/ViPERDSP-patched/
+rm -rf -- build/ViPERDSP-patched/.git
+export VIPERDSP_SOURCE_DIR="$PWD/build/ViPERDSP-patched"
 python3 patches/fix_lufs_speed.py
 python3 patches/preallocate_stereo_imager.py
 python3 patches/preallocate_multiband_compressor.py
@@ -50,7 +54,8 @@ cp -- /usr/share/pipewire/filter-chain.conf routing-config/filter-chain.conf
 mkdir -p build
 [[ ! -e build/CMakeCache.txt ]] || { echo 'Build not clean.' >&2; exit 1; }
 echo '== Fresh native CMake configure and compile =='
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DVIPERDSP_SOURCE_DIR="$VIPERDSP_SOURCE_DIR"
 cmake --build build --target viper_dsp_ladspa viper-ctl viper-gui -j4
 for item in build/viper_dsp_ladspa.so build/viper-ctl build/viper-gui; do
     [[ -s "$item" ]] || { echo "Missing expected compiled binary: $item" >&2; exit 1; }

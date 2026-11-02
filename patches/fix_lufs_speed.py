@@ -3,8 +3,9 @@
 
 No upstream rebase; refuse unknown source instead of fuzzy substitution.
 """
+import os
 from pathlib import Path
-p = Path(__file__).resolve().parent.parent/'third_party/ViPERDSP/viper/effects/LUFSTargeting.cpp'
+p = Path(os.environ.get('VIPERDSP_SOURCE_DIR', str(Path(__file__).resolve().parent.parent / 'third_party/ViPERDSP'))) / 'viper/effects/LUFSTargeting.cpp'
 s = p.read_text()
 old = '''void LUFSTargeting::SetSpeed(const int value) {
     if (value < 0) speed_ = 0;

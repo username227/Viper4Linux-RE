@@ -10,7 +10,8 @@ for required in ("pkgname=viper4linux-re-git", 'pkgver() {',
                  'git rev-list --count HEAD', 'git rev-parse --short=12 HEAD',
                  'git+file://', 'Desktop/viper4linux-submodule', 'ViPERDSP::git+https://',
                  'git submodule init', 'submodule.third_party/ViPERDSP.url',
-                 'protocol.file.allow=always submodule update',
+                 'protocol.file.allow=always submodule update', 'ViPERDSP-patched',
+                 'VIPERDSP_SOURCE_DIR=',
                  'sha256sums=(\'SKIP\'', 'package() {',
                  'check() {', 'install -Dm755', 'usr/lib/ladspa/viper_dsp_ladspa.so'):
     assert required in pkg, required
@@ -21,6 +22,8 @@ assert 'jamesdsp' not in re.findall(r'^\s*conflicts=.*', pkg, flags=re.M)[0].low
 assert (root / '.gitmodules').read_text().find('path = third_party/ViPERDSP') >= 0
 assert (root / '.gitmodules').read_text().find('https://github.com/likelikeslike/ViPERDSP.git') >= 0
 assert 'ln -sfn' not in pkg
+assert 'git -C third_party/ViPERDSP archive HEAD' in pkg
+assert '-DVIPERDSP_SOURCE_DIR=' in pkg
 assert 'SYSTEM_MODE' in launcher and "Path('/usr/bin/viper4linux-gui')" in launcher
 assert 'SYSTEM_BACKEND' in launcher and 'SYSTEM_ROUTING' in launcher
 assert 'VIPER_BACKEND_FINGERPRINT' in backend

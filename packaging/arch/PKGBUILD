@@ -35,14 +35,18 @@ prepare() {
     git -c protocol.file.allow=always submodule update --init --checkout -- third_party/ViPERDSP
     test "$(git -C third_party/ViPERDSP rev-parse HEAD)" = "$(git rev-parse HEAD:third_party/ViPERDSP)" || return 1
 
-    python3 patches/fix_lufs_speed.py
-    python3 patches/preallocate_stereo_imager.py
-    python3 patches/preallocate_multiband_compressor.py
+    # Export a private copy: no patches in the tracked upstream submodule.
+    mkdir -p "$srcdir/ViPERDSP-patched"
+    git -C third_party/ViPERDSP archive HEAD | tar -x -C "$srcdir/ViPERDSP-patched"
+    VIPERDSP_SOURCE_DIR="$srcdir/ViPERDSP-patched" python3 patches/fix_lufs_speed.py
+    VIPERDSP_SOURCE_DIR="$srcdir/ViPERDSP-patched" python3 patches/preallocate_stereo_imager.py
+    VIPERDSP_SOURCE_DIR="$srcdir/ViPERDSP-patched" python3 patches/preallocate_multiband_compressor.py
 }
 
 build() {
     cmake -S "$srcdir/viper4linux" -B "$srcdir/viper4linux-build" \
-        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_BUILD_TYPE=Release \
+        -DVIPERDSP_SOURCE_DIR="$srcdir/ViPERDSP-patched"
     cmake --build "$srcdir/viper4linux-build" --parallel "$(nproc)"
 }
 
