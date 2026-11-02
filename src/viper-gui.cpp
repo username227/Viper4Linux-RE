@@ -9,6 +9,9 @@
 #include <QButtonGroup>
 #include <QDialogButtonBox>
 #include <QDesktopServices>
+#include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMenu>
 #include <QRadioButton>
 #include <QSaveFile>
@@ -679,6 +682,12 @@ public:
         menuButton->setMenu(makeApplicationMenu(menuButton));
         titleRow->addWidget(menuButton);
         layout->addLayout(titleRow);
+        // Read-only status from the background monitor. No CLI subprocesses.
+        audio_output_label_ = new QLabel("Audio Output: detecting…", central);
+        audio_output_label_->setObjectName("viperCurrentAudioOutput");
+        audio_output_label_->setStyleSheet("color: palette(mid);");
+        audio_output_label_->setToolTip("Current physical Audio Output. Automatic per-output settings are not enabled yet.");
+        layout->addWidget(audio_output_label_);
 
         // Master bypass lives outside both tabs, as in the previous working UI.
         auto* masterCard = new QFrame(central);
@@ -1804,7 +1813,10 @@ public:
         connect(lufs_enabled_, &QCheckBox::toggled, this, [this]{ updateLabels(); push(); });
         connect(lufs_speed_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
         auto* timer = new QTimer(this);
-        connect(timer, &QTimer::timeout, this, [this]{ pollBackend(); });
+        connect(timer, &QTimer::timeout, this, [this]{
+            pollBackend();
+            updateAudioOutputDisplay();
+        });
         timer->start(500);
         // Theme selection changes only the GUI, never DSP settings.
         connect(theme_selector_, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -3078,6 +3090,36 @@ private:
         if (file.write(desktop) != desktop.size()) { file.cancelWriting(); return false; }
         return file.commit();
     }
+    void updateAudioOutputDisplay() {
+        const QString runtime = qEnvironmentVariable("XDG_RUNTIME_DIR");
+        if (runtime.isEmpty()) {
+            audio_output_label_->setText("Audio Output: unavailable");
+            return;
+        }
+        QFile file(QDir(runtime).filePath("viper4linux-output-status.json"));
+        if (!file.open(QIODevice::ReadOnly)) {
+            audio_output_label_->setText("Audio Output: detecting…");
+            return;
+        }
+        const QJsonDocument status = QJsonDocument::fromJson(file.readAll());
+        if (!status.isObject() || status.object().value("format").toInt() != 1 ||
+            std::abs(status.object().value("timestamp").toDouble() -
+                     double(QDateTime::currentSecsSinceEpoch())) > 5.0) {
+            audio_output_label_->setText("Audio Output: unavailable");
+            return;
+        }
+        const QJsonObject active = status.object().value("active").toObject();
+        const QString description = active.value("description").toString();
+        const QString identity = active.value("key").toString();
+        if (description.isEmpty() || identity.size() != 64) {
+            audio_output_label_->setText("Audio Output: detecting…");
+            return;
+        }
+        audio_output_label_->setText("Audio Output: " + description);
+        audio_output_label_->setToolTip("Audio Output identity: " + identity.left(12) +
+            "\nThe full per-output settings feature is not enabled yet.");
+    }
+
     void showPreferences() {
         QDialog dialog(this);
         dialog.setWindowTitle("Viper4Linux — Window & Tray");
@@ -4684,6 +4726,7 @@ private:
     bool cinnamon_theme_known_ = false;
     bool cinnamon_theme_dark_ = false;
     QLabel* header_icon_{};
+    QLabel* audio_output_label_{};
     QComboBox* theme_selector_{};
     QCheckBox* eq_enabled_{};
     QComboBox* eq_mode_{};
