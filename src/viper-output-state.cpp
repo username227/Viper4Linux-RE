@@ -306,7 +306,7 @@ static bool validateState(const QJsonObject& state) {
         if (!item.isObject() || !validateFields(item.toObject(), deqFields)) return false;
     const auto files = state.value("files");
     if (!files.isObject() || files.toObject().size() != 2) return false;
-    for (const QString& k : {"ddc_profile", "convolver_kernel"}) {
+    for (const QString k : {"ddc_profile", "convolver_kernel"}) {
         const auto value = files.toObject().value(k);
         if (!value.isString() || value.toString().size() > 4096) return false;
     }
@@ -325,7 +325,7 @@ static bool validateState(const QJsonObject& state) {
     const auto values = state.value("values").toObject();
     // A removed IR/VDC file must not silently leave another output's old
     // loaded filter active. Reject this restore *before* writing settings.
-    for (const QString& path : {"ddc_profile", "convolver_kernel"}) {
+    for (const QString path : {"ddc_profile", "convolver_kernel"}) {
         const QString value = files.toObject().value(path).toString();
         if (!value.isEmpty() && !QFileInfo(value).isFile()) return false;
     }
