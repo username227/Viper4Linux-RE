@@ -1,0 +1,69 @@
+name: Prepare stable release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to prepare (without v prefix); do not publish a tag yet"
+        required: true
+        type: string
+        default: "1.0.0"
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout source and pinned ViPERDSP submodule
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Build unified source archive and public stable PKGBUILD
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash scripts/prepare-stable-release.sh "$VERSION" "$GITHUB_WORKSPACE/dist"
+
+      - name: Compile, test and package on current Arch Linux
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace:rw" \
+            -w /workspace \
+            archlinux:latest \
+            bash scripts/test-stable-arch.sh "$VERSION" /workspace/dist
+
+      - name: Validate packaged artifacts
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 tests/check-release-artifacts.py "$VERSION" "$GITHUB_WORKSPACE/dist"
+          (cd dist && sha256sum --check SHA256SUMS)
+          test -s dist/.SRCINFO
+
+      - name: Upload reviewable release assets (no publication)
+        uses: actions/upload-artifact@v4
+        with:
+          name: viper4linux-re-${{ inputs.version }}-release-candidate
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            dist/viper4linux-re-${{ inputs.version }}-unified-source.tar.xz
+            dist/SHA256SUMS
+            dist/PKGBUILD
+            dist/.SRCINFO
+            dist/SOURCE-COMMIT
+          include-hidden-files: true

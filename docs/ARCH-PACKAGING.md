@@ -57,3 +57,50 @@ Our application code is MIT-licensed. ViPERDSP has different upstream terms,
 which the MIT license does not supersede; see `THIRD-PARTY-NOTICES.md`.
 Publishing a unified source archive is a separate, deliberate distribution
 step, not part of GitHub's automatic source archives.
+
+## Prepare the 1.0.0 release (GitHub Actions)
+
+The manually dispatched [Prepare stable release](../.github/workflows/prepare-stable-release.yml)
+workflow creates an offline, unified source archive from the selected commit
+and its **recorded ViPERDSP submodule revision**. It does not create a tag,
+GitHub release, binary distribution, or AUR commit.
+
+1. On GitHub, open **Actions → Prepare stable release → Run workflow**.
+   Select the intended source revision/branch and enter `1.0.0`.
+2. The job generates `viper4linux-re-1.0.0-unified-source.tar.xz`, derives its
+   SHA-256, and renders `PKGBUILD` from
+   [`packaging/arch/PKGBUILD.stable.in`](../packaging/arch/PKGBUILD.stable.in).
+3. In an official Arch Linux container, the job builds the stable Arch package
+   **using that locally generated tarball**, runs `check()`, and verifies its
+   installed file list. Package dependencies may be downloaded by pacman;
+   application and DSP sources are not downloaded during this build.
+4. Download the `viper4linux-re-1.0.0-release-candidate` Actions artifact. It
+   contains the unified tarball, `SHA256SUMS`, versioned `PKGBUILD`, `.SRCINFO`,
+   and `SOURCE-COMMIT`. Review the test logs and source before publication.
+5. Ensure the release tag `v1.0.0` refers to **exactly** the tested
+   `SOURCE-COMMIT`. Create the GitHub release manually, upload the unified
+   tarball and checksum file as release assets, and verify the stable PKGBUILD
+   URL and checksum. GitHub's auto-generated archive is **not** the unified
+   source archive.
+6. Publish/update the AUR checkouts **manually**. The stable AUR PKGBUILD may
+   use the generated version and SHA-256; regenerate `.SRCINFO` before pushing.
+
+If a `v1.0.0` tag exists on another commit, release preparation fails rather
+than silently generating a mislabeled archive. Rerun preparation after any
+source change; the prior checksum will no longer be valid. GitHub Actions
+artifacts expire after the workflow's configured retention period.
+
+### Run the release preparation locally
+
+With the submodule initialized and clean, the same generation logic works
+without GitHub Actions:
+
+```bash
+mkdir -p release-candidate
+bash scripts/prepare-stable-release.sh 1.0.0 "$PWD/release-candidate"
+```
+
+The resulting source archive contains the pinned, unpatched upstream DSP; the
+stable PKGBUILD applies the three compatibility fixes only to a private build
+copy. The full Arch packaging test requires an Arch environment with pacman,
+Qt6, CMake and the other declared dependencies.

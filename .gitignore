@@ -7,3 +7,5 @@ __pycache__/
 
 # Source ZIP manifests provide revision information without Git.
 /RELEASE-REVISION
+/release-candidate/
+/dist/
