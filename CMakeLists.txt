@@ -58,4 +58,5 @@ target_compile_options(viper-gui PRIVATE -Wall -Wextra -Wpedantic)
 
 add_executable(viper-ctl src/viper-ctl.cpp)
 target_include_directories(viper-ctl PRIVATE src)
+target_link_libraries(viper-ctl PRIVATE Qt6::Core)
 target_compile_options(viper-ctl PRIVATE -Wall -Wextra -Wpedantic)

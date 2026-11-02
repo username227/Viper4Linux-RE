@@ -1,5 +1,6 @@
 #include "viper-control.h"
 #include "viper-backend-state.h"
+#include "viper-cli-settings.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -353,6 +354,10 @@ int main(int argc, char** argv) {
     } catch (const std::exception& e) {
         std::cerr << "Invalid value: " << e.what() << '\n';
         return 2;
+    }
+    if (cmd != "status" && !viperbass::persistCliSettings(cmd, c)) {
+        std::cerr << "Live DSP controls updated, but the saved CLI settings could not be written.\n";
+        return 1;
     }
     show(c);
     return 0;

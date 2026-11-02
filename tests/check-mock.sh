@@ -106,5 +106,12 @@ XDG_CONFIG_HOME="$config" "$work/check" "$work/viper_mock.so"
 
 # The CLI test uses a PID-scoped mock IPC channel and never connects to live audio.
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -Wall -Wextra -Werror -Isrc \
-  tests/check-cli-controls.cpp -o "$work/check-cli-controls"
-"$work/check-cli-controls"
+  $(pkg-config --cflags Qt6Core) tests/check-cli-controls.cpp \
+  -o "$work/check-cli-controls" $(pkg-config --libs Qt6Core)
+XDG_CONFIG_HOME="$config/cli-basic" "$work/check-cli-controls"
+
+# CLI persistence is tested in its own temporary config home.
+g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -Wall -Wextra -Werror -Isrc \
+  $(pkg-config --cflags Qt6Core) tests/check-cli-settings.cpp \
+  -o "$work/check-cli-settings" $(pkg-config --libs Qt6Core)
+XDG_CONFIG_HOME="$config/cli-only" "$work/check-cli-settings"

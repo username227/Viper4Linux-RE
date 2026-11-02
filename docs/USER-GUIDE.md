@@ -75,9 +75,12 @@ automatically. Closing a music player does not unload or restart the DSP.
 If audio is playing but the status remains **Ready to process audio**, inspect
 routing and the backend log: a process can be alive without a working DSP.
 
-The CLI writes **live shared-memory controls**. It does not yet offer full GUI
-parity or persistent named presets; GUI changes and CLI changes may supersede
-each other. The commands `on` and `off` control the **global ViPER bypass**;
+The CLI writes **live shared-memory controls** and immediately saves
+successful changes to the same per-user Qt settings store as the GUI, even when
+the GUI is closed. It does not manage named presets, IRS/VDC file selection, or
+all advanced GUI parameters. If the settings store is unwritable, the command
+reports a persistence failure even though the live DSP change may already have
+taken effect. GUI changes and CLI changes may supersede each other. The commands `on` and `off` control the **global ViPER bypass**;
 `bass-on`, `bass-off`, and `bass-toggle` control only **ViPER Bass**.
 Legacy `all-on`/`all-off` and `toggle` aliases remain accepted for scripts.
 

@@ -4393,6 +4393,8 @@ private:
             const QSignalBlocker blockMode(eq_mode_);
             eq_mode_->setCurrentIndex(eq_mode_->findData(remoteEqBands));
             loadEqLayout();
+            // A remote EQ-mode change is no longer the selected GUI preset.
+            selectEqPreset("custom");
         }
         bool eqRemoteEdit = false;
         for (int i = 0; i < eq_active_bands_; ++i) {
