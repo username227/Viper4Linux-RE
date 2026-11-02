@@ -2,6 +2,7 @@
 #include "viper-cli-report.h"
 #include "viper-backend-state.h"
 #include "viper-cli-settings.h"
+#include "viper-cli-eq.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -22,6 +23,7 @@ void usage(std::ostream& out = std::cerr) {
            "Dynamic Bass:  dynamic-on/off, dynamic-x-low/high, dynamic-y-low/high,\n"
            "               dynamic-side-low/high, dynamic-strength <value>\n"
            "EQ:            eq-on/off, eq-bands <10|15|25|31>, eq-level <band> <dB>\n"
+           "               eq-presets, eq-preset <NAME>\n"
            "Dynamic EQ:    deq-on/off (edit individual bands in GUI)\n"
            "Clarity:       clarity-on/off, clarity-gain <0..4.5>, clarity-mode <0..2>\n"
            "Spectrum:      spectrum-on/off, spectrum-freq <2200..8200>, spectrum-exciter <0..6>\n"
@@ -89,6 +91,11 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc < 2) { usage(); return 2; }
+    if (argc == 2 && std::string(argv[1]) == "eq-presets") {
+        QSettings settings("ViPERforLinux", "ViPERClean");
+        viperbass::cli_eq::list(settings, std::cout);
+        return 0;
+    }
     viperbass::Mapping mapping;
     if (!mapping.attach()) {
         const auto pid = viperbass::detected_backend_pid();
@@ -117,6 +124,14 @@ int main(int argc, char** argv) {
         }
         if ((cmd == "on" || cmd == "all-on") && argc == 2) c.master_enabled.store(1);
         else if ((cmd == "off" || cmd == "all-off") && argc == 2) c.master_enabled.store(0);
+        else if (cmd == "eq-preset" && argc == 3) {
+            QSettings settings("ViPERforLinux", "ViPERClean");
+            std::string error;
+            if (!viperbass::cli_eq::choose(settings, c, QString::fromUtf8(argv[2]), error)) {
+                std::cerr << "EQ preset: " << error << '\n';
+                return error.find("Could not save") != std::string::npos ? 1 : 2;
+            }
+        }
         else if (cmd == "bass-on" && argc == 2) c.enabled.store(1);
         else if (cmd == "bass-off" && argc == 2) c.enabled.store(0);
         else if ((cmd == "bass-toggle" || cmd == "toggle") && argc == 2)
@@ -306,10 +321,15 @@ int main(int argc, char** argv) {
         std::cerr << "Invalid value: " << e.what() << '\n';
         return 2;
     }
-    if (cmd != "status" && !viperbass::persistCliSettings(cmd, c)) {
+    if (cmd != "status" && cmd != "eq-preset" && !viperbass::persistCliSettings(cmd, c)) {
         std::cerr << "Live DSP controls updated, but the saved CLI settings could not be written.\n";
         return 1;
     }
     show(c, cmd, argc > 2 ? argv[2] : nullptr);
+    if (cmd == "eq-preset") {
+        QSettings settings("ViPERforLinux", "ViPERClean");
+        std::cout << "Selected EQ preset: "
+                  << settings.value("eq/selected_preset").toString().toStdString() << '\n';
+    }
     return 0;
 }

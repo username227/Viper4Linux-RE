@@ -115,3 +115,9 @@ g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -I
   $(pkg-config --cflags Qt6Core) tests/check-cli-settings.cpp \
   -o "$work/check-cli-settings" $(pkg-config --libs Qt6Core)
 XDG_CONFIG_HOME="$config/cli-only" "$work/check-cli-settings"
+
+# Preset selection and complete status use another isolated mock channel/store.
+g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
+  $(pkg-config --cflags Qt6Core) tests/check-cli-eq-presets.cpp \
+  -o "$work/check-cli-eq-presets" $(pkg-config --libs Qt6Core)
+XDG_CONFIG_HOME="$config/cli-presets" "$work/check-cli-eq-presets"

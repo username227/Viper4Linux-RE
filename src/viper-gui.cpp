@@ -4385,6 +4385,8 @@ private:
         const QSignalBlocker blockDdc(ddc_enabled_), blockSpeaker(speaker_enabled_);
         const QSignalBlocker blockDeq(deq_enabled_);
         const QSignalBlocker blockEq(eq_enabled_);
+        settings_.sync();
+        const QString remoteEqPreset = settings_.value("eq/selected_preset", "custom").toString();
         eq_enabled_->setChecked(c->eq_enabled.load() != 0);
         const int remoteEqBands = validEqBands(c->eq_band_count.load());
         if (remoteEqBands != eq_active_bands_) {
@@ -4393,8 +4395,9 @@ private:
             const QSignalBlocker blockMode(eq_mode_);
             eq_mode_->setCurrentIndex(eq_mode_->findData(remoteEqBands));
             loadEqLayout();
-            // A remote EQ-mode change is no longer the selected GUI preset.
-            selectEqPreset("custom");
+            // Preserve a preset chosen by the CLI; ordinary EQ-band edits
+            // already save "custom" to the same settings key.
+            selectEqPreset(remoteEqPreset);
         }
         bool eqRemoteEdit = false;
         for (int i = 0; i < eq_active_bands_; ++i) {
@@ -4406,7 +4409,8 @@ private:
             eq_values_[i]->setText(QString::number(level / 100.0, 'f', 2));
             eqRemoteEdit = true;
         }
-        if (eqRemoteEdit) { saveEqLayout(); selectEqPreset("custom"); updateEqOverview(); }
+        if (eqRemoteEdit) { saveEqLayout(); selectEqPreset(remoteEqPreset); updateEqOverview(); }
+        if (remoteEqPreset != eq_selected_preset_) selectEqPreset(remoteEqPreset);
         tube_enabled_->setChecked(c->tube_enabled.load() != 0);
         {
             const QSignalBlocker a(crossfeed_enabled_), b(crossfeed_mode_);
