@@ -41,16 +41,19 @@ The installed command is `viper4linux-ctl`. Try:
 
 ```bash
 viper4linux-ctl status
-viper4linux-ctl all-off
-viper4linux-ctl all-on
+viper4linux-ctl off
+viper4linux-ctl on
+viper4linux-ctl bass-off
+viper4linux-ctl bass-on
 viper4linux-ctl --help
 man viper4linux-ctl
 ```
 
 The CLI writes **live shared-memory controls**. It does not yet offer full GUI
 parity or persistent named presets; GUI changes and CLI changes may supersede
-each other. The options `on`, `off` and `toggle` control **ViPER Bass**, not
-Master. `all-on` and `all-off` control the master bypass.
+each other. The commands `on` and `off` control the **global ViPER bypass**;
+`bass-on`, `bass-off`, and `bass-toggle` control only **ViPER Bass**.
+Legacy `all-on`/`all-off` and `toggle` aliases remain accepted for scripts.
 
 For a direct-source development build, useful scripts are `./status.sh`,
 `./verify.sh`, `./stop.sh` and `./start.sh`. The source installer builds

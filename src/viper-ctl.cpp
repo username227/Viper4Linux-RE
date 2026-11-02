@@ -9,8 +9,8 @@
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
-    out << "Usage: viper4linux-ctl status | on | off | toggle | "
-                 "all-on | all-off | bass-mode <0..2> | gain <0.5..10> | freq <15..150 Hz> | "
+    out << "Usage: viper4linux-ctl status | on | off | bass-on | bass-off | bass-toggle | "
+                 "bass-mode <0..2> | gain <0.5..10> | freq <15..150 Hz> | "
                  "mono-on | mono-off | mono-mode <0..2> | mono-strength <0.5..10> | mono-freq <15..150> | "
                  "psycho-on | psycho-off | psycho-cutoff <60..150> | psycho-intensity <0..100> | psycho-order <2..5> | psycho-original <0..100> | "
                  "dynamic-on | dynamic-off | dynamic-x-low <0..2400> | dynamic-x-high <0..12000> | dynamic-y-low <0..200> | dynamic-y-high <0..300> | dynamic-side-low <0..100> | dynamic-side-high <0..100> | dynamic-strength <0..100> | "
@@ -112,11 +112,12 @@ int main(int argc, char** argv) {
     const std::string cmd(argv[1]);
     try {
         if (cmd == "status" && argc == 2) { show(c); return 0; }
-        if (cmd == "all-on" && argc == 2) c.master_enabled.store(1);
-        else if (cmd == "all-off" && argc == 2) c.master_enabled.store(0);
-        else if (cmd == "on" && argc == 2) c.enabled.store(1);
-        else if (cmd == "off" && argc == 2) c.enabled.store(0);
-        else if (cmd == "toggle" && argc == 2) c.enabled.store(!c.enabled.load());
+        if ((cmd == "on" || cmd == "all-on") && argc == 2) c.master_enabled.store(1);
+        else if ((cmd == "off" || cmd == "all-off") && argc == 2) c.master_enabled.store(0);
+        else if (cmd == "bass-on" && argc == 2) c.enabled.store(1);
+        else if (cmd == "bass-off" && argc == 2) c.enabled.store(0);
+        else if ((cmd == "bass-toggle" || cmd == "toggle") && argc == 2)
+            c.enabled.store(!c.enabled.load());
         else if (cmd == "bass-mode" && argc == 3) {
             const auto v = number(argv[2], 0.f, 2.f);
             if (std::trunc(v) != v) throw std::invalid_argument("Bass mode must be an integer 0, 1, or 2");

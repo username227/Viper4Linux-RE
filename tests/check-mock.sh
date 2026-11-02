@@ -103,3 +103,8 @@ g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ir-reader.cpp -o "$wo
 g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ddc-reader.cpp -o "$work/check-ddc-reader"
 "$work/check-ddc-reader"
 XDG_CONFIG_HOME="$config" "$work/check" "$work/viper_mock.so"
+
+# The CLI test uses a PID-scoped mock IPC channel and never connects to live audio.
+g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -Wall -Wextra -Werror -Isrc \
+  tests/check-cli-controls.cpp -o "$work/check-cli-controls"
+"$work/check-cli-controls"
