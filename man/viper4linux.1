@@ -1,20 +1,26 @@
-.TH VIPER4LINUX 1 "November 2026" "ViPER for Linux" "User Commands"
+.TH VIPER4LINUX 1 "November 2026" "ViPER4Linux-RE" "User Commands"
 .SH NAME
-viper4linux \- launch the ViPER for Linux PipeWire backend and Qt6 GUI
+viper4linux \- launch the ViPER4Linux-RE PipeWire backend and Qt6 GUI
 .SH SYNOPSIS
 .B viper4linux
 .RI [ --fingerprint ]
 .SH DESCRIPTION
-Starts the matching ViPER for Linux PipeWire filter-chain backend if needed,
+Starts the matching ViPER4Linux-RE PipeWire filter-chain backend if needed,
 then launches the Qt6 GUI. A compatible running backend is reused. If an older
 marked ViPER backend is present, the launcher attempts to replace only that
 instance; it does not restart PipeWire itself. Quit GUI leaves backend audio
 processing running.
 .SH OPTIONS
 .TP
+.B --help
+Display available launcher options and exit without starting the backend.
+.TP
 .B --fingerprint
 Print the fingerprint of the installed DSP binary, controller and PipeWire
-routing configuration; do not launch the backend or GUI.
+routing configuration; do not launch the backend or GUI. The launcher uses
+this fingerprint to reuse a compatible running instance or to replace its
+own older or mismatched instance. It does not terminate unrelated PipeWire
+clients.
 .SH FILES
 .TP
 .I $XDG_CONFIG_HOME/ViPERforLinux/ViPERClean.conf
@@ -39,4 +45,5 @@ Window/tray behavior and named presets are configured in the GUI.
 The backend's virtual sink and routing are PipeWire-specific; audio effects
 may continue after the GUI is closed. Start at a safe listening volume.
 .SH SEE ALSO
-.BR viper4linux-ctl (1)
+.BR viper4linux-ctl (1),
+.BR v4l-cli (1)

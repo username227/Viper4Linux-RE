@@ -39,9 +39,9 @@ To see compact command help, use
 .SH GLOBAL COMMANDS AND BACKEND STATUS
 .TP
 .B status
-Print the complete DSP report, grouped into the same six sections as the GUI.
-It includes all effect settings, sample rate, backend PID, and audio-block
-counter. Only this command prints the full configuration.
+Print the six-section live DSP summary, showing effect states, principal
+parameters, sample rate, backend PID, and audio-block counter. This summary
+does not list every EQ band or every compressor parameter.
 The status command never changes or saves settings. A started backend with no
 DSP channel reports READY TO PROCESS AUDIO. A connected channel does not prove
 that audible music is playing; compare the counter between repeated queries.
@@ -171,9 +171,13 @@ Set harmonic order. VALUE accepts decimals from 2 through 5 inclusive,
 rounded to the nearest whole-number order.
 .TP
 .BI "psycho-original " VALUE
-Set original-signal contribution. VALUE accepts decimals from 0 through
+Set the percentage of the unprocessed signal retained by the psychoacoustic
+bass processor. VALUE accepts decimals from 0 through
 100 percent inclusive, rounded to the nearest whole percentage point.
 .SS "D. Dynamic System"
+The X and Y values are Dynamic System's native shaping parameters, not
+frequencies or decibel values. Adjust them together with the strength and
+side-contribution controls; the GUI offers the same parameters.
 .TP
 .BR dynamic-on " and " dynamic-off
 Enable or disable Dynamic System bass. No arguments.
@@ -213,13 +217,14 @@ Enable or disable the graphic equalizer. No arguments.
 .TP
 .BI "eq-bands " COUNT
 Set the number of graphic-EQ bands. COUNT must be exactly one of the whole
-numbers 10, 15, 25 or 31. This selects the active EQ layout.
+numbers 10, 15, 25 or 31. This selects the active EQ layout and marks the EQ preset as Custom.
 .TP
 .BI "eq-level " "BAND DB"
 Set an individual EQ band. BAND must be a whole-number index from 1 through
 the current number of bands, inclusive. DB accepts decimals from -12 through
 +12 dB inclusive, stored to the nearest hundredth of a decibel.
-Example:
+Changing a band marks the EQ preset as Custom; built-in preset curves remain
+unchanged. Example:
 .B viper4linux-ctl eq-level 3 -1.75
 .SS "B. Dynamic EQ"
 .TP
@@ -333,8 +338,9 @@ Set mid-image factor. VALUE accepts decimals from 1 through 2 inclusive,
 stored in hundredths.
 .TP
 .BI "field-depth " VALUE
-Set depth. VALUE accepts 0 (off) or decimals from 200 through 950
-inclusive; nonzero values are rounded to the nearest whole unit.
+Set depth contribution. VALUE accepts 0 (depth component disabled) or
+decimals from 200 through 950 inclusive; nonzero values are rounded to the
+nearest whole unit. Use field-off to disable the entire Field Surround effect.
 The GUI exposes coarser 50-unit steps.
 .SS "E. Reverberation"
 .TP
@@ -424,13 +430,15 @@ Enable or disable the convolver. No arguments. Import and select an IRS
 or supported WAV impulse response in the GUI.
 .TP
 .BI "convolver-cross " VALUE
-Set convolver cross-channel mix. VALUE accepts decimals from 0 through
-100 percent inclusive, rounded to the nearest whole percentage point.
+Set the percentage of cross-channel convolution mixing. This control is
+separate from the wet/dry settings of other effects. VALUE accepts decimals
+from 0 through 100 percent inclusive, rounded to the nearest whole percentage point.
 .SH SETTINGS AND PRECISION
 CLI edits are applied to the live control channel, then saved to the GUI's
 per-user Qt settings store. The short-lived CLI tool reports a nonzero exit
 status if settings cannot be written, but audio processing might already have
-changed. The GUI polls the backend approximately every 500 milliseconds.
+changed. The GUI polls the backend approximately every 500 milliseconds. A live change
+may therefore be visible in the DSP before it appears in the GUI.
 .PP
 Some CLI parameters accept finer precision than the GUI sliders. While the
 backend is running, the live DSP retains the requested value. A later GUI
@@ -449,7 +457,10 @@ Backend or DSP control unavailable for the requested command, or a settings
 persistence failure after a live control change.
 .TP
 .B 2
-Unknown command, wrong number of arguments, or invalid value. For example,
+Unknown command, wrong number of arguments, or invalid value, once the DSP
+control channel is available. Backend availability is checked first, so an
+unavailable backend can produce exit status 1 even for an invalid command.
+For example,
 .B viper4linux-ctl tube-drive 12.5
 is rejected because tube-drive requires a whole number, whereas
 .B viper4linux-ctl psycho-intensity 12.5
