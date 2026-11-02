@@ -2,12 +2,18 @@
 // CLI-only presentation of the existing shared-memory DSP state.
 // No DSP writes, ABI changes, background process, or Qt dependencies.
 #include "viper-control.h"
+#include "viper-eq-presets.h"
 #include <initializer_list>
 #include <ostream>
 #include <string>
 
 namespace viperbass {
 namespace cli_report {
+struct FullDetails {
+    std::string selectedPreset;
+    std::string ddcProfile;
+    std::string convolverKernel;
+};
 enum class Effect {
     Master, Limiter, Agc, Lufs,
     Bass, Mono, Psycho, Dynamic,
@@ -88,7 +94,8 @@ inline void detail(std::ostream& out, const char* label, const char* value) {
     out << "      " << label << ": " << value << '\n';
 }
 
-inline void effect(std::ostream& out, const Controls& c, Effect e, bool full, int eqBand = -1) {
+inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
+                   int eqBand = -1, bool expanded = false, const FullDetails& info = {}) {
     const auto heading = [&](const char* letter, const char* name, const char* state) {
         out << (full ? "  " : "") << letter << ". " << name << " - " << state << '\n';
     };
@@ -150,10 +157,32 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full, in
             detail(out, "Selected band gain", c.eq_levels_hundredths[eqBand - 1].load() / 100.0, " dB");
         detail(out, "Applied/requested", (std::to_string(c.eq_applied_serial.load()) + "/" +
                 std::to_string(c.eq_request_serial.load())).c_str());
+        if (expanded) {
+            detail(out, "Selected preset", info.selectedPreset.empty() ? "custom" : info.selectedPreset.c_str());
+            const int count = viper_eq::validBands(c.eq_band_count.load());
+            const auto& hz = viper_eq::frequencies(count);
+            for (int i = 0; i < count; ++i)
+                out << "      Band " << i+1 << " (" << hz[i] << " Hz): "
+                    << c.eq_levels_hundredths[i].load()/100.0 << " dB\n";
+        }
         break;
     case Effect::Deq:
         heading("B", "Dynamic EQ", enabled(c.deq_enabled.load()));
         detail(out, "Active bands", c.deq_band_count.load());
+        if (expanded) {
+            for (int i = 0; i < std::clamp(c.deq_band_count.load(), 0, 10); ++i) {
+                const auto& b = c.deq_bands[i];
+                out << "      Band " << i+1 << ": " << b.frequency_hz.load() << " Hz"
+                    << ", Q " << b.q_hundredths.load()/100.0
+                    << ", gain " << b.gain_hundredths.load()/100.0 << " dB"
+                    << ", threshold " << b.threshold_tenths.load()/10.0 << " dB"
+                    << ", attack " << b.attack_ms.load() << " ms"
+                    << ", release " << b.release_ms.load() << " ms"
+                    << ", filter type " << b.filter_type.load() << '\n';
+            }
+            detail(out, "Applied/requested", (std::to_string(c.deq_applied_serial.load()) + "/" +
+                    std::to_string(c.deq_request_serial.load())).c_str());
+        }
         break;
     case Effect::Clarity:
         heading("C", "ViPER Clarity", enabled(c.clarity_enabled.load()));
@@ -224,10 +253,28 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full, in
     case Effect::Multiband:
         heading("B", "Multiband Compressor", enabled(c.mb_enabled.load()));
         detail(out, "Bands", c.mb_band_count.load());
+        if (expanded) {
+            const int count = c.mb_band_count.load() == 5 ? 5 : 3;
+            for (int i = 0; i < count-1; ++i)
+                out << "      Crossover " << i+1 << ": " << c.mb_crossovers_hz[i].load() << " Hz\n";
+            for (int i = 0; i < count; ++i) {
+                const auto& b = c.mb_bands[i];
+                out << "      Band " << i+1 << ": " << enabled(b.enabled.load())
+                    << ", threshold " << b.threshold_db.load() << " dB"
+                    << ", ratio " << b.ratio_tenths.load()/10.0 << ":1"
+                    << ", knee " << b.knee_db.load() << " dB"
+                    << ", makeup " << b.makeup_db.load() << " dB"
+                    << ", attack " << b.attack_ms.load() << " ms"
+                    << ", release " << b.release_ms.load() << " ms\n";
+            }
+            detail(out, "Applied/requested", (std::to_string(c.mb_applied_serial.load()) + "/" +
+                    std::to_string(c.mb_request_serial.load())).c_str());
+        }
         break;
     case Effect::Ddc:
         heading("A", "ViPER-DDC", enabled(c.ddc_enabled.load()));
         detail(out, "Profile status", ddcStatus(c.ddc_status.load()));
+        if (expanded) detail(out, "Selected profile", info.ddcProfile.empty() ? "(none)" : info.ddcProfile.c_str());
         break;
     case Effect::Speaker:
         heading("B", "Speaker Correction", enabled(c.speaker_enabled.load()));
@@ -236,6 +283,7 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full, in
         heading("C", "Convolver", enabled(c.convolver_enabled.load()));
         detail(out, "IR status", irStatus(c.convolver_status.load()));
         detail(out, "Cross-channel mix", c.convolver_cross_percent.load(), "%");
+        if (expanded) detail(out, "Selected kernel", info.convolverKernel.empty() ? "(none)" : info.convolverKernel.c_str());
         break;
     case Effect::Unknown:
         out << "Unknown CLI effect group\n";
@@ -244,14 +292,16 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full, in
 }
 
 inline void section(std::ostream& out, const Controls& c, const char* name,
-                    std::initializer_list<Effect> effects) {
+                    std::initializer_list<Effect> effects, bool expanded = false,
+                    const FullDetails& info = {}) {
     out << '\n' << name << '\n' << std::string(58, '-') << '\n';
-    for (Effect e : effects) effect(out, c, e, true);
+    for (Effect e : effects) effect(out, c, e, true, -1, expanded, info);
 }
 } // namespace cli_report
 
 inline void printCliReport(std::ostream& out, const Controls& c,
-                           const std::string& cmd, int eqBand = -1) {
+                           const std::string& cmd, int eqBand = -1,
+                           bool expanded = false, const cli_report::FullDetails& info = {}) {
     using namespace cli_report;
     // Only an explicit status query prints the complete six-tab report.
     // The master switch and its legacy aliases confirm the new state briefly.
@@ -266,16 +316,16 @@ inline void printCliReport(std::ostream& out, const Controls& c,
     out << "ViPER4Linux-RE - DSP status\n";
     out << "============================================\n";
     effect(out, c, Effect::Master, true);
-    section(out, c, "1. Output", {Effect::Limiter, Effect::Agc, Effect::Lufs});
-    section(out, c, "2. Bass", {Effect::Bass, Effect::Mono, Effect::Psycho, Effect::Dynamic});
+    section(out, c, "1. Output", {Effect::Limiter, Effect::Agc, Effect::Lufs}, expanded, info);
+    section(out, c, "2. Bass", {Effect::Bass, Effect::Mono, Effect::Psycho, Effect::Dynamic}, expanded, info);
     section(out, c, "3. EQ & Tone", {Effect::Eq, Effect::Deq, Effect::Clarity,
-                                     Effect::Spectrum, Effect::Tube, Effect::Analogx});
+                                     Effect::Spectrum, Effect::Tube, Effect::Analogx}, expanded, info);
     section(out, c, "4. Spatial", {Effect::Crossfeed, Effect::Headphone,
                                    Effect::Differential, Effect::Field, Effect::Reverb,
-                                   Effect::Imager});
-    section(out, c, "5. Dynamics", {Effect::Fet, Effect::Multiband});
+                                   Effect::Imager}, expanded, info);
+    section(out, c, "5. Dynamics", {Effect::Fet, Effect::Multiband}, expanded, info);
     section(out, c, "6. Sound Correction", {Effect::Ddc, Effect::Speaker,
-                                            Effect::Convolver});
+                                            Effect::Convolver}, expanded, info);
     out << "\nBackend\n" << std::string(58, '-') << '\n';
     out << "  Processing rate: " << c.sample_rate_hz.load() << " Hz\n"
         << "  Backend PID:     " << c.owner_pid.load() << '\n'

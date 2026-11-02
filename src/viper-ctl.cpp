@@ -15,7 +15,7 @@ namespace {
 void usage(std::ostream& out = std::cerr) {
     out << "Usage: viper4linux-ctl COMMAND [ARGUMENTS...]\n"
            "\n"
-           "Global:        status, on, off\n"
+           "Global:        status [--full], on, off\n"
            "Bass:          bass-on/off, bass-toggle, bass-mode <0..2>, gain <0.5..10>, freq <15..150 Hz>\n"
            "Bass Mono:     mono-on/off, mono-mode <0..2>, mono-strength <0.5..10>, mono-freq <15..150>\n"
            "Psycho Bass:   psycho-on/off, psycho-cutoff/intensity/order/original <value>\n"
@@ -70,9 +70,17 @@ void workerValue(std::atomic<std::int32_t>& parameter,
         serial.fetch_add(1, std::memory_order_release);
 }
 void show(viperbass::Controls& c, const std::string& command = "status",
-          const char* bandText = nullptr) {
+          const char* bandText = nullptr, bool expanded = false) {
     const int band = command == "eq-level" && bandText ? std::atoi(bandText) : -1;
-    viperbass::printCliReport(std::cout, c, command, band);
+    viperbass::cli_report::FullDetails info;
+    if (expanded) {
+        QSettings settings("ViPERforLinux", "ViPERClean");
+        settings.sync();
+        info.selectedPreset = settings.value("eq/selected_preset", "custom").toString().toStdString();
+        info.ddcProfile = settings.value("ddc_profile").toString().toStdString();
+        info.convolverKernel = settings.value("convolver_kernel").toString().toStdString();
+    }
+    viperbass::printCliReport(std::cout, c, command, band, expanded, info);
 }
 }
 int main(int argc, char** argv) {
@@ -84,7 +92,8 @@ int main(int argc, char** argv) {
     viperbass::Mapping mapping;
     if (!mapping.attach()) {
         const auto pid = viperbass::detected_backend_pid();
-        if (argc == 2 && std::string(argv[1]) == "status" && pid > 0) {
+        if (std::string(argv[1]) == "status" &&
+            (argc == 2 || (argc == 3 && std::string(argv[2]) == "--full")) && pid > 0) {
             std::cout << "ViPER backend: READY TO PROCESS AUDIO (PID " << pid
                       << ") | DSP control channel: not active yet\n";
             return 0; // Process is running; a script can distinguish ready from offline.
@@ -101,7 +110,11 @@ int main(int argc, char** argv) {
     auto& c = *mapping.get();
     const std::string cmd(argv[1]);
     try {
-        if (cmd == "status" && argc == 2) { show(c); return 0; }
+        if (cmd == "status" && (argc == 2 ||
+                (argc == 3 && std::string(argv[2]) == "--full"))) {
+            show(c, cmd, nullptr, argc == 3);
+            return 0;
+        }
         if ((cmd == "on" || cmd == "all-on") && argc == 2) c.master_enabled.store(1);
         else if ((cmd == "off" || cmd == "all-off") && argc == 2) c.master_enabled.store(0);
         else if (cmd == "bass-on" && argc == 2) c.enabled.store(1);

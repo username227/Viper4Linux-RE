@@ -42,6 +42,12 @@ To see compact command help, use
 Print the six-section live DSP summary, showing effect states, principal
 parameters, sample rate, backend PID, and audio-block counter. This summary
 does not list every EQ band or every compressor parameter.
+.TP
+.B status --full
+Print the expanded six-section report with all active graphic EQ band
+frequencies and levels, each Dynamic EQ band, all multiband compressor
+settings, selected EQ preset, and chosen DDC/Convolver files when recorded.
+Both status modes are read-only.
 The status command never changes or saves settings. A started backend with no
 DSP channel reports READY TO PROCESS AUDIO. A connected channel does not prove
 that audible music is playing; compare the counter between repeated queries.
