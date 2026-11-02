@@ -14,10 +14,13 @@ than
 .B --help
 and
 .BR -h .
-Commands change the live processing controls; they are not a substitute for
-the GUI's persistent settings, named effect presets, IRS/VDC libraries, or
-application/window preferences. GUI changes and CLI changes can override each
-other. Exit status 0 indicates a successful command, 1 a missing backend, and
+Commands change the live processing controls. The GUI polls the shared
+backend every 500 milliseconds and reflects CLI edits without restarting
+audio. While the GUI is open, those edits are saved with its normal effect
+settings. When the GUI is closed, CLI edits remain live in the backend, but
+are not persisted until the GUI is reopened while that backend is still
+running. A backend restart before then discards unsaved CLI changes. The CLI
+does not manage named presets, IRS/VDC file selection, or window preferences. Exit status 0 indicates a successful command, 1 a missing backend, and
 2 a usage or invalid-value error.
 .PP
 .B on
@@ -120,6 +123,77 @@ Spectrum reference frequency, Hz.
 .TP
 .BI "spectrum-exciter " 0..6
 Exciter strength.
+.SS Dynamic EQ, Tone, and device correction
+.TP
+.BR deq-on " | " deq-off
+Enable or disable Dynamic EQ. Configure the individual frequency bands in the GUI.
+.TP
+.BR tube-on " | " tube-off
+Enable or disable Tube Simulator.
+.TP
+.BI "tube-model " 0..2
+Select the tube model (0 12AX7, 1 12AU7, 2 6N1P).
+.TP
+.BI "tube-drive " 0..100
+Tube drive, percent (whole number).
+.TP
+.BI "tube-mix " 0..100
+Tube mix, percent (whole number).
+.TP
+.BR analogx-on " | " analogx-off
+Enable or disable AnalogX.
+.TP
+.BI "analogx-mode " 0..2
+Mild, Medium, or Strong (whole-number index).
+.TP
+.BR ddc-on " | " ddc-off
+Enable or disable ViPER-DDC. A compatible profile must already be selected
+in the GUI; the command does not select an external .vdc file.
+.TP
+.BR speaker-on " | " speaker-off
+Enable or disable Speaker Correction.
+.SS Compressors and Stereo Imager
+.TP
+.BR fet-on " | " fet-off
+Enable or disable the native FET compressor.
+.TP
+.BI "fet-threshold " -48..0
+FET compressor threshold in dB (whole number).
+.TP
+.BI "fet-ratio " 1..10
+FET compression ratio, in 0.1 increments.
+.TP
+.BR mb-on " | " mb-off
+Enable or disable the native Multiband Compressor.
+.TP
+.BI "mb-bands " "3|5"
+Choose three or five compressor bands. Configure individual band parameters
+in the GUI.
+.TP
+.BR imager-on " | " imager-off
+Enable or disable the three-band Stereo Imager.
+.TP
+.BI "imager-low " 0..200
+Low-frequency stereo width, percent.
+.TP
+.BI "imager-mid " 0..200
+Mid-frequency stereo width, percent.
+.TP
+.BI "imager-high " 0..200
+High-frequency stereo width, percent.
+.TP
+.BI "imager-xover-low " 80..400
+Low/mid crossover frequency in Hz.
+.TP
+.BI "imager-xover-high " 2000..8000
+Mid/high crossover frequency in Hz.
+.SS Cure Crossfeed
+.TP
+.BR crossfeed-on " | " crossfeed-off
+Enable or disable ViPER Cure crossfeed.
+.TP
+.BI "crossfeed-mode " 0..2
+Mild, Medium, or Strong crossfeed preset (whole-number index).
 .SS Graphic equalizer and Convolver
 .TP
 .BR eq-on " | " eq-off

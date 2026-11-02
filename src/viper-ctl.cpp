@@ -1,5 +1,6 @@
 #include "viper-control.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -9,33 +10,61 @@
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
-    out << "Usage: viper4linux-ctl status | on | off | bass-on | bass-off | bass-toggle | "
-                 "bass-mode <0..2> | gain <0.5..10> | freq <15..150 Hz> | "
-                 "mono-on | mono-off | mono-mode <0..2> | mono-strength <0.5..10> | mono-freq <15..150> | "
-                 "psycho-on | psycho-off | psycho-cutoff <60..150> | psycho-intensity <0..100> | psycho-order <2..5> | psycho-original <0..100> | "
-                 "dynamic-on | dynamic-off | dynamic-x-low <0..2400> | dynamic-x-high <0..12000> | dynamic-y-low <0..200> | dynamic-y-high <0..300> | dynamic-side-low <0..100> | dynamic-side-high <0..100> | dynamic-strength <0..100> | "
-                 "clarity-on | clarity-off | clarity-gain <0..4.5> | clarity-mode <0..2> | "
-                 "spectrum-on | spectrum-off | spectrum-freq <2200..8200 Hz> | spectrum-exciter <0..6> | "
-                 "headphone-on | headphone-off | headphone-level <1..5> | "
-                 "diff-on | diff-off | diff-delay <1..20 ms> | diff-reverse <0|1> | "
-                 "diff-mix <0..100 percent> | diff-lowpass <0..20000 Hz> | "
-                 "field-on | field-off | field-widen <0..8> | "
-                 "field-mid <1..2> | field-depth <0 or 200..950> | "
-                 "reverb-on | reverb-off | reverb-room <0..100> | "
-                 "reverb-width <0..100> | reverb-damp <0..100> | "
-                 "reverb-wet <0..100> | reverb-dry <0..100> | "
-                 "limiter-threshold <0.3..1> | limiter-gain <0.01..2> | limiter-pan <-1..1> | "
-                 "agc-on | agc-off | agc-strength <0.5..3> | agc-max <1..10> | agc-threshold <0.3..1> | "
-                 "lufs-on | lufs-off | lufs-target <-24..-8> | lufs-max <0..12> | lufs-speed <0..2> | "
-                 "eq-on | eq-off | eq-bands <10|15|25|31> | eq-level <1..31> <-12..12 dB> | "
-                 "convolver-on | convolver-off | convolver-cross <0..100 percent>\n";
+    out << "Usage: viper4linux-ctl COMMAND [ARGUMENTS...]\n"
+           "\n"
+           "Global:        status, on, off\n"
+           "Bass:          bass-on/off, bass-toggle, bass-mode <0..2>, gain <0.5..10>, freq <15..150 Hz>\n"
+           "Bass Mono:     mono-on/off, mono-mode <0..2>, mono-strength <0.5..10>, mono-freq <15..150>\n"
+           "Psycho Bass:   psycho-on/off, psycho-cutoff/intensity/order/original <value>\n"
+           "Dynamic Bass:  dynamic-on/off, dynamic-x-low/high, dynamic-y-low/high,\n"
+           "               dynamic-side-low/high, dynamic-strength <value>\n"
+           "EQ:            eq-on/off, eq-bands <10|15|25|31>, eq-level <band> <dB>\n"
+           "Dynamic EQ:    deq-on/off (edit individual bands in GUI)\n"
+           "Clarity:       clarity-on/off, clarity-gain <0..4.5>, clarity-mode <0..2>\n"
+           "Spectrum:      spectrum-on/off, spectrum-freq <2200..8200>, spectrum-exciter <0..6>\n"
+           "Tube:          tube-on/off, tube-model <0..2>, tube-drive/mix <0..100>\n"
+           "AnalogX:       analogx-on/off, analogx-mode <0..2>\n"
+           "Crossfeed:     crossfeed-on/off, crossfeed-mode <0..2>\n"
+           "Surround+:     headphone-on/off, headphone-level <1..5>\n"
+           "Differential:  diff-on/off, diff-delay/reverse/mix/lowpass <value>\n"
+           "Field:         field-on/off, field-widen/mid/depth <value>\n"
+           "Reverb:        reverb-on/off, reverb-room/width/damp/wet/dry <0..100>\n"
+           "Stereo Imager: imager-on/off, imager-low/mid/high <0..200>,\n"
+           "               imager-xover-low <80..400>, imager-xover-high <2000..8000>\n"
+           "Compressors:   fet-on/off, fet-threshold <-48..0>, fet-ratio <1..10>,\n"
+           "               mb-on/off, mb-bands <3|5>\n"
+           "Correction:    ddc-on/off, speaker-on/off, convolver-on/off,\n"
+           "               convolver-cross <0..100>\n"
+           "Output:        limiter-threshold/gain/pan <value>, agc-on/off,\n"
+           "               agc-strength/max/threshold <value>, lufs-on/off,\n"
+           "               lufs-target/max/speed <value>\n"
+           "\n"
+           "All on/off pairs are individual commands (for example, tube-on and tube-off).\n"
+           "Use 'man viper4linux-ctl' for exact argument ranges and units.\n";
 }
+
 float number(const char* value, float lower, float upper) {
     std::size_t parsed = 0;
     const float result = std::stof(value, &parsed);
     if (value[parsed] || !std::isfinite(result) || result < lower || result > upper)
         throw std::invalid_argument("Value outside permitted range");
     return result;
+}
+int whole(const char* value, int lo, int hi) {
+    const auto n = number(value, static_cast<float>(lo), static_cast<float>(hi));
+    if (std::trunc(n) != n) throw std::invalid_argument("Expected a whole number");
+    return static_cast<int>(n);
+}
+void workerToggle(std::atomic<std::int32_t>& effect,
+                  std::atomic<std::uint32_t>& serial, int value) {
+    // Rebuilds/reset filters on the backend's non-RT worker, not the audio callback.
+    if (effect.exchange(value, std::memory_order_relaxed) != value)
+        serial.fetch_add(1, std::memory_order_release);
+}
+void workerValue(std::atomic<std::int32_t>& parameter,
+                 std::atomic<std::uint32_t>& serial, int value) {
+    if (parameter.exchange(value, std::memory_order_relaxed) != value)
+        serial.fetch_add(1, std::memory_order_release);
 }
 void show(viperbass::Controls& c) {
     std::cout << "ViPER processing: " << (c.master_enabled.load() ? "ON" : "BYPASSED")
@@ -83,6 +112,15 @@ void show(viperbass::Controls& c) {
               << " | EQ: " << (c.eq_enabled.load() ? "ON" : "OFF")
               << " | EQ bands " << c.eq_band_count.load()
               << " | EQ applied " << c.eq_applied_serial.load() << "/" << c.eq_request_serial.load()
+              << " | Dynamic EQ: " << (c.deq_enabled.load() ? "ON" : "OFF")
+              << " | Tube: " << (c.tube_enabled.load() ? "ON" : "OFF")
+              << " | AnalogX: " << (c.analogx_enabled.load() ? "ON" : "OFF")
+              << " | Crossfeed: " << (c.crossfeed_enabled.load() ? "ON" : "OFF")
+              << " | Stereo Imager: " << (c.imager_enabled.load() ? "ON" : "OFF")
+              << " | FET: " << (c.fet_enabled.load() ? "ON" : "OFF")
+              << " | Multiband: " << (c.mb_enabled.load() ? "ON" : "OFF")
+              << " | ViPER-DDC: " << (c.ddc_enabled.load() ? "ON" : "OFF")
+              << " | Speaker Correction: " << (c.speaker_enabled.load() ? "ON" : "OFF")
               << " | Convolver: " << (c.convolver_enabled.load() ? "ON" : "OFF")
               << " | IR: " << ([&]{ switch(c.convolver_status.load()) {
                      case 1: return "READY";
@@ -156,6 +194,45 @@ int main(int argc, char** argv) {
         else if (cmd == "convolver-off" && argc == 2) c.convolver_enabled.store(0);
         else if (cmd == "convolver-cross" && argc == 3)
             c.convolver_cross_percent.store(static_cast<int>(std::lround(number(argv[2], 0.f, 100.f))));
+        // The worker-managed native effects must receive a request serial with
+        // every changed control. Directly storing the enable field alone can
+        // leave their current filters unchanged until an unrelated GUI edit.
+        else if (cmd == "deq-on" && argc == 2) workerToggle(c.deq_enabled, c.deq_request_serial, 1);
+        else if (cmd == "deq-off" && argc == 2) workerToggle(c.deq_enabled, c.deq_request_serial, 0);
+        else if (cmd == "tube-on" && argc == 2) workerToggle(c.tube_enabled, c.tube_request_serial, 1);
+        else if (cmd == "tube-off" && argc == 2) workerToggle(c.tube_enabled, c.tube_request_serial, 0);
+        else if (cmd == "tube-model" && argc == 3) workerValue(c.tube_model, c.tube_request_serial, whole(argv[2], 0, 2));
+        else if (cmd == "tube-drive" && argc == 3) workerValue(c.tube_drive_percent, c.tube_request_serial, whole(argv[2], 0, 100));
+        else if (cmd == "tube-mix" && argc == 3) workerValue(c.tube_mix_percent, c.tube_request_serial, whole(argv[2], 0, 100));
+        else if (cmd == "analogx-on" && argc == 2) workerToggle(c.analogx_enabled, c.analogx_request_serial, 1);
+        else if (cmd == "analogx-off" && argc == 2) workerToggle(c.analogx_enabled, c.analogx_request_serial, 0);
+        else if (cmd == "analogx-mode" && argc == 3) workerValue(c.analogx_mode, c.analogx_request_serial, whole(argv[2], 0, 2));
+        else if (cmd == "crossfeed-on" && argc == 2) workerToggle(c.crossfeed_enabled, c.crossfeed_request_serial, 1);
+        else if (cmd == "crossfeed-off" && argc == 2) workerToggle(c.crossfeed_enabled, c.crossfeed_request_serial, 0);
+        else if (cmd == "crossfeed-mode" && argc == 3) workerValue(c.crossfeed_preset, c.crossfeed_request_serial, whole(argv[2], 0, 2));
+        else if (cmd == "imager-on" && argc == 2) workerToggle(c.imager_enabled, c.imager_request_serial, 1);
+        else if (cmd == "imager-off" && argc == 2) workerToggle(c.imager_enabled, c.imager_request_serial, 0);
+        else if (cmd == "imager-low" && argc == 3) workerValue(c.imager_low_width_percent, c.imager_request_serial, whole(argv[2], 0, 200));
+        else if (cmd == "imager-mid" && argc == 3) workerValue(c.imager_mid_width_percent, c.imager_request_serial, whole(argv[2], 0, 200));
+        else if (cmd == "imager-high" && argc == 3) workerValue(c.imager_high_width_percent, c.imager_request_serial, whole(argv[2], 0, 200));
+        else if (cmd == "imager-xover-low" && argc == 3) workerValue(c.imager_low_crossover_hz, c.imager_request_serial, whole(argv[2], 80, 400));
+        else if (cmd == "imager-xover-high" && argc == 3) workerValue(c.imager_high_crossover_hz, c.imager_request_serial, whole(argv[2], 2000, 8000));
+        else if (cmd == "fet-on" && argc == 2) workerToggle(c.fet_enabled, c.fet_request_serial, 1);
+        else if (cmd == "fet-off" && argc == 2) workerToggle(c.fet_enabled, c.fet_request_serial, 0);
+        else if (cmd == "fet-threshold" && argc == 3) workerValue(c.fet_threshold_db, c.fet_request_serial, whole(argv[2], -48, 0));
+        else if (cmd == "fet-ratio" && argc == 3)
+            workerValue(c.fet_ratio_tenths, c.fet_request_serial, static_cast<int>(std::lround(number(argv[2], 1.f, 10.f) * 10.f)));
+        else if (cmd == "mb-on" && argc == 2) workerToggle(c.mb_enabled, c.mb_request_serial, 1);
+        else if (cmd == "mb-off" && argc == 2) workerToggle(c.mb_enabled, c.mb_request_serial, 0);
+        else if (cmd == "mb-bands" && argc == 3) {
+            const int value = whole(argv[2], 3, 5);
+            if (value != 3 && value != 5) throw std::invalid_argument("Multiband must use 3 or 5 bands");
+            workerValue(c.mb_band_count, c.mb_request_serial, value);
+        }
+        else if (cmd == "ddc-on" && argc == 2) workerToggle(c.ddc_enabled, c.ddc_request_serial, 1);
+        else if (cmd == "ddc-off" && argc == 2) workerToggle(c.ddc_enabled, c.ddc_request_serial, 0);
+        else if (cmd == "speaker-on" && argc == 2) workerToggle(c.speaker_enabled, c.speaker_request_serial, 1);
+        else if (cmd == "speaker-off" && argc == 2) workerToggle(c.speaker_enabled, c.speaker_request_serial, 0);
         else if (cmd == "mono-on" && argc == 2) c.bass_mono_enabled.store(1);
         else if (cmd == "mono-off" && argc == 2) c.bass_mono_enabled.store(0);
         else if (cmd == "mono-mode" && argc == 3) c.bass_mono_mode.store(static_cast<int>(std::lround(number(argv[2],0,2))));

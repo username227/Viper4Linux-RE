@@ -77,3 +77,28 @@ check routing before assuming an effect implementation has failed.
 
 See [Effects](EFFECTS.md) for processor behavior and restrictions. For
 importing `.irs` and `.vdc` files, see [Presets and libraries](PRESETS-AND-LIBRARIES.md).
+
+## Automating effects with the CLI
+
+`viper4linux-ctl` can toggle every effect group and configure many common
+parameters without starting the GUI. The master `on`/`off` bypass controls
+are distinct from `bass-on`/`bass-off`, and Headphone Surround+ uses the same
+one-based `headphone-level 1..5` as the GUI.
+
+```sh
+viper4linux-ctl on
+viper4linux-ctl headphone-level 2
+viper4linux-ctl imager-on
+viper4linux-ctl imager-mid 149
+```
+
+The interface applies changes to the **running** backend. An open GUI reflects
+them on its 500 ms polling cycle and saves changed controls. When the GUI is
+closed, the CLI does **not** write Qt preferences: reopen the GUI before the
+backend restarts if you want those CLI changes saved for later sessions. For
+settings such as a DDC file or convolver impulse response, select the file in
+the GUI; the CLI can toggle the effect after it is loaded.
+
+The CLI returns status `0` for a successful command, `1` if no backend is
+running, and `2` for invalid commands or arguments. See
+`man viper4linux-ctl` for the available switches and argument ranges.
