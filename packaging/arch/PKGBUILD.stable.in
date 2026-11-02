@@ -35,18 +35,16 @@ build() {
 
 check() {
     cd "$srcdir/viper4linux-re-$pkgver"
-    bash tests/check-mock.sh
-    python3 tests/check-launcher.py
-    python3 tests/check-arch-install.py
-    python3 tests/check-native-state-contract.py
-    python3 tests/check-theme-contract.py
-    python3 tests/check-ui-contract.py
-    python3 tests/check-tray-contract.py
-    python3 tests/check-named-presets-contract.py
-    python3 tests/check-preset-reset-contract.py
-    # check-packaging-contract.py checks the VCS PKGBUILD and .gitmodules,
-    # neither of which describes a stable unified-source package.
-    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
+    # Leave heavy DSP/GUI regression checks to the release CI/developer suite.
+    bash tests/check-package.sh
+    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor
+
+package() {
+    local tree="$srcdir/viper4linux-re-$pkgver"
+    local built="$srcdir/viper4linux-build"
+    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
+}
+
 }
 
 package() {

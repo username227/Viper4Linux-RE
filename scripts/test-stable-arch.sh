@@ -24,6 +24,16 @@ runuser -u builder -- env SRCDEST="$release_dir" bash -c '
     makepkg --noconfirm --cleanbuild --nodeps
     makepkg --printsrcinfo > "$1/.SRCINFO"
 ' bash "$release_dir"
+# Run all developer regressions on the same extracted release candidate.
+# Keep full native DSP tests in CI, not routine user's makepkg check().
+source_tree="$release_dir/arch-build/src/viper4linux-re-$version"
+test -f "$source_tree/tests/check-developer.sh"
+runuser -u builder -- bash -c '
+    set -Eeuo pipefail
+    cd "$1"
+    bash tests/check-developer.sh
+' bash "$source_tree"
+
 # Only the main application package is a release asset. makepkg may also
 # produce a debug-symbol package, which is deliberately not distributed here.
 shopt -s nullglob

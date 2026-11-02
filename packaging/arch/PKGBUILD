@@ -49,18 +49,17 @@ build() {
 
 check() {
     cd "$srcdir/viper4linux"
-    bash tests/check-mock.sh
-    python3 tests/check-launcher.py
-    python3 tests/check-arch-install.py
-    python3 tests/check-native-state-contract.py
-    python3 tests/check-theme-contract.py
-    python3 tests/check-ui-contract.py
-    python3 tests/check-tray-contract.py
-    python3 tests/check-named-presets-contract.py
-    python3 tests/check-preset-reset-contract.py
-    python3 tests/check-packaging-contract.py
-    python3 -m unittest discover -s tests -p 'test_output_*.py' -v
-    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
+    # Fast, isolated packaging smoke tests. For the complete development
+    # regression suite, run: bash tests/check-developer.sh
+    bash tests/check-package.sh
+    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor
+
+package() {
+    local tree="$srcdir/viper4linux"
+    local built="$srcdir/viper4linux-build"
+    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
+}
+
 }
 
 package() {

@@ -49,17 +49,26 @@ checkout, run `./install.sh` (which runs the DSP mock tests and checks the LADSP
 export), then `./viper4linux`. For a system build, use
 [Arch packaging](ARCH-PACKAGING.md).
 
-Source-level tests can be run before building the native application:
+Routine Arch package builds run a deliberately small, deterministic smoke suite
+after compiling the application. It checks launcher process handling, offline
+package staging and physical Audio Output memory/identity logic, and verifies
+the LADSPA entry point. It does not start PipeWire or compile the isolated
+mock DSP again.
+
+For the complete native DSP, GUI, preset, snapshot and release-contract
+regressions, run the developer suite explicitly when changing those systems:
 
 ```bash
-./tests/check-mock.sh
-python3 tests/check-launcher.py
-python3 tests/check-theme-contract.py
-python3 tests/check-tray-contract.py
-python3 tests/check-ui-contract.py
-python3 tests/check-named-presets-contract.py
-python3 tests/check-packaging-contract.py
+bash tests/check-developer.sh
 ```
+
+The developer script includes the package smoke checks and isolated mock tests,
+but excludes repeated static checks already run by the mock script. Release
+candidate CI runs the full suite *in addition to* normal Arch package checks.
+A passing package smoke check does not certify a DSP change; run the developer
+suite before merging native DSP or snapshot changes. Rebuilding an AUR package
+should not force every user to run those expensive, more fragile tests.
+
 
 A full live acceptance test must cover Qt rendering, real PipeWire audio,
 Bluetooth reconnection, sample-rate changes, IRS/VDC loading, presets, tray

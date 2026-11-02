@@ -28,8 +28,17 @@ assert 'install -Dm' not in pkg, 'PKGBUILD must delegate file layout to install 
 assert pkg.count('bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"') == 1
 assert stable.count('bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"') == 1
 assert 'install -Dm' not in stable
-assert 'python3 tests/check-arch-install.py' in pkg
-assert 'python3 tests/check-arch-install.py' in stable
+assert 'bash tests/check-package.sh' in pkg
+assert 'bash tests/check-package.sh' in stable
+assert 'bash tests/check-mock.sh' not in pkg
+assert 'bash tests/check-mock.sh' not in stable
+smoke = (root / 'tests/check-package.sh').read_text()
+developer = (root / 'tests/check-developer.sh').read_text()
+assert 'python3 tests/check-launcher.py' in smoke
+assert 'python3 tests/check-arch-install.py' in smoke
+assert "python3 -m unittest discover -s tests -p 'test_output_*.py'" in smoke
+assert 'bash tests/check-mock.sh' in developer
+assert 'python3 tests/check-native-state-contract.py' in developer
 assert 'ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"' in installer
 assert 'ln -s -- viper4linux-ctl.1 "$pkgdir/usr/share/man/man1/v4l-cli.1"' in installer
 assert 'usr/share/licenses/$pkgname/LICENSE' in installer
@@ -37,8 +46,8 @@ assert 'usr/lib/ladspa/viper_dsp_ladspa.so' in installer
 assert 'viper-output-state' in (root / 'CMakeLists.txt').read_text()
 assert 'viper4linux-output-state' in installer
 assert 'viper4linux-output' in installer
-assert 'python3 tests/check-native-state-contract.py' in pkg
-assert 'python3 tests/check-native-state-contract.py' in stable
+assert (root / 'tests/check-package.sh').is_file()
+assert (root / 'tests/check-developer.sh').is_file()
 assert 'src/viper_*.py' in installer
 assert 'viper_output_monitor.py' in installer
 assert 'Missing package source:' in installer

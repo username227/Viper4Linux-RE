@@ -8,6 +8,13 @@ makepkg Git source cache. Do not run `makepkg` inside a source checkout.
 
 ## Build the development package
 
+The default `check()` phase is intentionally small: offline launcher, package
+staging, per-output identity/memory tests and the LADSPA exported-symbol check.
+The full native DSP and UI regression suite remains available as
+`bash tests/check-developer.sh` for developers and release candidate CI. AUR
+builders should not need `--nocheck` just to bypass development diagnostics.
+
+
 Once the GitHub repository has been populated, place the PKGBUILD in a
 separate folder and build it:
 
