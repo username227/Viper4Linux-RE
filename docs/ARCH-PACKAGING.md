@@ -1,49 +1,53 @@
-# Arch Linux local development packaging
+# Arch Linux packaging (development and publication plan)
 
-The source-with-Git tar.gz contains the full application repository; ViPERDSP
-is retrieved at the pinned upstream commit by the development PKGBUILD.
+**Current state:** `packaging/arch/PKGBUILD` is the local-development recipe
+for `viper4linux-re-git`, not yet a public AUR submission. The package builds
+against a separate local Git checkout; do not run `makepkg` inside that
+checkout or any of its subdirectories.
 
-**Build from any separate directory** — do not run makepkg in the source
-checkout itself (including under its packaging/arch subdirectory):
+## Build the current development checkout
+
+Extract the source-with-Git archive somewhere on the Desktop, keeping its
+`.git` directory. Create a separate folder containing the PKGBUILD:
 
 ```bash
-# Extract the source archive on the Desktop; it contains viper4linux-compressors/
 mkdir -p ~/Desktop/viper4linux-package
-cp ~/Downloads/PKGBUILD ~/Desktop/viper4linux-package/
+cp /path/to/PKGBUILD ~/Desktop/viper4linux-package/PKGBUILD
 cd ~/Desktop/viper4linux-package
-makepkg -si
+VIPER4LINUX_REPO="$HOME/Desktop/your-extracted-source-directory" makepkg -si
 ```
 
-By default, the PKGBUILD reads a separate **local Git checkout** at
-`~/Desktop/viper4linux-compressors` regardless of where makepkg is launched.
-Override with `VIPER4LINUX_REPO=/absolute/path makepkg -si` if necessary.
-The revision count and twelve-digit hash are calculated from that checkout
-using `git rev-list --count HEAD` and `git rev-parse --short=12 HEAD`.
+The `VIPER4LINUX_REPO` environment variable overrides the checkout path
+currently hard-coded as a default in the test PKGBUILD. The `pkgver()`
+function derives revision count and commit hash from its actual Git history.
+Use a space-free temporary build folder for now: Arch's generated compiler
+`-ffile-prefix-map` can break under the current CMake/Make setup if a build
+path contains spaces.
 
-The development package conflicts with the former test package
-(`viper4linux-git`), Noah's `viper4linux` package, and its stable counterpart
-(`viper4linux-re`). During `makepkg -si`, pacman should prompt to remove
-any installed conflicting package as part of the same transaction. Do **not**
-use `--overwrite` to bypass file ownership checks. Per-user GUI settings
-are not removed by pacman's package replacement. JamesDSP is not declared
-a conflict pending specific compatibility investigation.
-Package installation does not modify /etc/pipewire or overwrite the user's
-PipeWire configuration. The launcher handles backend fingerprint changes.
+The local test package declares conflicts with `viper4linux-re`, `viper4linux`
+and `viper4linux-git`. This permits pacman to offer removal of the older
+incompatible installation instead of bypassing file ownership checks.
+JamesDSP remains a separate runtime-routing compatibility question; it is
+not declared a package conflict. Do not use pacman's `--overwrite` merely
+to bypass conflicts.
 
-## Publication plan (not implemented yet)
+The package installs the launcher, GUI, controller, LADSPA module, desktop
+entry, icons, man pages, and maintained docs. Personal settings, presets,
+and IRS/VDC files remain in user directories and should survive package
+replacement. If an old source checkout installed a launcher symlink,
+use `type -a viper4linux` to ensure it does not shadow `/usr/bin/viper4linux`.
 
-- `viper4linux-re`: stable, versioned source tar.gz release, no Git needed for
-  the build. ViPERDSP must be available as tarball source or within a properly
-  licensed source bundle (not fetched via Git during the package build).
-- `viper4linux-re-git`: current source from the published Git remote, with
-  automatic commit-derived `pkgver()`, not the local Desktop checkout.
-- The development package already declares stable/legacy ViPER conflicts.
-  Add the reciprocal conflicts in the future stable PKGBUILD. Recheck actual
-  names and installed-file lists before AUR publication; keep JamesDSP
-  compatibility under separate investigation.
-- A fix or tested workaround for building under paths containing spaces is
-  still outstanding; use a simple directory name during local testing.
-- Confirm redistribution licenses before publishing.
+## Intended public packages
 
-After installing, run `type -a viper4linux` to check that an obsolete
-`~/.local/bin/viper4linux` symlink is not shadowing `/usr/bin/viper4linux`.
+| Package | Source | Versioning |
+|---|---|---|
+| `viper4linux-re` | Published versioned source tarball | Fixed release number (`0.1.0-1`, etc.) |
+| `viper4linux-re-git` | Published Git remote | Commit-derived VCS `pkgver()` |
+
+The stable package should not need a Git checkout to build; its sources,
+including the suitably licensed DSP dependency, must be obtainable through
+release archives. The `-git` package should follow the latest published
+repository commit rather than a Desktop path. Before publication, review
+reciprocal conflicts, upstream licenses, proper sources/hashes, dependencies,
+and reproducible builds. The repository PKGBUILD remains subject to the
+user's own separate cleanup/review.
