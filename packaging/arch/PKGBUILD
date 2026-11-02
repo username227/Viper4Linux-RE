@@ -57,6 +57,7 @@ check() {
     python3 tests/check-named-presets-contract.py
     python3 tests/check-preset-reset-contract.py
     python3 tests/check-packaging-contract.py
+    python3 -m unittest discover -s tests -p 'test_output_*.py' -v
     nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
 }
 
@@ -74,6 +75,9 @@ package() {
 
 # Launchers
     install -Dm644 "$tree/src/viper_launcher.py" "$pkgdir/usr/lib/viper4linux/viper_launcher.py"
+    for module in viper_output_graph.py viper_output_store.py viper_output_memory.py viper_output_monitor.py; do
+      install -Dm644 "$tree/src/$module" "$pkgdir/usr/lib/viper4linux/$module"
+    done
     install -Dm755 "$tree/packaging/arch/start-backend" "$pkgdir/usr/lib/viper4linux/start-backend"
     install -Dm755 "$tree/packaging/arch/viper4linux" "$pkgdir/usr/bin/viper4linux"
 

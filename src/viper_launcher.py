@@ -99,7 +99,7 @@ def ensure_backend(root: Path = ROOT) -> None:
         current = running_clients()
         if current and all(tag == desired for tag in current.values()) and len(current) == 1:
             print('Viper4Linux backend already running at the current build; reusing it.', flush=True)
-            return
+            return next(iter(current))
         if current:
             print('Previous or mismatched Viper4Linux backend detected; stopping it first.', flush=True)
             for pid in current:
@@ -132,7 +132,7 @@ def ensure_backend(root: Path = ROOT) -> None:
                     first_seen = time.monotonic()
                 elif time.monotonic() - first_seen >= 0.35:
                     print(f'Viper4Linux backend started (PID {proc.pid}); log: {log_path}', flush=True)
-                    return
+                    return proc.pid
             else:
                 first_seen = None
             time.sleep(0.1)
@@ -141,6 +141,65 @@ def ensure_backend(root: Path = ROOT) -> None:
             proc.terminate()
         raise RuntimeError(f'Backend did not become ready; see {log_path}')
 
+
+# An Audio Output manager is a separate process, never tied to the GUI.
+OUTPUT_MANAGER_TAG = b'VIPER_AUDIO_OUTPUT_MANAGER_SHA='
+
+def running_output_managers(script: Path, proc_root: Path = PROC) -> dict[int, tuple[int, str | None]]:
+    result = {}
+    for process in proc_root.iterdir():
+        if not process.name.isdecimal():
+            continue
+        try:
+            if process.stat().st_uid != os.getuid():
+                continue
+            argv = (process / 'cmdline').read_bytes().split(b'\0')
+            if os.fsencode(script) not in argv or b'--backend-pid' not in argv:
+                continue
+            idx = argv.index(b'--backend-pid')
+            backend = int(argv[idx + 1])
+            env = (process / 'environ').read_bytes().split(b'\0')
+            tag = next((e[len(OUTPUT_MANAGER_TAG):].decode('ascii', errors='replace')
+                        for e in env if e.startswith(OUTPUT_MANAGER_TAG)), None)
+            result[int(process.name)] = (backend, tag)
+        except (OSError, ValueError, IndexError):
+            continue
+    return result
+
+def ensure_output_monitor(backend_pid: int, root: Path = ROOT) -> None:
+    script = (Path('/usr/lib/viper4linux/viper_output_monitor.py')
+              if SYSTEM_MODE and root == ROOT else root / 'src/viper_output_monitor.py')
+    if not script.is_file():
+        raise RuntimeError(f'Audio Output monitor missing: {script}')
+    desired = hashlib.sha256(script.read_bytes()).hexdigest()
+    runtime = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
+    with (runtime / 'viper4linux-output-launch.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        existing = running_output_managers(script)
+        if len(existing) == 1 and next(iter(existing.values())) == (backend_pid, desired):
+            return
+        if existing:
+            for pid in existing:
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+            deadline = time.monotonic() + 5.0
+            while time.monotonic() < deadline and running_output_managers(script):
+                time.sleep(0.1)
+            if running_output_managers(script):
+                raise RuntimeError('Previous Audio Output monitor did not stop')
+        log_dir = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'viper4linux'
+        log_dir.mkdir(parents=True, exist_ok=True)
+        env = os.environ.copy()
+        env['VIPER_AUDIO_OUTPUT_MANAGER_SHA'] = desired
+        with (log_dir / 'output-monitor.log').open('ab') as log:
+            proc = subprocess.Popen([sys.executable, str(script), '--backend-pid', str(backend_pid)],
+                                    env=env, stdin=subprocess.DEVNULL, stdout=log,
+                                    stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
+        time.sleep(0.25)
+        if proc.poll() is not None:
+            raise RuntimeError(f'Audio Output monitor exited ({proc.returncode}); see {log_dir / "output-monitor.log"}')
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='Viper4Linux unified launcher')
@@ -153,7 +212,11 @@ def main() -> int:
         gui = Path('/usr/bin/viper4linux-gui') if SYSTEM_MODE else ROOT / 'build/viper-gui'
         if not gui.is_file() or not os.access(gui, os.X_OK):
             raise RuntimeError('GUI not built. Run ./install.sh first.')
-        ensure_backend()
+        backend_pid = ensure_backend()
+        try:
+            ensure_output_monitor(backend_pid)
+        except (OSError, RuntimeError) as exc:
+            print(f'viper4linux: Audio Output monitor unavailable: {exc}', file=sys.stderr)
         # Never launch another GUI if the backend could not be verified.
         os.execv(str(gui), [str(gui)])
     except (RuntimeError, OSError) as exc:
