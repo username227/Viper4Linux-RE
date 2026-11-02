@@ -17,7 +17,7 @@ void usage(std::ostream& out = std::cerr) {
     out << "Usage: viper4linux-ctl COMMAND [ARGUMENTS...]\n"
            "\n"
            "Global:        status [--full], on, off\n"
-           "Bass:          bass-on/off, bass-toggle, bass-mode <0..2>, gain <0.5..10>, freq <15..150 Hz>\n"
+           "Bass:          bass-on/off, bass-toggle, bass-mode <0..2>, bass-gain <0.5..10>, bass-freq <15..150 Hz>\n"
            "Bass Mono:     mono-on/off, mono-mode <0..2>, mono-strength <0.5..10>, mono-freq <15..150>\n"
            "Psycho Bass:   psycho-on/off, psycho-cutoff/intensity/order/original <value>\n"
            "Dynamic Bass:  dynamic-on/off, dynamic-x-low/high, dynamic-y-low/high,\n"
@@ -141,9 +141,9 @@ int main(int argc, char** argv) {
             if (std::trunc(v) != v) throw std::invalid_argument("Bass mode must be an integer 0, 1, or 2");
             c.bass_mode.store(static_cast<int>(v));
         }
-        else if (cmd == "gain" && argc == 3)
+        else if (cmd == "bass-gain" && argc == 3)
             c.strength_centi.store(static_cast<int>(std::lround(number(argv[2], 0.5f, 10.f) * 100.f)));
-        else if (cmd == "freq" && argc == 3)
+        else if (cmd == "bass-freq" && argc == 3)
             c.frequency_hz.store(static_cast<int>(std::lround(number(argv[2], 15.f, 150.f))));
         else if (cmd == "eq-on" && argc == 2) {
             c.eq_enabled.store(1);

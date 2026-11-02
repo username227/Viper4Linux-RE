@@ -26,9 +26,18 @@ int main() {
     assert(execute({"off"}) == 0);
     s.sync();
     assert(!s.value("master_enabled", true).toBool());
-    assert(execute({"gain", "2.38"}) == 0);
+    assert(execute({"bass-gain", "2.38"}) == 0);
     s.sync();
     assert(s.value("strength_tenths").toInt() == 24); // Round to the GUI's tenths.
+    assert(execute({"bass-freq", "74.6"}) == 0);
+    s.sync();
+    assert(s.value("frequency").toInt() == 75);
+    // Generic names were deliberately removed as a CLI-breaking cleanup.
+    assert(execute({"gain", "9"}) == 2);
+    assert(execute({"freq", "100"}) == 2);
+    s.sync();
+    assert(s.value("strength_tenths").toInt() == 24);
+    assert(s.value("frequency").toInt() == 75);
     assert(execute({"psycho-intensity", "34.6"}) == 0);
     s.sync();
     assert(s.value("psycho_intensity_percent").toInt() == 35);

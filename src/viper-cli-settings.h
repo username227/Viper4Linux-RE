@@ -29,7 +29,7 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
 
     if (oneOf({"on", "off", "all-on", "all-off"})) {
         flag("master_enabled", c.master_enabled);
-    } else if (oneOf({"bass-on", "bass-off", "bass-toggle", "toggle", "bass-mode", "gain", "freq"})) {
+    } else if (oneOf({"bass-on", "bass-off", "bass-toggle", "toggle", "bass-mode", "bass-gain", "bass-freq"})) {
         flag("enabled", c.enabled);
         num("bass_mode", c.bass_mode);
         s.setValue("strength_tenths", (value(c.strength_centi) + 5) / 10);

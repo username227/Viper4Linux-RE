@@ -10,6 +10,10 @@ missing = sorted(c for c in commands if not re.search(r'(?<![\w-])' + re.escape(
 assert len(commands) >= 85, f'CLI parser coverage dropped unexpectedly ({len(commands)})'
 assert not missing, f'Undocumented CLI commands: {missing}'
 assert '--help' in man and 'round' in man and 'inclusive' in man
+assert 'bass-gain' in commands and 'bass-freq' in commands
+assert not {'gain', 'freq'} & commands
+assert '.BI "bass-gain " VALUE' in man and '.BI "bass-freq " VALUE' in man
+assert not re.search(r'^\.BI "(gain|freq) "', man, re.M)
 expected = [
     ('1. OUTPUT', ['Master Limiter', 'Playback Gain Control (AGC)', 'LUFS Targeting']),
     ('2. BASS', ['ViPER Bass', 'ViPER Bass Mono', 'Psychoacoustic Bass', 'Dynamic System']),

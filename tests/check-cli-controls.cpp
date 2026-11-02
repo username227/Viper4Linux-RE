@@ -57,6 +57,16 @@ int main() {
     run("all-on");
     assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
 
+    assert(invoke({"bass-gain", "2.35"}) == 0);
+    assert(c.strength_centi.load() == 235);
+    assert(invoke({"bass-freq", "72.6"}) == 0);
+    assert(c.frequency_hz.load() == 73);
+    // No compatibility aliases for generic Bass gain and frequency names.
+    assert(invoke({"gain", "5"}) == 2);
+    assert(invoke({"freq", "90"}) == 2);
+    assert(c.strength_centi.load() == 235);
+    assert(c.frequency_hz.load() == 73);
+
     // Only an explicit status query prints all six categories. Master switch
     // commands show one confirmation line; effect edits remain scoped.
     std::string displayed;
