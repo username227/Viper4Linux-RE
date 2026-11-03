@@ -18,14 +18,18 @@ namespace {
 void usage(std::ostream& out = std::cerr) {
     out << R"V4LHELP(Usage: viper4linux-ctl COMMAND1 [ARGUMENTS...] COMMAND2 [ARGUMENTS...] ...
 
-Commands (alphabetical):
+Global commands:
+  on                                       Enable master DSP processing
+  off                                      Bypass master DSP processing
+  status                                   Show current DSP settings; add --full for detailed values
+  all-on / all-off                         Legacy aliases for on / off
+
+Effect-specific commands (alphabetical):
   agc-max <1..10>                          Set automatic gain control maximum gain
   agc-off                                  Disable automatic gain control
   agc-on                                   Enable automatic gain control
   agc-strength <0.5..3>                    Set automatic gain control strength
   agc-threshold <0.3..1>                   Set automatic gain control threshold
-  all-off                                  Alias for off
-  all-on                                   Alias for on
   analogx-mode <0..2>                      Set AnalogX mode
   analogx-off                              Disable AnalogX
   analogx-on                               Enable AnalogX
@@ -105,8 +109,6 @@ Commands (alphabetical):
   mono-off                                 Disable Bass Mono
   mono-on                                  Enable Bass Mono
   mono-strength <0.5..10>                  Set Bass Mono strength
-  off                                      Bypass master DSP processing
-  on                                       Enable master DSP processing
   psycho-cutoff <60..150>                  Set psychoacoustic bass cutoff frequency
   psycho-intensity <0..100>                Set psychoacoustic bass intensity
   psycho-off                               Disable psychoacoustic bass
@@ -126,14 +128,11 @@ Commands (alphabetical):
   spectrum-freq <2200..8200>               Set spectrum extension frequency
   spectrum-off                             Disable spectrum extension
   spectrum-on                              Enable spectrum extension
-  status                                   Show current DSP settings; add --full for detailed values
-  toggle                                   Alias for bass-toggle
   tube-drive <0..100>                      Set tube simulator drive
   tube-mix <0..100>                        Set tube simulator mix
   tube-model <0..2>                        Set tube simulator model
   tube-off                                 Disable tube simulator
   tube-on                                  Enable tube simulator
-
 Commands can be chained: v4l-cli on bass-on clarity-gain 2.5
 Use man viper4linux-ctl for exact units, constraints and examples.
 )V4LHELP";
@@ -225,7 +224,7 @@ int executeOne(int argc, char** argv) {
         }
         else if (cmd == "bass-on" && argc == 2) c.enabled.store(1);
         else if (cmd == "bass-off" && argc == 2) c.enabled.store(0);
-        else if ((cmd == "bass-toggle" || cmd == "toggle") && argc == 2)
+        else if (cmd == "bass-toggle" && argc == 2)
             c.enabled.store(!c.enabled.load());
         else if (cmd == "bass-mode" && argc == 3) {
             const auto v = number(argv[2], 0.f, 2.f);
