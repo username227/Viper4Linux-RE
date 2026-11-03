@@ -14,6 +14,9 @@ assert 'if (confirm.clickedButton() != resetButton) return;' in reset
 assert reset.index('if (confirm.clickedButton() != resetButton) return;') < reset.index('applySettings(')
 assert 'settings_.clear()' not in reset
 assert 'settings_.remove("preset")' not in reset
+assert 'applySettings(true, false, 0, 100, 65,' in reset
+assert 'applySettings(true, true, 0, 100, 65,' not in reset
+assert '(master processing and limiter at defaults; all optional effects off).' in reset
 assert 'resetOutputControls();' in reset
 assert 'resetNewBassControls();' in reset
 assert 'resetFetSettings();' in reset
