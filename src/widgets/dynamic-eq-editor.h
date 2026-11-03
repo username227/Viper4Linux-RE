@@ -53,8 +53,11 @@ inline DynamicEqEditorWidgets createDynamicEqEditor(QWidget* parent) {
         auto* deq_content_layout = new QVBoxLayout(deq_content);
         deq_content_layout->setSpacing(9);
         auto* deq_explain = new QLabel(
-            "Select a band in the table or on the curve. All filter settings remain editable below. "
-            "The curve shows maximum configured gain, not live audio levels.", deq_content);
+            "Each band\'s Maximum gain is its individual setting; the curve estimates the combined "
+            "response of all active filters. Frequency, Q (bandwidth), filter shape (especially shelves) "
+            "and other bands can change the curve even when a band\'s gain stays the same. "
+            "This is an approximate preview, not live metering: real processing also depends on "
+            "threshold, attack, release and signal level.", deq_content);
         deq_explain->setWordWrap(true);
         deq_content_layout->addWidget(deq_explain);
         auto* deq_top = new QHBoxLayout();
