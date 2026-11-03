@@ -386,7 +386,7 @@ has been run by the assistant.
 `correction-panels.h`. Do not create empty files for unfinished tabs.
 Keep the ability to split an unusually complex tab later.
 
-### Checkpoint 5C — Output tab extraction (code committed; native test pending)
+### Checkpoint 5C — Output tab extraction (maintainer accepted)
 
 Extracted the widget and layout construction for all three Output effects
 (Master Limiter, Playback Gain Control/AGC, and LUFS Targeting) to
@@ -401,13 +401,14 @@ position in the Output tab and its visibility rule are unchanged. The
 preexisting `addSlider()` helper is reused; no DSP, ABI, preset, packaging,
 submodule or CMake source-target changes were made.
 
-**Verification gate:** The code has been structurally checked against the
-previous construction and the set of labels, slider ranges, tooltips and card
-keys. Native Qt compilation, clean-build regression checks and real audio/GUI
-acceptance have **not** yet been performed by the assistant. The maintainer
-is making a fresh clone to investigate intermittent apparent build hangs.
-**Do not call 5C accepted or proceed to the next tab until the fresh build
-and maintainer tests pass.**
+**Acceptance, 2026-11-03 — maintainer confirmation:** The maintainer
+confirmed all seven Output-panel checks passed on a fresh native build:
+three cards in order, permanently active/disabled Limiter indicator,
+independent switches and expand/collapse, limiter sliders, LUFS speed options,
+AGC+LUFS combined warning, and values persisting after GUI restart.
+**Checkpoint 5C accepted** at the build/GUI smoke-test level; the final
+full developer, DSP/CLI precision and hardware regression suites still apply.
+The intermittent build hangs are unresolved and tracked separately.
 
 After cloning the refactoring branch with submodules, build from a new
 directory with `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release` and
@@ -424,6 +425,41 @@ activity before interrupting it.
 **Current panel-file count:** 2/6 (`output-panels.h`, `spatial-panels.h`).
 Bass, EQ & Tone, Dynamics and Sound Correction remain to be extracted.
 No merge or release to `main`.
+
+### Checkpoint 5D — Bass tab extraction (native test pending)
+
+Extracted all four Bass-card control constructions into
+`src/panels/bass-panels.h`: ViPER Bass, ViPER Bass Mono,
+Psychoacoustic Bass, and Dynamic System. This mechanical extraction
+returns original combo, switch and slider pointers to `ViperWindow`
+without altering values, defaults, options, tooltips, warnings or slider
+ranges. The existing `addSlider()` helper is reused. In the main window,
+all four effect-card wrappers keep their stable keys and order:
+`bass`, `bass_mono`, `psycho_bass`, `dynamic_bass`.
+QSettings keys, saved expansion state, live-label formatting, all
+signal connections, backend/CLI synchronization and native DSP writes
+remain in `ViperWindow`. No edits to ViPERDSP, LADSPA, shared memory
+ABI, CMake, packaging or presets.
+
+**Verification status:** Structural checks of preserved label strings,
+option text, slider ranges, factory fields and state connections passed.
+Native Qt compilation, developer regression tests and live GUI/audio
+acceptance have not been performed by the assistant; the maintainer must
+test before 5D is accepted or another panel is attempted.
+
+**Test 5D:** Clean-configure and build into `build-stage5d/`, inspect
+About revision, and launch this exact revision. Confirm four Bass cards
+in their previous order; switches remain independent of collapse/expand;
+Natural/Pure Bass+/Subwoofer selectors for Bass and Bass Mono; strength
+and frequency controls; mono caution text; Psychoacoustic Bass cutoff,
+intensity, harmonic order, original bass control; Dynamic System X/Y
+frequencies, side gains, strength and caution text; saved/reloaded values;
+and audible processing at conservative levels. If another build hangs,
+record process state and log output before interrupting it.
+
+**Panel extraction progress:** 3/6 (Output, Bass, Spatial); still
+outstanding EQ & Tone, Dynamics, Sound Correction. No merging or
+releasing to `main` before full acceptance and explicit approval.
 
 ## Checkpoint 6 — Settings/backend synchronization
 

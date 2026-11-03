@@ -6,6 +6,7 @@
 #include "widgets/eq-overviews.h"
 #include "widgets/dynamic-eq-editor.h"
 #include "widgets/graphic-eq-editor.h"
+#include "panels/bass-panels.h"
 #include "panels/output-panels.h"
 #include "panels/spatial-panels.h"
 #include "widgets/effect-widgets.h"
@@ -657,59 +658,37 @@ public:
             }
         });
 
-        auto* group = new QGroupBox("ViPER Bass", tabs_);
-        auto* form = new QFormLayout(group);
-        enabled_ = new EffectSwitch(group);
-        form->addRow("Bass processing", enabled_);
-        bass_mode_ = new QComboBox(group);
-        bass_mode_->addItems({"Natural", "Pure Bass+", "Subwoofer"});
-        bass_mode_->setToolTip("Select one of the three original ViPERDSP Bass processing algorithms.");
-        form->addRow("Bass mode", bass_mode_);
-        strength_ = addSlider(form, "Bass strength", 5, 100); // tenths
-        frequency_ = addSlider(form, "Frequency", 15, 150);
-        addEffectPanel(bassLayout, group, "bass", enabled_);
-
-        auto* mono_group = new QGroupBox("ViPER Bass Mono", tabs_);
-        auto* mono_form = new QFormLayout(mono_group);
-        mono_enabled_ = new EffectSwitch(mono_group);
-        mono_form->addRow("Mono bass processing", mono_enabled_);
-        mono_mode_ = new QComboBox(mono_group);
-        mono_mode_->addItems({"Natural", "Pure Bass+", "Subwoofer"});
-        mono_form->addRow("Bass mode", mono_mode_);
-        mono_strength_ = addSlider(mono_form, "Bass strength", 5, 100);
-        mono_frequency_ = addSlider(mono_form, "Frequency", 15, 150);
-        auto* mono_note = new QLabel("Mono-derived bass is blended into both channels. Start at a low strength.", mono_group);
-        mono_note->setWordWrap(true);
-        mono_form->addRow(mono_note);
-        addEffectPanel(bassLayout, mono_group, "bass_mono", mono_enabled_);
-
-        auto* psycho_group = new QGroupBox("Psychoacoustic Bass", tabs_);
-        auto* psycho_form = new QFormLayout(psycho_group);
-        psycho_enabled_ = new EffectSwitch(psycho_group);
-        psycho_form->addRow("Harmonic bass enhancement", psycho_enabled_);
-        psycho_cutoff_ = addSlider(psycho_form, "Bass cutoff", 60, 150);
-        psycho_intensity_ = addSlider(psycho_form, "Harmonic intensity", 0, 100);
-        psycho_order_ = new QComboBox(psycho_group);
-        psycho_order_->addItems({"2nd order", "3rd order", "4th order", "5th order"});
-        psycho_form->addRow("Harmonic order", psycho_order_);
-        psycho_original_ = addSlider(psycho_form, "Original bass level", 0, 100);
-        addEffectPanel(bassLayout, psycho_group, "psycho_bass", psycho_enabled_);
-
-        auto* dyn_group = new QGroupBox("Dynamic System", tabs_);
-        auto* dyn_form = new QFormLayout(dyn_group);
-        dyn_enabled_ = new EffectSwitch(dyn_group);
-        dyn_form->addRow("Dynamic bass processing", dyn_enabled_);
-        dyn_xlo_ = addSlider(dyn_form, "Low X frequency", 0, 2400);
-        dyn_xhi_ = addSlider(dyn_form, "High X frequency", 0, 12000);
-        dyn_ylo_ = addSlider(dyn_form, "Low Y frequency", 0, 200);
-        dyn_yhi_ = addSlider(dyn_form, "High Y frequency", 0, 300);
-        dyn_side_lo_ = addSlider(dyn_form, "Low side gain", 0, 100);
-        dyn_side_hi_ = addSlider(dyn_form, "High side gain", 0, 100);
-        dyn_strength_ = addSlider(dyn_form, "Dynamic bass strength", 0, 100);
-        auto* dyn_note = new QLabel("Advanced crossover/dynamic-bass controls. Enable only after setting a conservative strength.", dyn_group);
-        dyn_note->setWordWrap(true);
-        dyn_form->addRow(dyn_note);
-        addEffectPanel(bassLayout, dyn_group, "dynamic_bass", dyn_enabled_);
+        // Bass widget construction moved; card wrappers, persistence,
+        // precise DSP values and shared-memory subscriptions remain here.
+        const auto bassPanels = viper_panels::createBassPanels(
+            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
+                return addSlider(form, label, min, max);
+            });
+        enabled_ = bassPanels.enabled;
+        bass_mode_ = bassPanels.bass_mode;
+        strength_ = bassPanels.strength;
+        frequency_ = bassPanels.frequency;
+        mono_enabled_ = bassPanels.mono_enabled;
+        mono_mode_ = bassPanels.mono_mode;
+        mono_strength_ = bassPanels.mono_strength;
+        mono_frequency_ = bassPanels.mono_frequency;
+        psycho_enabled_ = bassPanels.psycho_enabled;
+        psycho_cutoff_ = bassPanels.psycho_cutoff;
+        psycho_intensity_ = bassPanels.psycho_intensity;
+        psycho_order_ = bassPanels.psycho_order;
+        psycho_original_ = bassPanels.psycho_original;
+        dyn_enabled_ = bassPanels.dyn_enabled;
+        dyn_xlo_ = bassPanels.dyn_xlo;
+        dyn_xhi_ = bassPanels.dyn_xhi;
+        dyn_ylo_ = bassPanels.dyn_ylo;
+        dyn_yhi_ = bassPanels.dyn_yhi;
+        dyn_side_lo_ = bassPanels.dyn_side_lo;
+        dyn_side_hi_ = bassPanels.dyn_side_hi;
+        dyn_strength_ = bassPanels.dyn_strength;
+        addEffectPanel(bassLayout, bassPanels.bassGroup, "bass", enabled_);
+        addEffectPanel(bassLayout, bassPanels.monoGroup, "bass_mono", mono_enabled_);
+        addEffectPanel(bassLayout, bassPanels.psychoGroup, "psycho_bass", psycho_enabled_);
+        addEffectPanel(bassLayout, bassPanels.dynamicGroup, "dynamic_bass", dyn_enabled_);
 
         auto* clarity_group = new QGroupBox("ViPER Clarity", central);
         auto* clarity_form = new QFormLayout(clarity_group);
