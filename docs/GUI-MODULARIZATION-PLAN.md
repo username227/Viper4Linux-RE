@@ -191,11 +191,20 @@ This accepts the Checkpoint 4A GUI smoke test. Tests of coincident-frequency
 markers, complete saved-state round trips, and the full developer regression
 suite remain pending integration verification.
 
-**Version-display observation:** The maintainer reported
-`Version: 1.1.0-3742fe888058` during this test, even though the branch's
-4A commit is newer. This may reflect a stale/generated build version stamp;
-do not assert version provenance or modify release/version logic as part of
-the mechanical EQ extraction. Investigate separately if reproducible.
+**Verified rebuild and version provenance, 2026-11-03:** After an explicit
+`cmake -S . -B build` reconfiguration and a successful
+`cmake --build build --target viper-gui -j4`, the maintainer confirmed that
+`git rev-parse --short=12 HEAD` and `build/generated/viper-build-info.h`
+both contain `fd7d0c6d3cc8` (version `1.1.0-fd7d0c6d3cc8`).
+The maintainer subsequently retested and reports the GUI/EQ remains functional.
+This strengthens acceptance of Checkpoint 4A. The About-dialog display after
+this rebuild was not separately reported; don't claim it was inspected.
+
+**Separate build-system follow-up:** The earlier About display
+`1.1.0-3742fe888058` was consistent with version information generated
+at CMake configuration time. A normal incremental build does not necessarily
+refresh that header when Git HEAD changes. Consider a reproducible automatic
+revision refresh after the refactor, independently from GUI code movement.
 
 The detailed editor layout and state integration remain for Checkpoint 4B.
 No merge to `main` before the full refactor is accepted.
