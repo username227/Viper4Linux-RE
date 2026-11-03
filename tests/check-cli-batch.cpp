@@ -25,6 +25,8 @@ int main() {
     assert(!check({"eq-bands", "10", "eq-level", "12", "-1.5"}).ok);
     assert(!check({"on", "bass-gain", "not-a-number"}).ok);
     assert(!check({"on", "gain", "2.5"}).ok);
+    assert(!check({"toggle"}).ok);
+    assert(check({"bass-toggle"}).ok);
     assert(!check({"on", "headphone-level", "2.5"}).ok);
     assert(!check({"on", "headphone-quality", "2"}).ok);
     assert(!check({"on", "tube-drive", "12.5"}).ok);
