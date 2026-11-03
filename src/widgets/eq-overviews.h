@@ -19,7 +19,7 @@
 #include <vector>
 
 // The compact overview has NO faders: paint from the same EQ state used by
-// the DSP.  It scales to any panel width without ever affecting its size hint.
+// the DSP. Fixed axes allow comparison between presets and band layouts.
 // Only a click on the graphic opens the separately managed detailed editor.
 class EqOverview final : public QWidget {
 public:
@@ -43,7 +43,10 @@ protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
-        const QRectF plot = QRectF(rect()).adjusted(10, 8, -10, -8);
+        // Fixed 20 Hz–20 kHz horizontal axis and fixed +/-12 dB vertical
+        // axis: different presets and band counts must be directly comparable.
+        // Levels are in hundredths of a decibel, as are the fader values.
+        const QRectF plot = QRectF(rect()).adjusted(36, 9, -10, -9);
         if (plot.width() <= 0 || plot.height() <= 0) return;
         const QColor fg = palette().color(QPalette::Text);
         const QColor accent = palette().color(QPalette::Highlight);
@@ -51,31 +54,33 @@ protected:
         p.setPen(QPen(fg, 1));
         p.setBrush(base);
         p.drawRoundedRect(QRectF(rect()).adjusted(1, 1, -2, -2), 8, 8);
+        constexpr double kMinHz = 20.0;
+        constexpr double kMaxHz = 20000.0;
+        constexpr int kMaxGain = 1200;
+        const qreal zeroY = plot.center().y();
+        p.setPen(QPen(fg, 1, Qt::DotLine));
+        p.drawLine(QPointF(plot.left(), zeroY), QPointF(plot.right(), zeroY));
+        p.setPen(fg);
+        const QFontMetrics metrics = p.fontMetrics();
+        const int textWidth = 30;
+        p.drawText(QRectF(3, plot.top()-4, textWidth, metrics.height()),
+                   Qt::AlignRight | Qt::AlignVCenter, "+12");
+        p.drawText(QRectF(3, zeroY-metrics.height()/2.0, textWidth, metrics.height()),
+                   Qt::AlignRight | Qt::AlignVCenter, "0");
+        p.drawText(QRectF(3, plot.bottom()-metrics.height()+4, textWidth, metrics.height()),
+                   Qt::AlignRight | Qt::AlignVCenter, "-12");
         if (levels_.empty()) return;
-        const auto [minimum, maximum] = std::minmax_element(levels_.begin(), levels_.end());
-        // Auto-fit the displayed response; full positive/negative extrema
-        // reach the top/bottom of the usable plot rather than sitting near
-        // the middle of a fixed +/-12 dB graph.
-        if (*minimum < 0 && *maximum > 0) {
-            const qreal zeroY = plot.top() + plot.height() *
-                viper_eq::normalizedY(0, *minimum, *maximum);
-            p.setPen(QPen(fg, 1, Qt::DotLine));
-            p.drawLine(QPointF(plot.left(), zeroY), QPointF(plot.right(), zeroY));
-        }
-        // The EQ is a log-frequency response, not an evenly spaced list of
-        // arbitrary categories. Keep all band values in the full editor only.
         const auto& hz = viper_eq::frequencies(static_cast<int>(levels_.size()));
-        const double lo = std::log(static_cast<double>(hz[0]));
-        const double hi = std::log(static_cast<double>(hz[levels_.size()-1]));
-        const qreal range = static_cast<qreal>(hi - lo);
-        if (range <= 0) return;
+        const double lo = std::log(kMinHz);
+        const double range = std::log(kMaxHz) - lo;
         std::vector<QPointF> points;
         points.reserve(levels_.size());
         for (size_t i = 0; i < levels_.size(); ++i) {
             const qreal x = plot.left() + plot.width() *
                 (std::log(static_cast<double>(hz[i])) - lo) / range;
-            const qreal y = plot.top() + plot.height() *
-                viper_eq::normalizedY(levels_[i], *minimum, *maximum);
+            const qreal y = zeroY - plot.height() *
+                static_cast<double>(std::clamp(levels_[i], -kMaxGain, kMaxGain))
+                / (2.0 * kMaxGain);
             points.emplace_back(x, y);
         }
         // Cubic segments PASS THROUGH each band's actual value, unlike a

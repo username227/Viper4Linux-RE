@@ -1035,6 +1035,9 @@ public:
             eq_active_bands_ = validEqBands(eq_mode_->itemData(index).toInt());
             if (eq_selected_preset_ != "custom") applyEqPreset(eq_selected_preset_);
             else { loadEqLayout(); push(); }
+            // A visible nonmodal editor must change its columns immediately.
+            // applyEqPreset() updates levels, not column visibility.
+            syncGraphicEqEditorColumns();
         });
         for (int i = 0; i < 31; ++i) {
             connect(eq_faders_[i], &QSlider::valueChanged, this, [this, i](int value) {

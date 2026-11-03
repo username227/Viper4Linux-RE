@@ -287,6 +287,21 @@ Dynamic EQ interactions. If the compiler appears stalled, inspect live
 processes and memory while the build is active. This checkpoint has **not
 been natively built or tested by the assistant**; maintain verification gate.
 
+**Follow-up findings and fixes, 2026-11-03 (awaiting test):**
+The maintainer confirmed the original 31-fader visibility problem was much
+improved, but reported (1) the overview's automatic vertical rescaling
+misrepresented relative gains across presets, and (2) switching band counts
+while the editor remained open did not immediately show or hide columns.
+The overview now uses fixed vertical +/-12 dB with a permanent 0 dB centerline
+and a fixed logarithmic 20 Hz–20 kHz horizontal mapping (these are rendering
+changes only; DSP values are untouched). The band-count selector callback
+now explicitly calls `syncGraphicEqEditorColumns()` after preset/layout
+application, which previously refreshed graph values but not active-column
+visibility for preset selections. Check 10/15/25/31 modes *with editor open*,
+graph normalization using Flat/Acoustic/Bass Booster, real-time fader→graph
+updates, and preset→fader updates. Check that 0 dB remains centered regardless
+of gain extrema. No native build or visual test has been performed by assistant.
+
 ## Checkpoint 5 — Effect panels and layout construction
 
 Move construction and hookup of the six tab panels into reasonably scoped components (potentially grouped by tab) without changing signal connections, visibility, disabled/default states, effect labels or settings values. Avoid a single giant 'panels' file.
