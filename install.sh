@@ -7,7 +7,8 @@ for tool in cmake g++ gcc pkg-config pipewire python3 nm; do
     command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 1; }
 done
 [[ -r /usr/include/ladspa.h ]] || { echo 'Install Arch package ladspa' >&2; exit 1; }
-pkg-config --exists Qt6Widgets || { echo 'Install Arch package qt6-base' >&2; exit 1; }
+pkg-config --exists Qt6Widgets || { echo 'Install Arch package qt6-base (Qt6 Widgets)' >&2; exit 1; }
+pkg-config --exists Qt6Network || { echo 'Install Arch package qt6-base (Qt6 Network)' >&2; exit 1; }
 [[ -r /usr/share/pipewire/filter-chain.conf ]] || {
   echo 'Missing /usr/share/pipewire/filter-chain.conf (Arch PipeWire package)' >&2; exit 1;
 }

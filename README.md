@@ -106,7 +106,7 @@ for system package installation.
 Install the build dependencies on Arch:
 
 ```bash
-sudo pacman -S --needed base-devel cmake git pkgconf ladspa pipewire qt6-base
+sudo pacman -S --needed base-devel cmake git pkgconf ladspa pipewire qt6-base python
 ```
 
 Clone the application and its pinned ViPERDSP submodule, then build:

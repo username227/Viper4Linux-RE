@@ -20,9 +20,8 @@ python3 tests/check-save-preset-choice-contract.py
 python3 tests/test_filter_idle_config.py
 # check-mock.sh already runs tray, Dynamic EQ UI, About, and native dispatch
 # contracts. Avoid invoking the same tests a second time.
-if [[ -f .gitmodules ]]; then
-    python3 tests/check-packaging-contract.py
-fi
+# check-package.sh already verifies source-install and stable Arch dependency
+# contracts, both in Git checkouts and unified source archives.
 if [[ -f .github/workflows/prepare-stable-release.yml ]]; then
     python3 tests/check-native-deb-workflow.py
     python3 tests/check-assembled-release.py
