@@ -745,8 +745,8 @@ once-only window wiring and important moved methods. The developer source-contra
 Legacy named-preset, preset reset, preset-save choice, About and tray
 contracts now follow the current module boundaries without removing
 behavioral requirements. The new integration contract is run by
-`check-developer.sh`. Full Qt compilation and hardware checks remain
-**pending**.
+`check-developer.sh`. A native Qt build was performed by the
+maintainer; the complete device/audio acceptance matrix remains pending.
 
 **Automated suite (maintainer, 2026-11-03): PASS reported.** The
 maintainer successfully worked through the stale source-contract
@@ -755,6 +755,15 @@ rerunning `tests/check-developer.sh`. The assistant independently
 reviewed the revised assertions against branch source but has not run
 the native Arch suite itself. Source-contract repairs were test-only
 and did not change DSP, GUI runtime or IPC code.
+
+**Sample cross-section live regression (maintainer, 2026-11-03):
+PASS reported.** The maintainer exercised a representative sampling
+of controls across all six tabs and reported expected functionality,
+with special attention to IRS file loading and Graphic EQ. This is
+a successful sample-based runtime smoke test, **not** exhaustive
+per-control coverage. Full Dynamic EQ, window/tray lifecycle, named
+preset save/load/reset, per-output memory A→B→A→B and valid DDC
+profile processing are not yet accepted as a result of this sample.
 
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
