@@ -7,6 +7,7 @@
 #include "widgets/dynamic-eq-editor.h"
 #include "widgets/graphic-eq-editor.h"
 #include "panels/bass-panels.h"
+#include "panels/eq-tone-panels.h"
 #include "panels/output-panels.h"
 #include "panels/spatial-panels.h"
 #include "widgets/effect-widgets.h"
@@ -236,74 +237,21 @@ public:
         auto* dynamicsLayout = addEffectsTab("Dynamics");
         auto* correctionLayout = addEffectsTab("Sound Correction");
 
-        // The two selectors share a flexible row; no selector grows to the
-        // length of its longest label or forces the containing tab wider.
-        auto* eq_group = new QGroupBox("Graphic Equalizer", tabs_);
-        auto* eq_form = new QFormLayout(eq_group);
-        eq_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        eq_enabled_ = new EffectSwitch(eq_group);
-        eq_form->addRow("Enable native EQ", eq_enabled_);
-        auto* eq_controls = new QWidget(eq_group);
-        auto* eq_row = new QHBoxLayout(eq_controls);
-        eq_row->setContentsMargins(0, 0, 0, 0);
-        eq_row->setSpacing(6);
-        eq_row->addWidget(new QLabel("Bands", eq_controls));
-        eq_mode_ = new QComboBox(eq_controls);
-        eq_mode_->setObjectName("viperEqBandCount");
-        for (int count : {10, 15, 25, 31})
-            eq_mode_->addItem(QString::number(count), count);
-        eq_mode_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-        eq_mode_->setMinimumContentsLength(2);
-        eq_mode_->setMinimumWidth(54);
-        eq_mode_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        eq_row->addWidget(eq_mode_, 2);
-        eq_row->addWidget(new QLabel("Preset", eq_controls));
-        eq_preset_ = new QComboBox(eq_controls);
-        eq_preset_->setObjectName("viperEqPreset");
-        eq_preset_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-        eq_preset_->setMinimumContentsLength(9);
-        eq_preset_->setMinimumWidth(92);
-        eq_preset_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        eq_row->addWidget(eq_preset_, 3);
-        eq_controls->setMinimumWidth(0);
-        eq_controls->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
-        eq_form->addRow(eq_controls);
-        eq_overview_ = new EqOverview(eq_group);
-        eq_form->addRow(eq_overview_);
-        auto* eq_actions = new QWidget(eq_group);
-        auto* eq_action_row = new QHBoxLayout(eq_actions);
-        eq_action_row->setContentsMargins(0, 0, 0, 0);
-        eq_action_row->setSpacing(6);
-        auto* eq_save = new QPushButton("Save preset…", eq_actions);
-        auto* eq_delete = new QPushButton("Delete preset", eq_actions);
-        eq_delete->setObjectName("viperEqDeletePreset");
-        eq_delete_button_ = eq_delete;
-        eq_action_row->addWidget(eq_save);
-        eq_action_row->addWidget(eq_delete);
-        eq_action_row->addStretch(1);
-        eq_form->addRow(eq_actions);
-        addEffectPanel(effectLayout, eq_group, "equalizer", eq_enabled_);
-
-        // Dynamic EQ: matching compact, clickable maximum-target preview.
-        // Ten configurable native filters live in one separate dialog.
-        auto* deq_group = new QGroupBox("Dynamic EQ", tabs_);
-        auto* deq_form = new QFormLayout(deq_group);
-        deq_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        deq_enabled_ = new EffectSwitch(deq_group);
-        deq_form->addRow("Enable native Dynamic EQ", deq_enabled_);
-        deq_count_ = new QSpinBox(deq_group);
-        deq_count_->setObjectName("viperDynamicEqMainBandCount");
-        deq_count_->setRange(1, 10);
-        deq_count_->setMinimumWidth(70);
-        deq_count_->setMaximumWidth(104);
-        deq_count_->setToolTip("Number of active native Dynamic EQ bands; also adjustable in the editor");
-        deq_form->addRow("Active bands", deq_count_);
-        auto* deq_label = new QLabel("Illustrative target curve — click to edit bands", deq_group);
-        deq_label->setWordWrap(true);
-        deq_form->addRow(deq_label);
-        deq_overview_ = new DynamicEqOverview(deq_group);
-        deq_form->addRow(deq_overview_);
-        addEffectPanel(effectLayout, deq_group, "dynamic_eq", deq_enabled_);
+        // The EQ and Dynamic EQ controls are composed separately; the
+        // editors, preset state, and all signal callbacks remain in this window.
+        const auto eqToneEq = viper_panels::createEqAndDynamicPanels(tabs_);
+        eq_enabled_ = eqToneEq.eq_enabled;
+        eq_mode_ = eqToneEq.eq_mode;
+        eq_preset_ = eqToneEq.eq_preset;
+        eq_overview_ = eqToneEq.eq_overview;
+        deq_enabled_ = eqToneEq.deq_enabled;
+        deq_count_ = eqToneEq.deq_count;
+        deq_overview_ = eqToneEq.deq_overview;
+        eq_delete_button_ = eqToneEq.eqDelete;
+        auto* eq_save = eqToneEq.eqSave;
+        auto* eq_delete = eqToneEq.eqDelete;
+        addEffectPanel(effectLayout, eqToneEq.eqGroup, "equalizer", eq_enabled_);
+        addEffectPanel(effectLayout, eqToneEq.deqGroup, "dynamic_eq", deq_enabled_);
 
         const auto editorWidgets = viper_eq_ui::createDynamicEqEditor(this);
         deq_editor_ = editorWidgets.dialog;
@@ -690,25 +638,18 @@ public:
         addEffectPanel(bassLayout, bassPanels.psychoGroup, "psycho_bass", psycho_enabled_);
         addEffectPanel(bassLayout, bassPanels.dynamicGroup, "dynamic_bass", dyn_enabled_);
 
-        auto* clarity_group = new QGroupBox("ViPER Clarity", central);
-        auto* clarity_form = new QFormLayout(clarity_group);
-        clarity_enabled_ = new EffectSwitch(clarity_group);
-        clarity_form->addRow("Clarity processing", clarity_enabled_);
-        clarity_mode_ = new QComboBox(clarity_group);
-        clarity_mode_->addItems({"Natural", "Ozone", "XHiFi"});
-        clarity_form->addRow("Clarity mode", clarity_mode_);
-        clarity_gain_ = addSlider(clarity_form, "Clarity strength", 0, 45); // tenths, 0..4.5
-        addEffectPanel(effectLayout, clarity_group, "clarity", clarity_enabled_);
-
-        auto* spectrum_group = new QGroupBox("Spectrum Extension", central);
-        auto* spectrum_form = new QFormLayout(spectrum_group);
-        spectrum_enabled_ = new EffectSwitch(spectrum_group);
-        spectrum_form->addRow("Spectrum processing", spectrum_enabled_);
-        spectrum_frequency_ = addSlider(spectrum_form, "Reference frequency", 22, 82); // 100 Hz increments
-        spectrum_frequency_.slider->setToolTip("Reference frequency, 2200–8200 Hz (100 Hz steps).");
-        spectrum_exciter_ = addSlider(spectrum_form, "Harmonic strength", 0, 60); // tenths, 0..6
-        spectrum_exciter_.slider->setToolTip("Added harmonic enhancement, 0.0–6.0.");
-        addEffectPanel(effectLayout, spectrum_group, "spectrum", spectrum_enabled_);
+        const auto eqToneClarity = viper_panels::createClaritySpectrumPanels(
+            central, [this](QFormLayout* form, const char* label, int min, int max) {
+                return addSlider(form, label, min, max);
+            });
+        clarity_enabled_ = eqToneClarity.clarity_enabled;
+        clarity_mode_ = eqToneClarity.clarity_mode;
+        clarity_gain_ = eqToneClarity.clarity_gain;
+        spectrum_enabled_ = eqToneClarity.spectrum_enabled;
+        spectrum_frequency_ = eqToneClarity.spectrum_frequency;
+        spectrum_exciter_ = eqToneClarity.spectrum_exciter;
+        addEffectPanel(effectLayout, eqToneClarity.clarityGroup, "clarity", clarity_enabled_);
+        addEffectPanel(effectLayout, eqToneClarity.spectrumGroup, "spectrum", spectrum_enabled_);
 
         const auto spatialPanels = viper_panels::createSpatialPanels(tabs_,
             [this](QFormLayout* form, const char* label, int min, int max) {
@@ -746,31 +687,18 @@ public:
         addEffectPanel(spatialLayout, spatialPanels.reverbGroup, "reverb", reverb_enabled_);
         addEffectPanel(spatialLayout, spatialPanels.imagerGroup, "imager", imager_enabled_);
 
-        // Tube Simulator is the native ViPERDSP TubeSimulator: no third-party DSP.
-        auto* tube_group = new QGroupBox("Tube Simulator", tabs_);
-        auto* tube_form = new QFormLayout(tube_group);
-        tube_enabled_ = new EffectSwitch(tube_group);
-        tube_form->addRow("Enable tube simulation", tube_enabled_);
-        tube_model_ = new QComboBox(tube_group);
-        tube_model_->addItems({"12AX7 (High Gain)", "12AU7 (Low Gain)", "6N1P (Medium Gain)"});
-        tube_model_->setToolTip("Native ViPERDSP vacuum-tube models.");
-        tube_form->addRow("Tube model", tube_model_);
-        tube_drive_ = addSlider(tube_form, "Drive", 0, 100);
-        tube_drive_.slider->setToolTip("Tube harmonic drive; 0–100% (native range 0.0–1.0).");
-        tube_mix_ = addSlider(tube_form, "Wet/Dry mix", 0, 100);
-        tube_mix_.slider->setToolTip("How much processed tube signal to blend in; 0% dry, 100% wet.");
-        addEffectPanel(effectLayout, tube_group, "tube", tube_enabled_);
-
-        // AnalogX has exactly the three upstream modes; no invented controls.
-        auto* analogx_group = new QGroupBox("AnalogX", tabs_);
-        auto* analogx_form = new QFormLayout(analogx_group);
-        analogx_enabled_ = new EffectSwitch(analogx_group);
-        analogx_form->addRow("Enable AnalogX", analogx_enabled_);
-        analogx_mode_ = new QComboBox(analogx_group);
-        analogx_mode_->addItems({"Mild", "Medium", "Strong"});
-        analogx_mode_->setToolTip("Native ViPERDSP AnalogX coloration modes.");
-        analogx_form->addRow("Processing mode", analogx_mode_);
-        addEffectPanel(effectLayout, analogx_group, "analogx", analogx_enabled_);
+        const auto eqToneTube = viper_panels::createTubeAnalogXPanels(
+            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
+                return addSlider(form, label, min, max);
+            });
+        tube_enabled_ = eqToneTube.tube_enabled;
+        tube_model_ = eqToneTube.tube_model;
+        tube_drive_ = eqToneTube.tube_drive;
+        tube_mix_ = eqToneTube.tube_mix;
+        analogx_enabled_ = eqToneTube.analogx_enabled;
+        analogx_mode_ = eqToneTube.analogx_mode;
+        addEffectPanel(effectLayout, eqToneTube.tubeGroup, "tube", tube_enabled_);
+        addEffectPanel(effectLayout, eqToneTube.analogxGroup, "analogx", analogx_enabled_);
 
         // Audio enters native ViPERDSP at unity: no adapter input trim.
 

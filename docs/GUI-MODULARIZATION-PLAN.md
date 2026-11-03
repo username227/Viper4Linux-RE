@@ -426,7 +426,7 @@ activity before interrupting it.
 Bass, EQ & Tone, Dynamics and Sound Correction remain to be extracted.
 No merge or release to `main`.
 
-### Checkpoint 5D — Bass tab extraction (native test pending)
+### Checkpoint 5D — Bass tab extraction (maintainer accepted)
 
 Extracted all four Bass-card control constructions into
 `src/panels/bass-panels.h`: ViPER Bass, ViPER Bass Mono,
@@ -441,11 +441,21 @@ signal connections, backend/CLI synchronization and native DSP writes
 remain in `ViperWindow`. No edits to ViPERDSP, LADSPA, shared memory
 ABI, CMake, packaging or presets.
 
-**Verification status:** Structural checks of preserved label strings,
-option text, slider ranges, factory fields and state connections passed.
-Native Qt compilation, developer regression tests and live GUI/audio
-acceptance have not been performed by the assistant; the maintainer must
-test before 5D is accepted or another panel is attempted.
+**Acceptance — 2026-11-03, maintainer confirmation: PASSED.**
+The maintainer reports all seven Bass-panel acceptance checks passed, including
+the four card order, independent switch/collapse behavior, Bass and Mono mode
+selectors and sliders, Psychoacoustic Bass controls, Dynamic System sliders,
+GUI settings persistence after restart, and audible effects at conservative
+volume. The fresh native build log also reached `[100%] Built target viper-gui`.
+**Checkpoint 5D accepted** at native build, GUI and reported-audio smoke-test
+level. The final full developer/CLI regression gate remains pending.
+
+**Intermittent “build hang” investigation resolved:** the test instructions
+had run `./build-stage5d/viper-gui` in the foreground after the build; the Qt
+application event loop kept the shell occupied until the GUI closed. The
+maintainer confirmed that closing the GUI immediately restored the prompt.
+The compiler was not stuck in that run. Launch future standalone GUI tests
+with `./build-stage5e/viper-gui &`, keeping build success separately logged.
 
 **Test 5D:** Clean-configure and build into `build-stage5d/`, inspect
 About revision, and launch this exact revision. Confirm four Bass cards
@@ -460,6 +470,51 @@ record process state and log output before interrupting it.
 **Panel extraction progress:** 3/6 (Output, Bass, Spatial); still
 outstanding EQ & Tone, Dynamics, Sound Correction. No merging or
 releasing to `main` before full acceptance and explicit approval.
+
+### Checkpoint 5E — EQ & Tone tab extraction (native test pending)
+
+All six EQ & Tone card constructors have been moved to
+`src/panels/eq-tone-panels.h`: Graphic EQ, Dynamic EQ, ViPER Clarity,
+Spectrum Extension, Tube Simulator and AnalogX. The panel module uses
+three small construction factories, preserving original widget creation
+order around the editor initialization and other tabs:
+`createEqAndDynamicPanels`, `createClaritySpectrumPanels`, and
+`createTubeAnalogXPanels`. The main window still performs all six
+`addEffectPanel()` calls with their stable card keys, preserves
+independent enable/expand behavior, and owns all Qt signal connections,
+Graphic EQ preset save/delete actions, editor wiring, QSettings values,
+live graph updates, CLI/backend publishing and precision.
+
+The factories preserve the original Qt widget parents (EQ/Dynamic and
+Tube/AnalogX under `tabs_`; Clarity and Spectrum under `central`),
+labels, band selector properties, active-band limits, tooltip text,
+presets/combo entries, slider ranges and effect ordering. The separate
+`src/widgets/eq-overviews.h`, Dynamic/Graphic EQ editor builders and
+DSP/native controls are unchanged. No CMake source-target, submodule,
+shared-memory ABI or external format changes.
+
+**Verification status: PENDING.** Structural checks verify six wrappers,
+matching literal labels/options, slider limits and preservation of GUI
+callback/preset source references; no native Qt compilation or live GUI/audio
+tests have been performed by the assistant. **Do not accept 5E or proceed
+to Dynamics until maintainer tests pass.**
+
+**Acceptance checklist:** Build current refactor branch from a clean
+`build-stage5e/` directory and launch `./build-stage5e/viper-gui &`
+(not foreground, which previously looked like a build hang). Inspect all
+six EQ & Tone cards and independent enable/collapse behavior. Test Graphic EQ
+10/15/25/31 bands, preset changes and user preset save/delete, manual
+fader-to-fixed-axis-graph synchronization, active fader visibility with
+editor open, quit/reopen precision persistence, and audible EQ response.
+Test Dynamic EQ main active-band selector, editor and graph markers, selected
+band and table synchronization, disabled bands, precision and editor close/
+reopen. Test Clarity modes and strength; Spectrum frequency and strength;
+Tube model/drive/mix; AnalogX modes and enable states. Confirm no unintended
+changes to the other five tabs, preset round trips or audio processing.
+
+**Panel extraction count:** 4/6 (Output, Bass, EQ & Tone, Spatial).
+Dynamics and Sound Correction remain to extract. No merge/release to
+`main` before the complete refactor is accepted.
 
 ## Checkpoint 6 — Settings/backend synchronization
 
