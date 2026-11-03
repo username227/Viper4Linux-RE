@@ -190,13 +190,16 @@ int main() {
 
     std::ostringstream help;
     usage(help);
-    assert(help.str().find("Global:        status [--full], on, off") != std::string::npos);
-    assert(help.str().find("bass-on/off") != std::string::npos);
-    assert(help.str().find("all-on") == std::string::npos);
+    assert(help.str().find("Commands (alphabetical):") != std::string::npos);
+    assert(help.str().find("bass-on") != std::string::npos);
+    assert(help.str().find("bass-off") != std::string::npos);
+    assert(help.str().find("bass-on/off") == std::string::npos);
+    assert(help.str().find("all-on") != std::string::npos);
     assert(help.str().find("headphone-level <1..5>") != std::string::npos);
     assert(help.str().find("headphone-quality <0..4>") == std::string::npos);
-    assert(help.str().find("ddc-on/off") != std::string::npos);
-    assert(help.str().find("speaker-on/off") != std::string::npos);
+    assert(help.str().find("ddc-on") != std::string::npos);
+    assert(help.str().find("speaker-off") != std::string::npos);
+    assert(help.str().find("Use man viper4linux-ctl") != std::string::npos);
     server.stop_server();
 
     // Exercise the no-audio case without touching /proc or live PipeWire.
