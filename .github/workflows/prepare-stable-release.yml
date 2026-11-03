@@ -166,6 +166,11 @@ jobs:
         run: |
           set -Eeuo pipefail
           bash scripts/assemble-release-assets.sh "$VERSION" "$GITHUB_SHA" collected release-candidate
+          # The published bundle has one checksum manifest, with exactly four
+          # entries (source archive, Arch package, and both Debian builds).
+          test "$(find release-candidate -maxdepth 1 -name '*SHA256SUMS*' | wc -l)" -eq 1
+          test "$(wc -l < release-candidate/SHA256SUMS)" -eq 4
+          (cd release-candidate && sha256sum --check SHA256SUMS)
 
       - name: Upload complete release candidate (no publication)
         uses: actions/upload-artifact@v4
