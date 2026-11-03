@@ -478,12 +478,16 @@ status if settings cannot be written, but audio processing might already have
 changed. The GUI polls the backend approximately every 500 milliseconds. A live change
 may therefore be visible in the DSP before it appears in the GUI.
 .PP
-Some CLI parameters accept finer precision than the GUI sliders. While the
-backend is running, the live DSP retains the requested value. A later GUI
-interaction or complete backend restart may quantize settings to the GUI's
-coarser resolution, such as tenths of gain, hundreds of hertz for certain
-frequency sliders, or 50-unit Field Depth steps. Use the GUI for fully
-round-trippable values when this distinction matters.
+Some CLI parameters accept finer precision than the GUI sliders. The live
+DSP retains the requested value and the settings store preserves its full
+native precision across backend restarts. The GUI may show the closest
+supported slider position (for example, multiples of 100 Hz for Spectrum
+frequency), without changing the underlying DSP value. Explicitly adjusting
+that slider selects its displayed step and replaces the previously precise
+value; changes to unrelated GUI controls preserve it. Complete effect-preset
+loads and Reset Effects to Defaults intentionally replace the current values.
+The exact live value can be inspected with
+.BR "status --full" .
 .SH EXIT STATUS
 .TP
 .B 0
