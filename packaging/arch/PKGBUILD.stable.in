@@ -35,16 +35,9 @@ build() {
 
 check() {
     cd "$srcdir/viper4linux-re-$pkgver"
-    # Leave heavy DSP/GUI regression checks to the release CI/developer suite.
+    # Fast, isolated package checks. Full regressions run in release CI.
     bash tests/check-package.sh
-    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor
-
-package() {
-    local tree="$srcdir/viper4linux-re-$pkgver"
-    local built="$srcdir/viper4linux-build"
-    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
-}
-
+    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
 }
 
 package() {

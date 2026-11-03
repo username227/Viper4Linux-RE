@@ -2,10 +2,16 @@
 """Read-only packaging checks; no system files or real PipeWire are touched."""
 from pathlib import Path
 import re
+import subprocess
 root = Path(__file__).resolve().parents[1]
 pkg = (root / 'packaging/arch/PKGBUILD').read_text()
 stable = (root / 'packaging/arch/PKGBUILD.stable.in').read_text()
 installer = (root / 'packaging/arch/install-package.sh').read_text()
+# Parse both recipes before inspecting content: a truncated check() must
+# not silently swallow or duplicate the package() function.
+for recipe in ('PKGBUILD', 'PKGBUILD.stable.in'):
+    subprocess.run(['bash', '-n', str(root / 'packaging/arch' / recipe)],
+                   check=True)
 launcher = (root / 'src/viper_launcher.py').read_text()
 backend = (root / 'packaging/arch/start-backend').read_text()
 for required in ("pkgname=viper4linux-re-git", 'pkgver() {',

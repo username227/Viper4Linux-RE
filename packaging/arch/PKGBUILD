@@ -49,17 +49,9 @@ build() {
 
 check() {
     cd "$srcdir/viper4linux"
-    # Fast, isolated packaging smoke tests. For the complete development
-    # regression suite, run: bash tests/check-developer.sh
+    # Fast, isolated package checks. Full regressions: bash tests/check-developer.sh
     bash tests/check-package.sh
-    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor
-
-package() {
-    local tree="$srcdir/viper4linux"
-    local built="$srcdir/viper4linux-build"
-    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
-}
-
+    nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
 }
 
 package() {
