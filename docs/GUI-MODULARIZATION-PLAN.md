@@ -175,7 +175,7 @@ Extract EQ widget composition, graphical overview, popup/editor controls, select
 
 Rebuild and test: full EQ edit/save/reopen/load round-trips, mouse interactions, resizing and external CLI changes.
 
-### Checkpoint 4A — Graphic/Dynamic EQ overview widgets (awaiting test)
+### Checkpoint 4A — Graphic/Dynamic EQ overview widgets (accepted smoke test)
 
 Moved the two existing self-contained overview widgets, `EqOverview` and
 `DynamicEqOverview`, together with their shared `DeqBand` structure into
@@ -185,13 +185,20 @@ smoothing, log-frequency coordinates, Q/gain/threshold units, visual marker
 clustering, mouse selection behavior, or value storage. No editor or backend
 state transitions were changed.
 
-Run `cmake --build build --target viper-gui -j4`. Test the Graphic EQ overview
-with varying band-count/preset curves; click to open the detailed editor.
-Test the Dynamic EQ overview markers (including coincident frequencies),
-click a marker to select the matching band, and resize the window/editor.
-This is only **4A**, not completion of Checkpoint 4; editor layout and state
-integration remain for 4B. Hold at this checkpoint pending maintainer test;
-do not merge to `main`.
+**Maintainer verification, 2026-11-03:** Both EQ graphical overviews work;
+numbered Dynamic EQ markers can be clicked to select bands, and resizing works.
+This accepts the Checkpoint 4A GUI smoke test. Tests of coincident-frequency
+markers, complete saved-state round trips, and the full developer regression
+suite remain pending integration verification.
+
+**Version-display observation:** The maintainer reported
+`Version: 1.1.0-3742fe888058` during this test, even though the branch's
+4A commit is newer. This may reflect a stale/generated build version stamp;
+do not assert version provenance or modify release/version logic as part of
+the mechanical EQ extraction. Investigate separately if reproducible.
+
+The detailed editor layout and state integration remain for Checkpoint 4B.
+No merge to `main` before the full refactor is accepted.
 
 ## Checkpoint 5 — Effect panels and layout construction
 
