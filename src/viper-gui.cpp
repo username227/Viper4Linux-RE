@@ -4,6 +4,7 @@
 #include "viper-backend-state.h"
 #include "viper-eq-presets.h"
 #include "viper-build-info.h"
+#include "viper-android-export.h"
 #include <QApplication>
 #include <QAction>
 #include <QButtonGroup>
@@ -2293,12 +2294,14 @@ private:
         auto* rename = new QPushButton("Rename", &dialog);
         auto* remove = new QPushButton("Delete", &dialog);
         auto* assign = new QPushButton("Apply to Audio Output…", &dialog);
+        auto* exportAndroid = new QPushButton("Export for ViPER4Android…", &dialog);
         buttons->addWidget(save);
         buttons->addWidget(load);
         buttons->addWidget(rename);
         buttons->addWidget(remove);
         column->addLayout(buttons);
         column->addWidget(assign);
+        column->addWidget(exportAndroid);
         auto* bottom = new QHBoxLayout();
         auto* reset = new QPushButton("Reset Effects to Defaults…", &dialog);
         auto* close = new QPushButton("Close", &dialog);
@@ -2319,12 +2322,13 @@ private:
             }
             if (!list->currentItem() && list->count()) list->setCurrentRow(0);
         };
-        auto updateSelection = [list, load, rename, remove, assign] {
+        auto updateSelection = [list, load, rename, remove, assign, exportAndroid] {
             const bool selected = list->currentItem() != nullptr;
             load->setEnabled(selected);
             rename->setEnabled(selected);
             remove->setEnabled(selected);
             assign->setEnabled(selected);
+            exportAndroid->setEnabled(selected);
         };
         QObject::connect(list, &QListWidget::itemSelectionChanged, &dialog, updateSelection);
         refresh(); updateSelection();
@@ -2383,6 +2387,39 @@ private:
             }
             refresh(path);
             statusMessage("Effect preset saved: " + name);
+        });
+        QObject::connect(exportAndroid, &QPushButton::clicked, &dialog, [&, this] {
+            const QString source = selectedPath();
+            if (source.isEmpty()) return;
+            QJsonObject android;
+            QString warning, error;
+            if (!viper_android_export::convert(source, &android, &warning, &error)) {
+                QMessageBox::warning(&dialog, "Android Export Failed", error);
+                return;
+            }
+            const QString suggested = QDir::home().filePath(
+                list->currentItem()->text().trimmed() + ".v2.1.json");
+            const QString destination = QFileDialog::getSaveFileName(
+                &dialog, "Export for ViPER4Android", suggested,
+                "ViPER4Android JSON (*.json)");
+            if (destination.isEmpty()) return;
+            if (!warning.isEmpty() &&
+                QMessageBox::warning(&dialog, "Android Export Limitations",
+                    warning + "\n\nExport the supported settings anyway?",
+                    QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)
+                != QMessageBox::Yes) return;
+            QSaveFile output(destination);
+            if (!output.open(QIODevice::WriteOnly)) {
+                QMessageBox::warning(&dialog, "Android Export Failed", output.errorString());
+                return;
+            }
+            const QByteArray bytes = QJsonDocument(android).toJson(QJsonDocument::Indented);
+            if (output.write(bytes) != bytes.size() || !output.commit()) {
+                QMessageBox::warning(&dialog, "Android Export Failed",
+                    "Could not safely write the JSON export.");
+                return;
+            }
+            statusMessage("ViPER4Android preset exported: " + destination);
         });
         QObject::connect(assign, &QPushButton::clicked, &dialog, [&, this] {
             const QString preset = selectedPath();
