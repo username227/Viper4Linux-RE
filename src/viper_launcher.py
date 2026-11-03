@@ -114,7 +114,7 @@ def ensure_backend(root: Path = ROOT) -> None:
         state.mkdir(parents=True, exist_ok=True)
         log_path = state / 'backend.log'
         backend_start = (Path('/usr/lib/viper4linux/start-backend')
-                         if SYSTEM_MODE and root == ROOT else root / 'start.sh')
+                         if SYSTEM_MODE and root == ROOT else root / 'scripts/start.sh')
         with log_path.open('ab') as log:
             proc = subprocess.Popen([str(backend_start)], cwd=root, stdin=subprocess.DEVNULL,
                                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
