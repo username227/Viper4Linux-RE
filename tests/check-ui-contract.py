@@ -277,7 +277,11 @@ assert 'resources/viper4linux-icons.qrc' in brand_cmake
 assert 'PROPERTIES AUTORCC ON' in brand_cmake
 assert 'app.setWindowIcon(QIcon(":/viper4linux/blue.png"))' in brand_gui
 assert 'setWindowIcon(QIcon(":/viper4linux/blue.png"))' in brand_gui
-assert 'header_icon_->setPixmap' in brand_gui
+# The main window owns the label; theme painting sets its pixmap through
+# the helper's headerIcon parameter. Both sides of the connection must survive.
+assert 'header_icon_ = new QLabel(central);' in brand_gui
+assert 'tabs_, header_icon_, status_' in brand_gui
+assert 'headerIcon->setPixmap(logo.scaled(36,36,Qt::KeepAspectRatio,Qt::SmoothTransformation))' in brand_gui
 assert 'classic ? ":/viper4linux/blue.png" : ":/viper4linux/teal.png"' in brand_gui
 assert 'viper4linux-teal.png' in brand_qrc and 'viper4linux-blue.png' in brand_qrc
 for palette in ('teal','blue'):
