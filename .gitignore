@@ -9,3 +9,5 @@ __pycache__/
 /RELEASE-REVISION
 /release-candidate/
 /dist/
+
+/routing-config/filter-chain.conf
