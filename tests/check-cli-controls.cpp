@@ -50,7 +50,9 @@ int main() {
 
     run("bass-toggle");
     assert(c.enabled.load() == 0 && c.master_enabled.load() == 1);
-    run("toggle"); // Legacy alias still toggles Bass, not master.
+    assert(invoke({"toggle"}) == 2); // Generic toggle must not target Bass.
+    assert(c.enabled.load() == 0 && c.master_enabled.load() == 1);
+    run("bass-toggle");
     assert(c.enabled.load() == 1 && c.master_enabled.load() == 1);
     run("all-off"); // Legacy global alias.
     assert(c.master_enabled.load() == 0 && c.enabled.load() == 1);
@@ -190,7 +192,14 @@ int main() {
 
     std::ostringstream help;
     usage(help);
-    assert(help.str().find("Commands (alphabetical):") != std::string::npos);
+    const auto global = help.str().find("Global commands:");
+    const auto effectList = help.str().find("Effect-specific commands (alphabetical):");
+    assert(global != std::string::npos && effectList > global);
+    assert(help.str().find("  on ", global) < help.str().find("  off ", global));
+    assert(help.str().find("  off ", global) < help.str().find("  status ", global));
+    assert(help.str().find("  status ", global) < effectList);
+    assert(help.str().find("  agc-max ", effectList) > effectList);
+    assert(help.str().find("  toggle ") == std::string::npos);
     assert(help.str().find("bass-on") != std::string::npos);
     assert(help.str().find("bass-off") != std::string::npos);
     assert(help.str().find("bass-on/off") == std::string::npos);
