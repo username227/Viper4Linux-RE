@@ -772,6 +772,12 @@ reopening the GUI. These are live desktop observations, distinct from
 the automated source-contract suite. Startup preference variations
 were not separately reported by this result.
 
+**Named-preset runtime acceptance (maintainer, 2026-11-03): PASS
+reported.** The maintainer confirmed creating, loading, modifying
+and resetting named effect presets still work following Checkpoint 7
+modularization. These results validate the exercised operations, but
+do not independently certify every preset-management edge case.
+
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
