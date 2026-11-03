@@ -1,65 +1,47 @@
-# Arch Linux packaging (development and publication plan)
+# Arch Linux packaging and installation
 
-**Current state:** `packaging/arch/PKGBUILD` is a development recipe for
-`viper4linux-re-git`, not yet a public AUR submission. It retrieves the
-application from https://github.com/username227/viper4linux-re.git and
-ViPERDSP separately, then initializes the pinned submodule using the local
-makepkg Git source cache. Do not run `makepkg` inside a source checkout.
+There are three supported paths; they do **not** share a PKGBUILD:
 
-## Build the development package
+- **Direct source build:** `./install.sh` checks for required commands,
+  headers and Qt6 components, initializes the pinned ViPERDSP submodule,
+  patches a private copy and builds with CMake. It does not invoke `makepkg`
+  or read any PKGBUILD. Install the prerequisites listed in the README.
+- **Development VCS package:** `viper4linux-re-git` is published and its
+  authoritative PKGBUILD is maintained separately in the AUR. Build/update
+  it using the AUR Git checkout or an AUR helper. The obsolete duplicate
+  `packaging/arch/PKGBUILD` was removed from this source repository.
+- **Stable release package:** GitHub Actions generates a PKGBUILD from
+  `packaging/arch/PKGBUILD.stable.in` and a pinned, unified source archive.
+  It runs an actual Arch package build; generation does not publish to AUR.
 
-The default `check()` phase is intentionally small: offline launcher, package
-staging, per-output identity/memory tests and the LADSPA exported-symbol check.
-The full native DSP and UI regression suite remains available as
-`bash tests/check-developer.sh` for developers and release candidate CI. AUR
-builders should not need `--nocheck` just to bypass development diagnostics.
+Both Arch package variants delegate installation to the source-controlled
+`packaging/arch/install-package.sh`. It validates the built binaries and
+source assets, installs runtime Python modules automatically from
+`src/viper_*.py`, and verifies the staged package. Source reorganization
+therefore normally requires no AUR PKGBUILD edits.
 
+## Dependency and package regression checks
 
-Once the GitHub repository has been populated, place the PKGBUILD in a
-separate folder and build it:
+`tests/check-packaging-contract.py` checks the stable template's runtime
+and build dependencies, direct installer probes (including Qt6 Widgets and
+Network), CMake requirements, the README's source-install package list,
+pinned ViPERDSP handling, downstream patches, shared staging and backend
+launcher contracts. It is invoked by `tests/check-package.sh` from both
+normal package `check()` and the full developer suite. It is intentionally
+compatible with a unified release archive, which has no `.gitmodules`.
+`tests/check-arch-install.py` independently stages a mock stable and VCS
+package and validates its file manifest and failure behavior.
 
-```bash
-mkdir -p ~/Desktop/viper4linux-package
-cp /path/to/PKGBUILD ~/Desktop/viper4linux-package/PKGBUILD
-cd ~/Desktop/viper4linux-package
-makepkg -si
-```
+The packaged `check()` suite is intentionally short and offline. For
+native DSP and GUI regression coverage, run
+`bash tests/check-developer.sh`. Arch release preparation additionally
+builds the actual package and checks the LADSPA export. The separate
+published AUR VCS recipe remains maintainer-owned; these repository tests
+do not claim to validate its exact `pkgver()` or AUR metadata.
 
-For a pre-push test against a local checkout with full Git history, override
-`VIPER4LINUX_GIT_URL` to a `file://` URL; do not edit the upstream URL inside
-the PKGBUILD. `pkgver()` derives the revision and hash from actual Git history.
-Use a space-free temporary build folder for now: Arch's generated compiler
-`-ffile-prefix-map` can break under the current CMake/Make setup if a build
-path contains spaces.
-
-The local test package declares conflicts with `viper4linux-re`, `viper4linux`
-and `viper4linux-git`. This permits pacman to offer removal of the older
-incompatible installation instead of bypassing file ownership checks.
-JamesDSP remains a separate runtime-routing compatibility question; it is
-not declared a package conflict. Do not use pacman's `--overwrite` merely
-to bypass conflicts.
-
-The package installs the launcher, GUI, controller, LADSPA module, desktop
-entry, icons, man pages, maintained docs, and all `src/viper_*.py` Python
-modules. The package also provides the native
-`viper4linux-output-state` helper (complete shared-memory capture/restore),
-plus `viper4linux-output` for inspecting physical outputs, enabling/disabling
-memory and assigning an existing named preset to a remembered output.
-Both Arch VCS and stable PKGBUILDs call
-`packaging/arch/install-package.sh` in `package()`; the script inventories
-runtime Python modules automatically, checks required files before staging,
-then verifies the package contents. When new runtime Python modules are added,
-there is no need to edit the AUR `package()` file list.
-
-For the AUR VCS recipe, the package function is now:
-
-```bash
-package() {
-    local tree="$srcdir/viper4linux"
-    local built="$srcdir/viper4linux-build"
-    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
-}
-```
+For an AUR update, regenerate `.SRCINFO` in that package's Git checkout
+using `makepkg --printsrcinfo > .SRCINFO` and push both changed files.
+Do not use `pacman --overwrite` to bypass package file conflicts.
 
 The per-output feature is initially **disabled**, and enabling it in the GUI
 Preferences does not reset the current sound. It remembers distinct physical
@@ -82,7 +64,7 @@ should survive package replacement. If an old source checkout installed a
 launcher symlink, use `type -a viper4linux` to ensure it does not shadow
 `/usr/bin/viper4linux`.
 
-## Intended public packages
+## Package variants
 
 | Package | Source | Versioning |
 |---|---|---|
@@ -94,8 +76,8 @@ including the pinned DSP dependency, are assembled into a separate
 unified-source release archive. The `-git` package follows the latest published
 repository commit rather than a Desktop path. Before publication, review
 reciprocal conflicts, upstream licenses, proper sources/hashes, dependencies,
-and reproducible builds. The repository PKGBUILD remains subject to the
-user's own separate cleanup/review.
+and reproducible builds. The VCS PKGBUILD is maintained in its separate AUR Git repository and is
+not duplicated here.
 
 Our application code is MIT-licensed. ViPERDSP has different upstream terms,
 which the MIT license does not supersede; see `THIRD-PARTY-NOTICES.md`.

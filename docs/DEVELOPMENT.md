@@ -207,6 +207,32 @@ behavior, and the backend fingerprint on a GUI-only upgrade. Cinnamon/X11
 tray and minimize-to-tray behavior have been tested; KDE still requires live
 testing. The backend should not restart for GUI-only changes.
 
+## Post-merge compatibility checks (not GUI refactor blockers)
+
+The GUI modularization work was accepted and merged in PR #1 on
+2026-11-03. The 1.1.1 release-candidate workflow passed the full
+developer regression suite, the Arch native build and both Debian-family
+package builds. The following are **optional compatibility follow-ups**,
+not unfinished extraction steps and not grounds to retain the completed
+GUI modularization plan:
+
+- **DDC unsupported-rate live case:** test an unsupported sample-rate
+  or missing-rate VDC profile in the running PipeWire application, and
+  confirm processing is safely rejected without changing audio unexpectedly.
+  Parser-level invalid/missing-rate tests already pass; a valid 44.1/48 kHz
+  profile was audibly tested with on/off/on switching.
+- **KDE tray/window behavior:** test the single-instance GUI activation,
+  minimize-to-tray and restore sequence in a KDE session. Cinnamon/X11
+  tests passed, including activation when already hidden.
+- **Legacy named-preset migration:** test importing/loading settings
+  written by an older preset format on a disposable configuration, while
+  preserving user files. Current create/load/edit/reset and related
+  contract tests passed; historical migration was not separately
+  exercised in live acceptance.
+
+Track any outcomes here or in a targeted compatibility issue. Do not
+reopen the completed GUI extraction plan merely for these items.
+
 ## Cleanup decisions
 
 Historical layout notes, one-off milestone release notes and repeated
