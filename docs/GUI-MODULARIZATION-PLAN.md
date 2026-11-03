@@ -853,12 +853,14 @@ without creating a second `ViperWindow`. The independent backend and
 Audio Output monitor lifecycles are unchanged.
 
 **Single-instance live acceptance (maintainer, 2026-11-03): PASS for
-normal activation.** On Arch/Cinnamon, launching Viper4Linux a second
-time brought the existing GUI to the foreground and the second process
-exited promptly, without creating a second GUI window. A separate
-tray-hidden/minimized activation test remains unreported. The maintainer
-also built the new native Qt GUI successfully for this live test; the
-separate isolated regression suite's result was not explicitly reported.
+tray-hidden activation.** On Arch/Cinnamon, the GUI defaults to starting
+hidden in the system tray. Launching Viper4Linux a second time restored
+and maximized the existing GUI while the second process exited promptly,
+without creating a second GUI window. Thus the observed normal test
+already covered recovery from tray-hidden state, not just an initially
+visible window. The maintainer built the native Qt GUI successfully
+for this live test; the separate isolated regression suite's result
+was not explicitly reported.
 
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
