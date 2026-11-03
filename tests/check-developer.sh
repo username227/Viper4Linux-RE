@@ -7,6 +7,7 @@ cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 bash tests/check-package.sh
 bash tests/check-mock.sh
 python3 tests/check-native-state-contract.py
+python3 tests/check-precision-persistence-contract.py
 python3 tests/check-theme-contract.py
 python3 tests/check-ui-contract.py
 python3 tests/check-named-presets-contract.py
