@@ -816,13 +816,27 @@ Dynamic EQ still seems functional. This is a positive runtime
 smoke-test observation, not a measurement validating the illustrative
 curve against the actual native DSP transfer function.
 
+**Audio Output per-device memory (maintainer, 2026-11-03): basic
+A→B→A→B and restart persistence PASS reported.** The maintainer
+switched repeatedly between EDIFIER NeoBuds Planar and the internal
+output, observed previously changed effect settings restored on return,
+then restarted the ViPER backend and confirmed a changed setting took
+effect again after further output switches. The source launcher path
+regression caused by the move of `start.sh` into `scripts/` was fixed
+separately; starting through `./viper4linux` again brought up the
+Audio Output monitor and identified the headphones. Direct
+`build/viper-gui` launch intentionally does not manage the backend
+or monitor. This positive live test does not yet cover the memory-off
+mode, exact native precision, or two-GUI interference.
+
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
 tray/minimize/restore/startup preferences, Graphic/Dynamic EQ editors,
 DDC and Convolver import/popup behavior, GUI↔CLI precision,
-disconnected-backend edits/reconnect, Audio Output memory A→B→A→B,
-GUI/backend restart, and package/archive content. Verify full DDC
+disconnected-backend edits/reconnect, remaining Audio Output memory
+edge cases (memory-off, precision and two-GUI interference), and
+package/archive content. Verify full DDC
 `.vdc` profile selection, import and real DSP processing where a
 valid profile is available. Do not mark the whole refactor complete or
 merge to `main` until maintainer acceptance.
