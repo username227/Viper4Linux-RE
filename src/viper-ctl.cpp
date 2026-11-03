@@ -16,39 +16,127 @@
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
-    out << "Usage: viper4linux-ctl COMMAND [ARGUMENTS...]\n"
-           "\n"
-           "Global:        status [--full], on, off (commands may be chained)\n"
-           "Bass:          bass-on/off, bass-toggle, bass-mode <0..2>, bass-gain <0.5..10>, bass-freq <15..150 Hz>\n"
-           "Bass Mono:     mono-on/off, mono-mode <0..2>, mono-strength <0.5..10>, mono-freq <15..150>\n"
-           "Psycho Bass:   psycho-on/off, psycho-cutoff/intensity/order/original <value>\n"
-           "Dynamic Bass:  dynamic-on/off, dynamic-x-low/high, dynamic-y-low/high,\n"
-           "               dynamic-side-low/high, dynamic-strength <value>\n"
-           "EQ:            eq-on/off, eq-bands <10|15|25|31>, eq-level <band> <dB>\n"
-           "               eq-presets, eq-preset <NAME>\n"
-           "Dynamic EQ:    deq-on/off (edit individual bands in GUI)\n"
-           "Clarity:       clarity-on/off, clarity-gain <0..4.5>, clarity-mode <0..2>\n"
-           "Spectrum:      spectrum-on/off, spectrum-freq <2200..8200>, spectrum-exciter <0..6>\n"
-           "Tube:          tube-on/off, tube-model <0..2>, tube-drive/mix <0..100>\n"
-           "AnalogX:       analogx-on/off, analogx-mode <0..2>\n"
-           "Crossfeed:     crossfeed-on/off, crossfeed-mode <0..2>\n"
-           "Surround+:     headphone-on/off, headphone-level <1..5>\n"
-           "Differential:  diff-on/off, diff-delay/reverse/mix/lowpass <value>\n"
-           "Field:         field-on/off, field-widen/mid/depth <value>\n"
-           "Reverb:        reverb-on/off, reverb-room/width/damp/wet/dry <0..100>\n"
-           "Stereo Imager: imager-on/off, imager-low/mid/high <0..200>,\n"
-           "               imager-xover-low <80..400>, imager-xover-high <2000..8000>\n"
-           "Compressors:   fet-on/off, fet-threshold <-48..0>, fet-ratio <1..10>,\n"
-           "               mb-on/off, mb-bands <3|5>\n"
-           "Correction:    ddc-on/off, speaker-on/off, convolver-on/off,\n"
-           "               convolver-cross <0..100>\n"
-           "Output:        limiter-threshold/gain/pan <value>, agc-on/off,\n"
-           "               agc-strength/max/threshold <value>, lufs-on/off,\n"
-           "               lufs-target/max/speed <value>\n"
-           "\n"
-           "All on/off pairs are individual commands (for example, tube-on and tube-off).\n"
-           "Use 'man viper4linux-ctl' for exact argument ranges and units.\n"
-           "Multiple commands may follow one another, each with its own arguments.\n";
+    out << R"V4LHELP(Usage: viper4linux-ctl COMMAND [ARGUMENTS...]
+
+Commands (alphabetical):
+  agc-max <1..10>                          Set automatic gain control maximum gain
+  agc-off                                  Disable automatic gain control
+  agc-on                                   Enable automatic gain control
+  agc-strength <0.5..3>                    Set automatic gain control strength
+  agc-threshold <0.3..1>                   Set automatic gain control threshold
+  all-off                                  Alias for off
+  all-on                                   Alias for on
+  analogx-mode <0..2>                      Set AnalogX mode
+  analogx-off                              Disable AnalogX
+  analogx-on                               Enable AnalogX
+  bass-freq <15..150>                      Set ViPER Bass frequency
+  bass-gain <0.5..10>                      Set ViPER Bass gain
+  bass-mode <0..2>                         Set ViPER Bass mode
+  bass-off                                 Disable ViPER Bass
+  bass-on                                  Enable ViPER Bass
+  bass-toggle                              Toggle ViPER Bass processing
+  clarity-gain <0..4.5>                    Set ViPER Clarity gain
+  clarity-mode <0..2>                      Set ViPER Clarity mode
+  clarity-off                              Disable ViPER Clarity
+  clarity-on                               Enable ViPER Clarity
+  convolver-cross <0..100>                 Set convolver cross-channel mix
+  convolver-off                            Disable convolver
+  convolver-on                             Enable convolver
+  crossfeed-mode <0..2>                    Set crossfeed mode
+  crossfeed-off                            Disable crossfeed
+  crossfeed-on                             Enable crossfeed
+  ddc-off                                  Disable ViPER-DDC
+  ddc-on                                   Enable ViPER-DDC
+  deq-off                                  Disable Dynamic EQ
+  deq-on                                   Enable Dynamic EQ
+  diff-delay <1..20>                       Set differential surround delay
+  diff-lowpass <0..20000>                  Set differential surround low-pass cutoff
+  diff-mix <0..100>                        Set differential surround mix
+  diff-off                                 Disable differential surround
+  diff-on                                  Enable differential surround
+  diff-reverse <0..1>                      Set differential reverse routing (0 or 1)
+  dynamic-off                              Disable dynamic bass
+  dynamic-on                               Enable dynamic bass
+  dynamic-side-high <0..100>               Set dynamic bass side high
+  dynamic-side-low <0..100>                Set dynamic bass side low
+  dynamic-strength <0..100>                Set dynamic bass strength
+  dynamic-x-high <0..12000>                Set dynamic bass x high
+  dynamic-x-low <0..2400>                  Set dynamic bass x low
+  dynamic-y-high <0..300>                  Set dynamic bass y high
+  dynamic-y-low <0..200>                   Set dynamic bass y low
+  eq-bands <10|15|25|31>                   Select 10, 15, 25, or 31 graphic EQ bands
+  eq-level <BAND> <dB>                     Set a graphic EQ band's gain in dB
+  eq-off                                   Disable graphic EQ
+  eq-on                                    Enable graphic EQ
+  eq-preset <NAME>                         Apply an existing graphic EQ curve
+  eq-presets                               List available graphic EQ curves
+  fet-off                                  Disable FET compressor
+  fet-on                                   Enable FET compressor
+  fet-ratio <1..10>                        Set FET compressor ratio
+  fet-threshold <-48..0>                   Set FET compressor threshold
+  field-depth <0..950>                     Set field depth (0 or 200–950)
+  field-mid <1..2>                         Set field surround mid-image factor
+  field-off                                Disable field surround
+  field-on                                 Enable field surround
+  field-widen <0..8>                       Set field surround widening
+  headphone-level <1..5>                   Set Headphone Surround+ level (1–5)
+  headphone-off                            Disable Headphone Surround+
+  headphone-on                             Enable Headphone Surround+
+  imager-high <0..200>                     Set stereo imager high-band width
+  imager-low <0..200>                      Set stereo imager low-band width
+  imager-mid <0..200>                      Set stereo imager mid-image factor
+  imager-off                               Disable stereo imager
+  imager-on                                Enable stereo imager
+  imager-xover-high <2000..8000>           Set stereo imager xover high
+  imager-xover-low <80..400>               Set stereo imager xover low
+  limiter-gain <0.01..2>                   Set master limiter gain
+  limiter-pan <-1..1>                      Set master limiter stereo pan
+  limiter-threshold <0.3..1>               Set master limiter threshold
+  lufs-max <0..12>                         Set LUFS targeting maximum gain
+  lufs-off                                 Disable LUFS targeting
+  lufs-on                                  Enable LUFS targeting
+  lufs-speed <0..2>                        Set LUFS targeting speed
+  lufs-target <-24..-8>                    Set LUFS targeting target level
+  mb-bands <3|5>                           Select 3 or 5 compressor bands
+  mb-off                                   Disable multiband compressor
+  mb-on                                    Enable multiband compressor
+  mono-freq <15..150>                      Set Bass Mono frequency
+  mono-mode <0..2>                         Set Bass Mono mode
+  mono-off                                 Disable Bass Mono
+  mono-on                                  Enable Bass Mono
+  mono-strength <0.5..10>                  Set Bass Mono strength
+  off                                      Bypass master DSP processing
+  on                                       Enable master DSP processing
+  psycho-cutoff <60..150>                  Set psychoacoustic bass cutoff frequency
+  psycho-intensity <0..100>                Set psychoacoustic bass intensity
+  psycho-off                               Disable psychoacoustic bass
+  psycho-on                                Enable psychoacoustic bass
+  psycho-order <2..5>                      Set psychoacoustic bass harmonic order
+  psycho-original <0..100>                 Set psychoacoustic bass original signal percentage
+  reverb-damp <0..100>                     Set reverberation damping
+  reverb-dry <0..100>                      Set reverberation dry mix
+  reverb-off                               Disable reverberation
+  reverb-on                                Enable reverberation
+  reverb-room <0..100>                     Set reverberation room size
+  reverb-wet <0..100>                      Set reverberation wet mix
+  reverb-width <0..100>                    Set reverberation width
+  speaker-off                              Disable speaker correction
+  speaker-on                               Enable speaker correction
+  spectrum-exciter <0..6>                  Set spectrum extension harmonic strength
+  spectrum-freq <2200..8200>               Set spectrum extension frequency
+  spectrum-off                             Disable spectrum extension
+  spectrum-on                              Enable spectrum extension
+  status                                   Show current DSP settings; add --full for detailed values
+  toggle                                   Alias for bass-toggle
+  tube-drive <0..100>                      Set tube simulator drive
+  tube-mix <0..100>                        Set tube simulator mix
+  tube-model <0..2>                        Set tube simulator model
+  tube-off                                 Disable tube simulator
+  tube-on                                  Enable tube simulator
+
+Commands can be chained: v4l-cli on bass-on clarity-gain 2.5
+Use man viper4linux-ctl for exact units, constraints and examples.
+)V4LHELP";
 }
 
 float number(const char* value, float lower, float upper) {
