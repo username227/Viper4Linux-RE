@@ -90,6 +90,34 @@ Isolate light/dark/classic themes, palette and widget styling, icon/theme select
 
 Rebuild and test: selected themes, system theme changes, tray/icon rendering, resize and restart persistence.
 
+### Checkpoint 2 implementation — awaiting native rebuild and visual acceptance
+
+- Extracted the complete existing palette and QSS rendering code from
+  `ViperWindow::applyTheme()` into `src/viper-theme.h`,
+  `viper_theme::apply()`. The main window retains theme selection, persistence,
+  Cinnamon GTK-theme detection, Qt color-scheme signals, and its muted status
+  text state; no stored keys or effect code changed.
+- The new renderer is an inline function because the extracted implementation
+  is self-contained and CMake does not need new source targets. The extraction
+  passes existing dialog/widget pointers explicitly instead of depending on
+  private main-window fields. No audio-backend modifications.
+- **Still unverified:** successful native Qt rebuild and theme behavior.
+  Use `cmake --build build --target viper-gui -j4`, then check Modern/Classic
+  switching, light/dark under Cinnamon, EQ dialog palettes, combo arrows,
+  effect glyphs/switches, slider styles, and restart persistence.
+  Do **not** mark this checkpoint accepted before user confirmation.
+
+### Separate future issue — multiple simultaneous GUI instances
+
+The application currently permits opening multiple GUI processes that control
+the same DSP backend and may access the same settings. Potential concerns are
+stale control displays, competing writes and lost preferences. This behavior
+has not been established as defective and is **out of scope for this mechanical
+GUI refactoring**: do not introduce a singleton guard or synchronization change
+within Checkpoint 2. Investigate later with two windows and coordinated tests;
+decide whether to permit multi-window synchronization or enforce one GUI only
+as an independent feature/bugfix, with explicit maintainer approval.
+
 ## Checkpoint 3 — Native named-preset management
 
 Isolate native `QSettings` named preset reading/writing, validation, migration, Save/Load/Rename/Delete, reset and audio-output assignment. Preserve original on-disk INI format, UUID filenames, path safety and atomic writing, loading semantics and every confirmation prompt.
