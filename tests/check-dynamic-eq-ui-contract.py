@@ -36,6 +36,24 @@ assert 'QGuiApplication::primaryScreen()' in source
 assert 'void closeEvent(QCloseEvent* event) override' in source
 assert 'bool eventFilter(QObject* watched, QEvent* event) override' in source
 assert 'QTimer' not in plot, 'No timers/polling allowed for static plot'
+# The preview deliberately uses its prior auto-ranging behavior. A low
+# shelf can affect distant bands without changing their individual gains.
+# The numbered marker and the curve must share the same scale.
+assert 'double extreme = 12.0;' in plot
+assert 'for (double d : db) extreme = std::max(extreme, std::abs(d));' in plot
+assert 'db[j] / extreme' in plot
+assert 'db[bin] / extreme' in plot
+assert 'level += b.gain / 100.0 * shape;' in plot
+editor = (root / "src/widgets/dynamic-eq-editor.h").read_text()
+for explanation in (
+    "Maximum gain is its individual setting",
+    "combined",
+    "Frequency, Q (bandwidth), filter shape (especially shelves)",
+    "gain stays the same",
+    "approximate preview, not live metering",
+    "threshold, attack, release and signal level",
+):
+    assert explanation in editor, explanation
 match = re.search(r'static constexpr int ten\[\] = \{([^}]+)\};', source)
 assert match
 full = [int(x) for x in re.findall(r'\b\d+\b', match.group(1))]

@@ -778,6 +778,37 @@ and resetting named effect presets still work following Checkpoint 7
 modularization. These results validate the exercised operations, but
 do not independently certify every preset-management edge case.
 
+**Dynamic EQ graph clarification (maintainer report, 2026-11-03):
+help copy added; native acceptance pending.** The maintainer confirmed
+editor/overview synchronization and observed Band 4's apparent peak
+decrease when reducing Band 8 to -4.50 dB. The screenshots showed Band
+8 configured as **Low shelf** at 4000 Hz, Q 3.20. Such a filter
+attenuates frequencies *below* 4000 Hz, so it legitimately changes
+the combined curve around Band 4 at 250 Hz while Band 4's individual
+configured gain remains +6.50 dB. Threshold, attack and release may
+also influence the live audio but are not modeled by the preview.
+
+**Maintainer follow-up: filter-shape response confirmed.** Holding the
+4000 Hz / -4.50 dB / Q 3.20 Band 8 settings otherwise steady and
+switching Low shelf to Peak produced a *significant expected change*
+in the displayed graph. This strongly supports ordinary low-shelf
+interaction as the explanation for the prior observation rather than
+a synchronization defect. It does not validate the mathematical
+accuracy of the approximate curve against native DSP measurements.
+
+An earlier speculative change forced a fixed +/-12 dB graph axis and
+clipped stacked responses; this was **reverted without altering the
+DSP** because the reported behavior was filter interaction rather
+than evidence of a scaling error. The existing illustrative combined
+response/marker coordinates and auto-ranging scale were restored
+exactly from the pre-change source, and the plot's mathematical
+approximation remains unchanged. Instead, the popup editor now
+explicitly distinguishes individual gain from combined response,
+explains frequency/Q/shelf influence, and discloses that it is an
+approximation, not measured or live audio. Static tests check the
+previous curve/marker scale and the explanatory UI copy. Maintainer
+native build and inspection are still needed before final acceptance.
+
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
