@@ -39,7 +39,7 @@ def verify(version: str, dest: Path):
         assert re.search(r'Application commit: [0-9a-f]{40}', manifest)
         cmake = archive.extractfile(prefix + 'CMakeLists.txt').read().decode()
         assert f'set(V4L_BASE_VERSION "{version}")' in cmake, 'CMake version mismatch'
-    print(f'PASS: unified source, 1.0.0-style version, manifest, and SHA256: {digest}')
+    print(f'PASS: unified source, SemVer version, manifest, and SHA256: {digest}')
 
 
 if __name__ == '__main__':
