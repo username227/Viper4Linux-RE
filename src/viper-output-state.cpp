@@ -205,6 +205,14 @@ static void persistState(QSettings& settings, const QJsonObject& state) {
         const int value = values.value(key).toInt();
         settings.setValue(settingName(key),
                           flagName(key) ? QVariant(value != 0) : QVariant(settingValue(key, value)));
+        // Store full native units as well as legacy GUI slider units.
+        // Without these, output restoration could leave a stale precision
+        // override from the previously selected physical output.
+        if (key == "strength_centi" || key == "bass_mono_strength_centi" ||
+            key == "clarity_gain_milli" || key == "spectrum_frequency_hz" ||
+            key == "spectrum_exciter_milli" || key == "diff_lp_hz" ||
+            key == "field_depth")
+            settings.setValue("precision/" + key, value);
     }
     const auto eq = state.value("eq_levels").toArray();
     const int bands = values.value("eq_band_count").toInt();
