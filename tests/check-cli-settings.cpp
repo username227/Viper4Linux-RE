@@ -28,7 +28,8 @@ int main() {
     assert(!s.value("master_enabled", true).toBool());
     assert(execute({"bass-gain", "2.38"}) == 0);
     s.sync();
-    assert(s.value("strength_tenths").toInt() == 24); // Round to the GUI's tenths.
+    assert(s.value("strength_tenths").toInt() == 23);
+    assert(s.value("precision/strength_centi").toInt() == 238); // Round to the GUI's tenths.
     assert(execute({"bass-freq", "74.6"}) == 0);
     s.sync();
     assert(s.value("frequency").toInt() == 75);
@@ -44,6 +45,28 @@ int main() {
     assert(execute({"spectrum-freq", "4300"}) == 0);
     s.sync();
     assert(s.value("spectrum_frequency_hundreds").toInt() == 43);
+    assert(s.value("precision/spectrum_frequency_hz").toInt() == 4300);
+    assert(execute({"spectrum-freq", "8024"}) == 0);
+    s.sync();
+    assert(s.value("spectrum_frequency_hundreds").toInt() == 80);
+    assert(s.value("precision/spectrum_frequency_hz").toInt() == 8024);
+    assert(execute({"spectrum-on"}) == 0); // An unrelated value in the same effect group.
+    s.sync();
+    assert(s.value("precision/spectrum_frequency_hz").toInt() == 8024);
+    assert(execute({"clarity-gain", "2.675"}) == 0);
+    s.sync();
+    assert(s.value("clarity_gain_tenths").toInt() == 26);
+    assert(s.value("precision/clarity_gain_milli").toInt() == 2675);
+    assert(execute({"mono-strength", "2.47"}) == 0);
+    s.sync();
+    assert(s.value("precision/bass_mono_strength_centi").toInt() == 247);
+    assert(execute({"spectrum-exciter", "2.345"}) == 0);
+    s.sync();
+    assert(s.value("precision/spectrum_exciter_milli").toInt() == 2345);
+    assert(execute({"diff-lowpass", "4267"}) == 0);
+    s.sync();
+    assert(s.value("diff_lp_hundreds").toInt() == 42);
+    assert(s.value("precision/diff_lp_hz").toInt() == 4267);
     assert(execute({"tube-model", "2"}) == 0);
     s.sync();
     assert(s.value("tube_model").toInt() == 2);
@@ -58,6 +81,11 @@ int main() {
     assert(s.value("headphone_quality").toInt() == 2);
     assert(execute({"field-depth", "550"}) == 0);
     s.sync();
+    assert(s.value("field_depth_step").toInt() == 8);
+    assert(s.value("precision/field_depth").toInt() == 550);
+    assert(execute({"field-depth", "537"}) == 0);
+    s.sync();
+    assert(s.value("precision/field_depth").toInt() == 537);
     assert(s.value("field_depth_step").toInt() == 8);
     assert(execute({"imager-xover-high", "6000"}) == 0);
     s.sync();
