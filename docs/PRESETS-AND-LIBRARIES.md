@@ -18,9 +18,10 @@ Open **Presets…** from the main window or ☰ menu. The manager supports:
 - **Reset Effects to Defaults…** — confirm restoring the application's built-in
   starting effect settings; Cancel is the default confirmation action.
 
-The built-in reset returns to Natural Bass on and other effects off. It does
-**not** delete named presets, theme choices, window/tray settings, or library
-files. Current active effect settings are saved separately and automatically.
+The built-in reset enables master processing, restores the master limiter to
+its default settings, and disables **all optional effects**, including ViPER
+Bass. It does **not** delete named presets, theme choices, window/tray
+settings, or library files. Current active effect settings are saved separately and automatically.
 Saving a named preset is an explicit snapshot, not a change to active playback.
 
 Each complete effect snapshot is a versioned `.ini` file in
