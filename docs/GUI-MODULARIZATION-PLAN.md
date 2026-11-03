@@ -713,11 +713,45 @@ After verification proceed to Checkpoint 7 integration/cleanup,
 complete native developer/packaging and real-audio acceptance, and
 explicit maintainer approval before merging to `main`.
 
-## Checkpoint 7 — Main-window integration and cleanup
+## Checkpoint 7 — Main-window integration and cleanup (extracted; native regression pending)
 
-Reduce `viper-gui.cpp` to orchestration of the main window and composed components. Remove only demonstrably unused includes/code. Review component boundaries, documentation, and CMake targets; avoid sweeping renames or broad formatting churn that obscures semantic changes.
+A second mechanical extraction moved seven **cohesive, ViperWindow-owned**
+method regions into `src/window/`:
+`window-presets.inc` (preset snapshot/reset/manager bridge),
+`window-layout.inc` (window sizes, theme, panel orchestration, value labels),
+`window-correction.inc` (VDC/IRS libraries and live selection),
+`window-shell.inc` (tray, autostart, per-output preferences/status, About/Help),
+`window-graphic-eq.inc` (Graphic EQ layouts/presets),
+`window-dynamics.inc` (Dynamic EQ/FET/multiband editor state),
+`window-effect-actions.inc` (full/panel preset apply/reset actions).
 
-Rebuild and test all stages again.
+They are **implementation-only includes inside ViperWindow**, preserving
+the class scope and existing constructor, signals, `sender()`,
+signal blockers, QSettings storage, per-output memory callbacks,
+backend bridge and DSP control contract. There are no additional
+translation units or public component APIs. The original constructor,
+GUI lifecycle/event hooks, `push()`, offline status and owned state
+remain directly in `viper-gui.cpp`. No deliberate feature change.
+The six existing effect-panel files remain as accepted.
+
+**Source-integrity gate:** The extraction was checked for exact
+lossless reconstruction of the original `viper-gui.cpp` by substituting
+the seven original method chunks back for their single include sites.
+`tests/check-window-integration-contract.py` now covers the
+once-only window wiring and important moved methods. The developer
+source-contract helper indexes all seven new files. Full Qt compilation
+and hardware checks remain **pending**.
+
+**Full regression required:** Rebuild and run the entire
+`bash tests/check-developer.sh` suite, six-tab effect/audio
+functionality, preset save/load/delete/reset, theme switching,
+tray/minimize/restore/startup preferences, Graphic/Dynamic EQ editors,
+DDC and Convolver import/popup behavior, GUI↔CLI precision,
+disconnected-backend edits/reconnect, Audio Output memory A→B→A→B,
+GUI/backend restart, and package/archive content. Verify full DDC
+`.vdc` profile selection, import and real DSP processing where a
+valid profile is available. Do not mark the whole refactor complete or
+merge to `main` until maintainer acceptance.
 
 ## Per-stage verification gate
 
