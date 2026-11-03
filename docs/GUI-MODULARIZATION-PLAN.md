@@ -326,7 +326,7 @@ Move construction and hookup of the six tab panels into reasonably scoped compon
 
 Rebuild and test: all 24 effect groups, independent toggling versus collapse, all slider ranges/defaults, scrolling, tab order, IRS and DDC controls.
 
-### Checkpoint 5A — Crossfeed panel extraction (awaiting clean build and test)
+### Checkpoint 5A — Crossfeed panel extraction (maintainer GUI smoke test passed)
 
 Moved only Crossfeed (ViPER Cure) control construction to
 `src/panels/crossfeed-panel.h`, returning the exact `QGroupBox`,
@@ -348,6 +348,15 @@ without affecting the enable state, persistence after reopening, and audible
 effect if the audio setup permits. Verify that the other Spatial panels
 and tab order have not changed. No native compilation has been run by
 the assistant. Hold at 5A pending maintainer verification.
+
+**Maintainer feedback, 2026-11-03:** The Crossfeed-only extraction was
+reviewed in the GUI and reported to be in order. Treat this as a successful
+initial GUI smoke test, not proof that the separate clean-build hang has been
+diagnosed or that every acoustic mode/persistence test was explicitly reported.
+The follow-on Checkpoint 5B can group the remaining Spatial components
+(Headphone Surround+, Differential Surround, Field Surround, Reverberation,
+Stereo Imager) for one tab-wide verification gate; preserve panel ordering,
+switch/collapse separation, slider controls, and backend mappings.
 
 ## Checkpoint 6 — Settings/backend synchronization
 
