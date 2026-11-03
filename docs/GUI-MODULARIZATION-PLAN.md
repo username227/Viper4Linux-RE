@@ -326,6 +326,29 @@ Move construction and hookup of the six tab panels into reasonably scoped compon
 
 Rebuild and test: all 24 effect groups, independent toggling versus collapse, all slider ranges/defaults, scrolling, tab order, IRS and DDC controls.
 
+### Checkpoint 5A — Crossfeed panel extraction (awaiting clean build and test)
+
+Moved only Crossfeed (ViPER Cure) control construction to
+`src/panels/crossfeed-panel.h`, returning the exact `QGroupBox`,
+`EffectSwitch` and preset `QComboBox` to `ViperWindow`. The existing
+`addEffectPanel()` card wrapper, enable switch, saved expansion state,
+mode selection, settings keys, signal hookups and backend writes remain in
+the main window. The UI's three modes, labels and tooltip are unchanged.
+The rest of the Spatial tab and all other effects remain untouched.
+
+**Maintainer-requested clean rebuild and stall diagnosis:** use a fresh
+`build-stage5a/` directory, `cmake -S . -B build-stage5a -DCMAKE_BUILD_TYPE=Release`
+followed by `cmake --build build-stage5a --parallel 4 --verbose`, with
+output captured by `tee` and `pipefail`. A clean build verifies this
+checkpoint but cannot alone establish why prior builds appeared to hang.
+Check compiler activity and memory/swap **during** any slowdown, before
+interrupting. Launch `./build-stage5a/viper-gui` and verify its About
+revision. Test Crossfeed enable/disable, all three modes, collapse/expand
+without affecting the enable state, persistence after reopening, and audible
+effect if the audio setup permits. Verify that the other Spatial panels
+and tab order have not changed. No native compilation has been run by
+the assistant. Hold at 5A pending maintainer verification.
+
 ## Checkpoint 6 — Settings/backend synchronization
 
 Isolate synchronization and transport adapter responsibilities from presentation. This is the riskiest GUI stage: preserve the existing shared-memory control contract and version; do not change DSP/LADSPA internals or settings precision. Preserve the GUI's ability to reflect CLI edits without overwriting them, backend independence, source restoration and state update timing.

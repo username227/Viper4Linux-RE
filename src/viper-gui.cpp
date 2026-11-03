@@ -6,6 +6,7 @@
 #include "widgets/eq-overviews.h"
 #include "widgets/dynamic-eq-editor.h"
 #include "widgets/graphic-eq-editor.h"
+#include "panels/crossfeed-panel.h"
 #include "widgets/effect-widgets.h"
 #include "widgets/irs-combo-box.h"
 #include "viper-theme.h"
@@ -729,15 +730,10 @@ public:
         spectrum_exciter_.slider->setToolTip("Added harmonic enhancement, 0.0–6.0.");
         addEffectPanel(effectLayout, spectrum_group, "spectrum", spectrum_enabled_);
 
-        auto* crossfeed_group = new QGroupBox("Crossfeed (ViPER Cure)", tabs_);
-        auto* crossfeed_form = new QFormLayout(crossfeed_group);
-        crossfeed_enabled_ = new EffectSwitch(crossfeed_group);
-        crossfeed_form->addRow("Speaker-like headphone crossfeed", crossfeed_enabled_);
-        crossfeed_mode_ = new QComboBox(crossfeed_group);
-        crossfeed_mode_->addItems({"Mild", "Medium", "Strong"});
-        crossfeed_mode_->setToolTip("Native ViPERDSP Cure: filtered left/right crossfeed presets.");
-        crossfeed_form->addRow("Crossfeed strength", crossfeed_mode_);
-        addEffectPanel(spatialLayout, crossfeed_group, "crossfeed", crossfeed_enabled_);
+        const auto crossfeedPanel = viper_panels::createCrossfeedPanel(tabs_);
+        crossfeed_enabled_ = crossfeedPanel.enabled;
+        crossfeed_mode_ = crossfeedPanel.mode;
+        addEffectPanel(spatialLayout, crossfeedPanel.group, "crossfeed", crossfeed_enabled_);
 
         auto* headphone_group = new QGroupBox("Headphone Surround+", tabs_);
         auto* headphone_form = new QFormLayout(headphone_group);
