@@ -627,7 +627,7 @@ is outside this mechanical extraction.
 full regression/packaging verification and explicit maintainer approval
 still precede any merge to `main`.
 
-## Checkpoint 6 — Settings/backend synchronization (extracted; native testing pending)
+## Checkpoint 6 — Settings/backend synchronization (focused maintainer acceptance; broader regression deferred)
 
 Mechanically moved six ViperWindow member implementations into
 `src/sync/gui-settings-bridge.inc` and
@@ -662,12 +662,43 @@ their substantive control/behavior checks.
 reconnection/precision test passed with exact Git-blob-verified
 test and helper bytes. This is not a native Qt/PipeWire regression test.
 
-**Status: native build/GUI/audio testing PENDING.** Source-level
-checks verified every method transferred once and the critical pending-
-edit, precision, guarded CLI readback and persistence guards. No
-on-device Qt build or backend interaction has been run by the assistant.
+**Status: focused maintainer acceptance (2026-11-03).** The maintainer
+successfully built and opened the Checkpoint 6 GUI on Arch Linux and
+reported the full developer suite passing. Native GUI→DSP slider edits
+produced audible changes; CLI `bass-on` and `bass-off` correctly
+updated the existing GUI without readback feedback; edits survived
+closing/reopening the GUI. Precision preservation was tested by
+`viper4linux-ctl bass-gain 5.37`: editing the unrelated Clarity
+slider retained the exact native 5.37 value, and deliberately editing
+the Bass slider replaced that native precision as intended.
 
-**Verify Checkpoint 6:** Build `viper-gui` in a fresh `build-stage6/`,
+**Backend restart:** An initial restart through `viper4linux` opened
+a second GUI and reverted visible Bass values, so this observation is
+**inconclusive**, not a verified synchronization failure or a passing
+test. The maintainer retested using a backend-only launcher restart,
+keeping the original Checkpoint 6 GUI as the sole GUI instance; the
+offline Bass frequency edit and persisted settings appeared to survive
+reconnection. Mark **focused offline-edit/reconnect PASS, with the
+second-GUI interaction explicitly deferred to the broader regression**.
+The assistant did not run native Arch tests locally; results here are
+the maintainer's reports.
+
+**Per-output persistence requirement:** The existing Audio Output
+memory setting under Preferences is opt-in. When enabled, the
+`OutputMemory` monitor stores full native snapshots separately for
+stable physical-output identity keys in `~/.local/share/viper4linux/outputs`,
+checkpoints edits while an identified sink remains active, and restores
+that sink's own snapshot when revisited. This must persist across
+GUI close, backend restart, physical sink switch, and device reconnect.
+The single-sink backend restart is **not** proof that two independent
+physical sink snapshots correctly restore. The final regression must
+verify A→B→A→B, restart, output memory enabled/disabled, exact native
+precision preservation, and no unwanted overwrite by a second GUI.
+Also verify activity/idle/offline status and full effect panel coverage.
+Do not change QSettings/global defaults as a substitute for per-output
+snapshot restoration.
+
+**Final Checkpoint 6 regression checklist (focused acceptance done):** Build `viper-gui` in a fresh `build-stage6/`,
 then run `./build-stage6/viper-gui &`. Test GUI-to-DSP changes,
 CLI-to-GUI readback without feedback loops, CLI native precision
 preserved while unrelated GUI sliders change, deliberate override on
