@@ -4,6 +4,7 @@
 #include "viper-backend-state.h"
 #include "viper-eq-presets.h"
 #include "widgets/eq-overviews.h"
+#include "widgets/dynamic-eq-editor.h"
 #include "widgets/effect-widgets.h"
 #include "widgets/irs-combo-box.h"
 #include "viper-theme.h"
@@ -300,105 +301,21 @@ public:
         deq_form->addRow(deq_overview_);
         addEffectPanel(effectLayout, deq_group, "dynamic_eq", deq_enabled_);
 
-        deq_editor_ = new QDialog(this);
-        deq_editor_->setObjectName("viperDynamicEqEditor");
-        deq_editor_->setWindowTitle("Viper4Linux — Dynamic EQ Editor");
-        deq_editor_->resize(670, 735);
-        deq_editor_->setMinimumSize(425, 440);
-        auto* deq_editor_layout = new QVBoxLayout(deq_editor_);
-        auto* deq_scroll = new QScrollArea(deq_editor_);
-        deq_scroll->setObjectName("viperDynamicEqEditorScroll");
-        deq_scroll->setWidgetResizable(true);
-        deq_scroll->setFrameShape(QFrame::NoFrame);
-        deq_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        auto* deq_content = new QWidget(deq_scroll);
-        auto* deq_content_layout = new QVBoxLayout(deq_content);
-        deq_content_layout->setSpacing(9);
-        auto* deq_explain = new QLabel(
-            "Select a band in the table or on the curve. All filter settings remain editable below. "
-            "The curve shows maximum configured gain, not live audio levels.", deq_content);
-        deq_explain->setWordWrap(true);
-        deq_content_layout->addWidget(deq_explain);
-        auto* deq_top = new QHBoxLayout();
-        deq_top->addWidget(new QLabel("Active bands", deq_content));
-        deq_editor_count_ = new QSpinBox(deq_content);
-        deq_editor_count_->setObjectName("viperDynamicEqEditorBandCount");
-        deq_editor_count_->setRange(1, 10);
-        deq_editor_count_->setFixedWidth(77);
-        deq_top->addWidget(deq_editor_count_);
-        auto* deq_spread = new QPushButton("Spread frequencies", deq_content);
-        deq_spread->setObjectName("viperDynamicEqSpreadFrequencies");
-        deq_spread->setToolTip("Distribute active band frequencies over bass to treble. Preserves gain, Q, threshold, attack, release and filter type.");
-        deq_top->addWidget(deq_spread);
-        deq_top->addStretch();
-        deq_content_layout->addLayout(deq_top);
-        deq_editor_graph_ = new DynamicEqOverview(deq_content);
-        deq_editor_graph_->setObjectName("viperDynamicEqEditorGraph");
-        deq_editor_graph_->enableBandSelection();
-        deq_editor_graph_->setMinimumHeight(125);
-        deq_content_layout->addWidget(deq_editor_graph_);
-        deq_table_ = new QTableWidget(0, 4, deq_content);
-        deq_table_->setObjectName("viperDynamicEqBandTable");
-        deq_table_->setHorizontalHeaderLabels({"Band", "Frequency (Hz)", "Gain (dB)", "Threshold (dB)"});
-        deq_table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        deq_table_->verticalHeader()->hide();
-        deq_table_->verticalHeader()->setDefaultSectionSize(25);
-        deq_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
-        deq_table_->setSelectionMode(QAbstractItemView::SingleSelection);
-        deq_table_->setEditTriggers(QAbstractItemView::DoubleClicked |
-                                    QAbstractItemView::EditKeyPressed);
-        deq_table_->setAlternatingRowColors(true);
-        deq_table_->setWordWrap(false);
-        // All active band summaries can fit without a second inner scrollbar.
-        // The dialog's outer QScrollArea handles short screens instead.
-        deq_table_->setMinimumHeight(115);
-        deq_table_->setFixedHeight(115);
-        deq_table_->setToolTip("Double-click frequency, gain, or threshold to edit; select a row to adjust its other parameters below.");
-        deq_content_layout->addWidget(deq_table_);
-        deq_selected_label_ = new QLabel("Selected band", deq_content);
-        QFont deq_label_font = deq_selected_label_->font();
-        deq_label_font.setBold(true);
-        deq_selected_label_->setFont(deq_label_font);
-        deq_content_layout->addWidget(deq_selected_label_);
-        auto* deq_form_editor = new QFormLayout();
-        deq_form_editor->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        deq_band_select_ = new QComboBox(deq_content);
-        deq_band_select_->setObjectName("viperDynamicEqBandSelector");
-        deq_form_editor->addRow("Selected band", deq_band_select_);
-        deq_frequency_ = new QSpinBox(deq_content);
-        deq_frequency_->setRange(20,20000);
-        deq_frequency_->setSuffix(" Hz");
-        deq_form_editor->addRow("Center / shelf frequency", deq_frequency_);
-        deq_type_ = new QComboBox(deq_content);
-        deq_type_->addItems({"Peak", "Low shelf", "High shelf"});
-        deq_form_editor->addRow("Filter shape", deq_type_);
-        deq_q_ = new QDoubleSpinBox(deq_content);
-        deq_q_->setRange(0.5,8.0); deq_q_->setDecimals(2); deq_q_->setSingleStep(0.1);
-        deq_form_editor->addRow("Q (bandwidth)", deq_q_);
-        deq_gain_ = new QDoubleSpinBox(deq_content);
-        deq_gain_->setRange(-12,12); deq_gain_->setDecimals(2);
-        deq_gain_->setSingleStep(0.5); deq_gain_->setSuffix(" dB");
-        deq_form_editor->addRow("Maximum gain", deq_gain_);
-        deq_threshold_ = new QDoubleSpinBox(deq_content);
-        deq_threshold_->setRange(-80,0); deq_threshold_->setDecimals(1);
-        deq_threshold_->setSuffix(" dB");
-        deq_form_editor->addRow("Threshold", deq_threshold_);
-        deq_attack_ = new QSpinBox(deq_content);
-        deq_attack_->setRange(1,100); deq_attack_->setSuffix(" ms");
-        deq_form_editor->addRow("Attack", deq_attack_);
-        deq_release_ = new QSpinBox(deq_content);
-        deq_release_->setRange(10,500); deq_release_->setSuffix(" ms");
-        deq_form_editor->addRow("Release", deq_release_);
-        deq_content_layout->addLayout(deq_form_editor);
-        deq_content_layout->addStretch();
-        deq_scroll->setWidget(deq_content);
-        deq_editor_layout->addWidget(deq_scroll, 1);
-        auto* deq_actions = new QHBoxLayout();
-        deq_actions->addStretch();
-        auto* deq_close = new QPushButton("Close", deq_editor_);
-        deq_actions->addWidget(deq_close);
-        deq_editor_layout->addLayout(deq_actions);
-        connect(deq_close, &QPushButton::clicked, deq_editor_, &QDialog::hide);
+        const auto editorWidgets = viper_eq_ui::createDynamicEqEditor(this);
+        deq_editor_ = editorWidgets.dialog;
+        deq_editor_count_ = editorWidgets.bandCount;
+        deq_editor_graph_ = editorWidgets.graph;
+        deq_table_ = editorWidgets.table;
+        deq_selected_label_ = editorWidgets.selectedLabel;
+        deq_band_select_ = editorWidgets.bandSelector;
+        deq_frequency_ = editorWidgets.frequency;
+        deq_type_ = editorWidgets.filterType;
+        deq_q_ = editorWidgets.q;
+        deq_gain_ = editorWidgets.gain;
+        deq_threshold_ = editorWidgets.threshold;
+        deq_attack_ = editorWidgets.attack;
+        deq_release_ = editorWidgets.release;
+        auto* deq_spread = editorWidgets.spread;
         deq_overview_->selectBand = [this](int index) {
             if (index >= 0 && index < deq_active_count_)
                 deq_band_select_->setCurrentIndex(index);

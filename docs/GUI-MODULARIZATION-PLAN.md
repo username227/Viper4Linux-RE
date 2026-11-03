@@ -209,6 +209,22 @@ revision refresh after the refactor, independently from GUI code movement.
 The detailed editor layout and state integration remain for Checkpoint 4B.
 No merge to `main` before the full refactor is accepted.
 
+### Checkpoint 4B — Dynamic EQ detailed editor construction (awaiting test)
+
+Moved the existing Dynamic EQ editor widget and layout construction into
+`src/widgets/dynamic-eq-editor.h`, returning its widget pointers to the main
+window. Existing controls, ranges, labels, tooltip text, Close action and
+dialog dimensions are unchanged. All data binding, band-selection callbacks,
+table changes, Spread frequencies processing, persistence and DSP interaction
+remain in `ViperWindow`.
+
+Test with `cmake --build build --target viper-gui -j4`: open Dynamic EQ,
+change active band count, click graph markers and table rows, edit Q, gain,
+threshold and frequency, exercise Spread frequencies, close/reopen the dialog,
+and resize it. Preserve the numerical values to their existing precision.
+The Graphic EQ detailed editor remains for the next substep. No merge to
+`main` without full refactor approval.
+
 ## Checkpoint 5 — Effect panels and layout construction
 
 Move construction and hookup of the six tab panels into reasonably scoped components (potentially grouped by tab) without changing signal connections, visibility, disabled/default states, effect labels or settings values. Avoid a single giant 'panels' file.
