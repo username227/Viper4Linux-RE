@@ -94,6 +94,21 @@ class NativeEffects:
     def restore(self, snapshot: dict) -> None:
         self._call('restore', snapshot)
 
+    def preset(self, path: Path) -> dict:
+        if not self.helper.is_file() or not os.access(self.helper, os.X_OK):
+            raise RuntimeError('Native Audio Output state helper is not installed')
+        result = subprocess.run([str(self.helper), 'preset', str(path)],
+                                text=True, capture_output=True, timeout=3, check=False)
+        if result.returncode:
+            raise RuntimeError('Named preset conversion failed: ' + result.stderr.strip()[:280])
+        state = json.loads(result.stdout)
+        if state.get('format') != 1 or not isinstance(state.get('backend_pid'), int):
+            raise ValueError('Invalid converted native preset snapshot')
+        if self.backend_pid is not None and self.backend_pid != state['backend_pid']:
+            raise RuntimeError('DSP session changed during preset conversion')
+        self.backend_pid = state.pop('backend_pid')
+        return state
+
 def helper_path() -> Path:
     here = Path(__file__).resolve().parent
     if here == Path('/usr/lib/viper4linux'):
@@ -118,6 +133,50 @@ def status_for(graph: PipeWireGraph, store: OutputStore, backend_pid: int,
             'outputs': outputs, 'memory_enabled': store.enabled(),
             'memory_action': action, 'memory_revision': revision,
             'memory_error': error}
+
+def process_assignments(runtime: Path, store: OutputStore, effects: NativeEffects,
+                        memory: OutputMemory, active, settled: bool) -> None:
+    """Handle requests on the same thread as monitor checkpoints."""
+    library = Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local/share'))) / 'viper4linux/presets'
+    for request in sorted(runtime.glob('viper4linux-assign-*.request.json')):
+        identity = request.name[len('viper4linux-assign-'):-len('.request.json')]
+        response = runtime / f'viper4linux-assign-{identity}.result.json'
+        try:
+            if request.is_symlink() or response.exists():
+                raise ValueError('Duplicate or unsafe preset assignment request')
+            content = json.loads(request.read_text(encoding='utf-8'))
+            if not isinstance(content, dict) or set(content) != {'target', 'preset'}:
+                raise ValueError('Invalid preset assignment request')
+            key = content['target']
+            if not isinstance(key, str) or key not in store.inventory():
+                raise ValueError('Unknown remembered Audio Output')
+            if not store.enabled():
+                raise ValueError('Per-output memory is disabled')
+            selected = content['preset']
+            if not isinstance(selected, str):
+                raise ValueError('Invalid preset filename')
+            preset = Path(selected)
+            if (preset.suffix != '.ini' or preset.is_symlink() or
+                preset.parent.resolve() != library.resolve() or not preset.is_file()):
+                raise ValueError('Preset is not in the named preset library')
+            snapshot = effects.preset(preset)
+            if active and active.key == key:
+                if not settled or memory.current is None or memory.current.key != key:
+                    raise RuntimeError('Audio Output is transitioning; retry assignment')
+                effects.restore(snapshot)
+                store.save_settings(key, snapshot)
+            else:
+                store.save_settings(key, snapshot)
+            result = {'ok': True, 'target': key}
+        except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired, KeyError,
+                json.JSONDecodeError) as exc:
+            result = {'ok': False, 'error': str(exc)[:280]}
+        finally:
+            try:
+                write_status(response, result)
+            except OSError as exc:
+                print('Preset assignment acknowledgment failed: ' + str(exc), file=sys.stderr)
+            request.unlink(missing_ok=True)
 
 def stop_handler(_signal, _frame):
     global STOP
@@ -194,6 +253,8 @@ def service(graph: PipeWireGraph, store: OutputStore, effects: NativeEffects,
                 print('Audio Output memory: ' + error, file=sys.stderr, flush=True)
         elif not enabled:
             last_action = 'disabled'
+        process_assignments(path.parent, store, effects, memory, active,
+                            bool(active and now - stable_since >= 1.0))
         try:
             write_status(path, status_for(graph, store, backend_pid,
                         action=last_action, revision=revision, error=error))
