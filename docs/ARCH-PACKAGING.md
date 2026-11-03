@@ -43,7 +43,8 @@ The package installs the launcher, GUI, controller, LADSPA module, desktop
 entry, icons, man pages, maintained docs, and all `src/viper_*.py` Python
 modules. The package also provides the native
 `viper4linux-output-state` helper (complete shared-memory capture/restore),
-plus `viper4linux-output` for listing and enabling/disabling memory.
+plus `viper4linux-output` for inspecting physical outputs, enabling/disabling
+memory and assigning an existing named preset to a remembered output.
 Both Arch VCS and stable PKGBUILDs call
 `packaging/arch/install-package.sh` in `package()`; the script inventories
 runtime Python modules automatically, checks required files before staging,
@@ -67,7 +68,10 @@ DSP state when returning to an output, and continues working after Quit GUI
 through the launcher-supervised monitor. The native state helper validates
 complete snapshots and filesystem-dependent IRS/VDC paths before applying
 anything. Use `viper4linux-output --enable-memory` and
-`viper4linux-output --disable-memory` for command-line control.
+`viper4linux-output --disable-memory` for command-line control. The
+`viper4linux-output --assign-preset FILE --target OUTPUT_KEY` command asks
+the active monitor to assign an existing full-effect preset. Inactive-output
+assignment does not modify currently playing audio.
 
 After updating an AUR checkout, regenerate `.SRCINFO` with
 `makepkg --printsrcinfo > .SRCINFO` and push both files. Stable AUR
