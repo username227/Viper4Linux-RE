@@ -21,7 +21,10 @@ assert 'preset.contains("effects/master_enabled")' in presets
 assert 'preset.contains("effects/limiter_output_percent")' in presets
 assert 'settings_.remove("preset");' in presets
 assert '"Save Preset…"' in presets
-assert 'QInputDialog::getText(&dialog, "Save Effect Preset"' in presets
+assert 'QInputDialog::getItem(&dialog, "Save Effect Preset"' in presets
+assert '"New Preset…"' in presets
+assert 'for (const auto& preset : existing) choices << preset.name;' in presets
+assert 'QInputDialog::getText(&dialog, "New Effect Preset"' in presets
 assert '"Preset name:"' in presets
 assert 'name.compare(name, Qt::CaseInsensitive)' in presets
 assert '"Replace Preset"' in presets
