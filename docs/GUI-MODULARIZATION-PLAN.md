@@ -386,6 +386,45 @@ has been run by the assistant.
 `correction-panels.h`. Do not create empty files for unfinished tabs.
 Keep the ability to split an unusually complex tab later.
 
+### Checkpoint 5C — Output tab extraction (code committed; native test pending)
+
+Extracted the widget and layout construction for all three Output effects
+(Master Limiter, Playback Gain Control/AGC, and LUFS Targeting) to
+`src/panels/output-panels.h`. The typed factory returns the existing control
+pointers and the AGC+LUFS interaction warning label to `ViperWindow`.
+
+The main window still owns the three `addEffectPanel()` card wrappers,
+independent collapse/expand state, QSettings keys, default values, live labels,
+signal connections, backend/CLI synchronization and DSP writes. The native
+limiter's permanently checked, disabled switch is unchanged. The warning's
+position in the Output tab and its visibility rule are unchanged. The
+preexisting `addSlider()` helper is reused; no DSP, ABI, preset, packaging,
+submodule or CMake source-target changes were made.
+
+**Verification gate:** The code has been structurally checked against the
+previous construction and the set of labels, slider ranges, tooltips and card
+keys. Native Qt compilation, clean-build regression checks and real audio/GUI
+acceptance have **not** yet been performed by the assistant. The maintainer
+is making a fresh clone to investigate intermittent apparent build hangs.
+**Do not call 5C accepted or proceed to the next tab until the fresh build
+and maintainer tests pass.**
+
+After cloning the refactoring branch with submodules, build from a new
+directory with `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release` and
+`cmake --build build --parallel 4`. Check all three Output cards and tab
+order, limiter's fixed-on indicator, enabled switches versus collapsing,
+sliders' ranges and value labels, Slow/Normal/Fast selections, the AGC+LUFS
+warning shown only when both are on, and values after closing/reopening the
+GUI. Confirm that changing AGC and LUFS settings sends the expected native
+controls; optional CLI edits should refresh without overwriting precise values.
+Avoid deliberately raising loudness or output gain while listening at high
+volume. If a build stalls, capture compiler process state and RAM/swap
+activity before interrupting it.
+
+**Current panel-file count:** 2/6 (`output-panels.h`, `spatial-panels.h`).
+Bass, EQ & Tone, Dynamics and Sound Correction remain to be extracted.
+No merge or release to `main`.
+
 ## Checkpoint 6 — Settings/backend synchronization
 
 Isolate synchronization and transport adapter responsibilities from presentation. This is the riskiest GUI stage: preserve the existing shared-memory control contract and version; do not change DSP/LADSPA internals or settings precision. Preserve the GUI's ability to reflect CLI edits without overwriting them, backend independence, source restoration and state update timing.

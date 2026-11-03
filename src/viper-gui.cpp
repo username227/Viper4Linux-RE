@@ -6,6 +6,7 @@
 #include "widgets/eq-overviews.h"
 #include "widgets/dynamic-eq-editor.h"
 #include "widgets/graphic-eq-editor.h"
+#include "panels/output-panels.h"
 #include "panels/spatial-panels.h"
 #include "widgets/effect-widgets.h"
 #include "widgets/irs-combo-box.h"
@@ -794,46 +795,28 @@ public:
 
         // Audio enters native ViPERDSP at unity: no adapter input trim.
 
-        // Output processing — native limiter is always present, so show its
-        // switch as ON but inactive.  Its card remains independently collapsible.
-        auto* limiter_group = new QGroupBox("Master Limiter", tabs_);
-        auto* limiter_form = new QFormLayout(limiter_group);
-        limiter_indicator_ = new EffectSwitch(limiter_group);
-        limiter_indicator_->setChecked(true);
-        limiter_indicator_->setEnabled(false);
-        limiter_indicator_->setToolTip("The native Master Limiter is permanently active. Adjust its threshold, output level and balance below.");
-        limiter_form->addRow("Limiter always active", limiter_indicator_);
-        limiter_threshold_ = addSlider(limiter_form, "Peak threshold", 300, 1000); // thousandths
-        limiter_threshold_.slider->setToolTip("Linear peak threshold, -10.46 to 0 dBFS; default -6.02 dBFS.");
-        limiter_gain_ = addSlider(limiter_form, "Output gain", 1, 200); // percent
-        limiter_gain_.slider->setToolTip("Final output gain, 1–200%. Raising gain can cause more limiting.");
-        limiter_pan_ = addSlider(limiter_form, "Channel balance", -100, 100);
-        limiter_pan_.slider->setToolTip("-100 left; 0 center; +100 right. Attenuates the opposite channel.");
-        addEffectPanel(outputLayout, limiter_group, "limiter", limiter_indicator_);
-
-        auto* agc_group = new QGroupBox("Playback Gain Control (AGC)", tabs_);
-        auto* agc_form = new QFormLayout(agc_group);
-        agc_enabled_ = new EffectSwitch(agc_group);
-        agc_form->addRow("Automatic gain control", agc_enabled_);
-        agc_strength_ = addSlider(agc_form, "Strength", 50, 300);
-        agc_max_gain_ = addSlider(agc_form, "Maximum gain", 100, 1000);
-        agc_threshold_ = addSlider(agc_form, "Output threshold", 300, 1000);
-        addEffectPanel(outputLayout, agc_group, "agc", agc_enabled_);
-
-        auto* lufs_group = new QGroupBox("LUFS Targeting", tabs_);
-        auto* lufs_form = new QFormLayout(lufs_group);
-        lufs_enabled_ = new EffectSwitch(lufs_group);
-        lufs_form->addRow("Automatic loudness targeting", lufs_enabled_);
-        lufs_target_ = addSlider(lufs_form, "Target loudness", -240, -80);
-        lufs_gain_ = addSlider(lufs_form, "Maximum gain adjustment", 0, 120);
-        lufs_speed_ = new QComboBox(lufs_group);
-        lufs_speed_->addItems({"Slow", "Normal", "Fast"});
-        lufs_form->addRow("Response speed", lufs_speed_);
-        addEffectPanel(outputLayout, lufs_group, "lufs", lufs_enabled_);
-        output_warning_ = new QLabel("AGC and LUFS are both enabled. Their gain adjustments may interact; test carefully.", tabs_);
-        output_warning_->setWordWrap(true);
-        output_warning_->setProperty("viperWarningText", true);
-        output_warning_->setStyleSheet("color: #b36c20; font-weight: 600;");
+        // Output effect widget construction is separate; persistence and all
+        // backend/CLI connections remain in ViperWindow.
+        const auto outputPanels = viper_panels::createOutputPanels(
+            tabs_, [this](QFormLayout* form, const char* label, int minimum, int maximum) {
+                return addSlider(form, label, minimum, maximum);
+            });
+        limiter_indicator_ = outputPanels.limiter_indicator;
+        limiter_threshold_ = outputPanels.limiter_threshold;
+        limiter_gain_ = outputPanels.limiter_gain;
+        limiter_pan_ = outputPanels.limiter_pan;
+        agc_enabled_ = outputPanels.agc_enabled;
+        agc_strength_ = outputPanels.agc_strength;
+        agc_max_gain_ = outputPanels.agc_max_gain;
+        agc_threshold_ = outputPanels.agc_threshold;
+        lufs_enabled_ = outputPanels.lufs_enabled;
+        lufs_target_ = outputPanels.lufs_target;
+        lufs_gain_ = outputPanels.lufs_gain;
+        lufs_speed_ = outputPanels.lufs_speed;
+        output_warning_ = outputPanels.output_warning;
+        addEffectPanel(outputLayout, outputPanels.limiterGroup, "limiter", limiter_indicator_);
+        addEffectPanel(outputLayout, outputPanels.agcGroup, "agc", agc_enabled_);
+        addEffectPanel(outputLayout, outputPanels.lufsGroup, "lufs", lufs_enabled_);
         outputLayout->insertWidget(outputLayout->count() - 1, output_warning_);
 
 
