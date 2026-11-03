@@ -3806,7 +3806,8 @@ private:
         const auto preciseSlider = [this](QSlider* slider, int liveValue,
                                           int projectedSlider, int sliderValue,
                                           const char* setting) {
-            const int result = slider->value() == projectedSlider ? liveValue : sliderValue;
+            const int result = !replace_precision_on_push_ && slider->value() == projectedSlider
+                ? liveValue : sliderValue;
             settings_.setValue(setting, result);
             return result;
         };
@@ -4016,6 +4017,7 @@ private:
             return false;
         }
         pending_edit_ = false;
+        replace_precision_on_push_ = false;
         return true;
     }
     // Evenly sampled, log-spaced standard frequency centers. Keep the original
@@ -4401,6 +4403,7 @@ private:
         // Loading a complete named preset or resetting to defaults explicitly
         // replaces the previous full-precision CLI values.
         settings_.remove("precision");
+        replace_precision_on_push_ = true;
         // Suppress intermediate updates: don't send four DSP changes per reset.
         const QSignalBlocker block0(global_);
         const QSignalBlocker block1(enabled_);
@@ -4997,6 +5000,7 @@ private:
     QTimer* save_timer_{};
     viperbass::Mapping mapping_;
     bool pending_edit_ = false;
+    bool replace_precision_on_push_ = false;
     QCheckBox* limiter_indicator_{};
     SliderRow limiter_threshold_{};
     SliderRow limiter_gain_{};
