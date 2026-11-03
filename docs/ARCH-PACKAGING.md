@@ -121,12 +121,13 @@ releases or binary packages, or update the AUR.
 4. After **all three builds** pass, an assembly job verifies provenance,
    source/archive checksums and all three native package hashes. Download the
    `viper4linux-re-VERSION-complete-release-candidate` ZIP containing the
-   unified archive, main Arch package, both `.deb` files, checksums,
-   `PKGBUILD`, `.SRCINFO` and `SOURCE-COMMIT`. The optional Arch debug-symbol
+   unified archive, main Arch package, both `.deb` files, a single
+   `SHA256SUMS` covering all four artifacts, `PKGBUILD`, `.SRCINFO` and
+   `SOURCE-COMMIT`. The optional Arch debug-symbol
    package is not included.
 5. Confirm `vVERSION` points to **exactly** `SOURCE-COMMIT`, then create the
    GitHub release and attach the unified tarball, three native binaries, and
-   appropriate checksums. GitHub's automatic source archives do not include
+   the single `SHA256SUMS` file. GitHub's automatic source archives do not include
    the recorded DSP submodule.
 6. Publish/update AUR recipes **manually** in your separate AUR Git checkout
    and regenerate `.SRCINFO` before pushing.
