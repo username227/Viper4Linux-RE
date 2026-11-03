@@ -732,7 +732,10 @@ backend bridge and DSP control contract. There are no additional
 translation units or public component APIs. The original constructor,
 GUI lifecycle/event hooks, `push()`, offline status and owned state
 remain directly in `viper-gui.cpp`. No deliberate feature change.
-The six existing effect-panel files remain as accepted.
+The six existing effect-panel files remain as accepted. Source packaging
+uses `git archive`, which includes these checked-in `.inc` modules;
+CMake still builds a single `viper-gui.cpp` Qt translation unit with
+private class-body includes. No extra CMake target is required.
 
 **Source-integrity gate:** The extraction was checked for exact
 lossless reconstruction of the original `viper-gui.cpp` by substituting
