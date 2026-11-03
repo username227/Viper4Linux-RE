@@ -55,7 +55,7 @@ Extract the self-contained widget classes from `src/viper-gui.cpp` (such as `Saf
 
 Rebuild and test: slider mouse wheel only when focused, switch hit targets/toggling, all icon styles, effect panel collapse/expand and high-DPI/scaled rendering.
 
-### Checkpoint 1 implementation — awaiting local build and acceptance
+### Checkpoint 1 implementation — GUI smoke test accepted
 
 The following classes were extracted **without changing their existing
 methods, signals, drawing logic or event handlers**:
@@ -71,15 +71,18 @@ These are self-contained inline Qt widget classes, so no new CMake sources or
 Qt meta-object processing are needed; `viper-gui.cpp` now includes the headers.
 The DSP, IPC, native preset format, and build configuration are unchanged.
 
-**Verification status:** mechanical source move checked; **native Qt compilation
-and live GUI regression checks must be performed by the maintainer**.
-Recommended command: `cmake --build build --target viper-gui -j4`.
+**Verification status — maintainer acceptance, 2026-11-03:** The maintainer
+opened the refactored GUI and confirmed correct rendering, effect activation
+switches, functioning dropdown menus and movable sliders. The extracted
+widget implementations were source-compared against the originals before
+committing, and no DSP/IPC logic was changed. This is **accepted as the
+Checkpoint 1 GUI smoke test**; the complete developer suite and live audio
+verification are deferred to the final integration gate.
 
-Quick manual checks: open the GUI, toggle a few effect switches; verify the
-slider scroll wheel still behaves correctly (focused vs. unfocused), all effect
-glyphs render normally, and the IRS drop-down opens/selects without unexpected
-list changes. Do not mark this checkpoint accepted until these checks pass.
-No changes may merge to `main`.
+**Not specifically confirmed in this smoke test:** mouse wheel focus behavior
+and IRS-list stability during popup refresh. Preserve these as regression
+checks when related controls are next modified. No changes may merge to `main`
+until the entire refactor is complete and expressly approved.
 
 ## Checkpoint 2 — Appearance and theme handling
 
