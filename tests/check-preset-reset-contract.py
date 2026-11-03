@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Source-level regression for confirmed, non-destructive defaults reset."""
 from pathlib import Path
-s = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
+s = (Path(__file__).resolve().parents[1] / 'src/window/window-presets.inc').read_text()
 assert 'Reset to test defaults' not in s
 assert 'Reset Effects to Defaults…' in s
 start = s.index('    void resetEffectsWithConfirmation() {')

@@ -12,7 +12,8 @@ assert 'configure_dynamic_eq(enabled, count, bands);' in method
 assert 'ir_transition.store(true' not in method
 assert 'sleep_for' not in method
 assert 'wet.ApplyDynamicEq(p)' in s
-ui = (r / 'src/viper-gui.cpp').read_text()
+from gui_source_contract import read_gui_sources
+ui = read_gui_sources(r)
 # About moved from the footer to the compact application menu.
 assert 'menuButton->setObjectName("viperApplicationMenuButton")' in ui
 assert 'menuButton->setMenu(makeApplicationMenu(menuButton));' in ui

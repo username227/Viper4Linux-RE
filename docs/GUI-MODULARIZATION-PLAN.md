@@ -738,9 +738,12 @@ The six existing effect-panel files remain as accepted.
 lossless reconstruction of the original `viper-gui.cpp` by substituting
 the seven original method chunks back for their single include sites.
 `tests/check-window-integration-contract.py` now covers the
-once-only window wiring and important moved methods. The developer
-source-contract helper indexes all seven new files. Full Qt compilation
-and hardware checks remain **pending**.
+once-only window wiring and important moved methods. The developer source-contract helper indexes all seven new files.
+Legacy named-preset, preset reset, preset-save choice, About and tray
+contracts now follow the current module boundaries without removing
+behavioral requirements. The new integration contract is run by
+`check-developer.sh`. Full Qt compilation and hardware checks remain
+**pending**.
 
 **Full regression required:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite, six-tab effect/audio
