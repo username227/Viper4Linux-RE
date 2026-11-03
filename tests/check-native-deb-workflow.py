@@ -28,6 +28,11 @@ assert 'complete-release-candidate' in main_workflow
 assert 'scripts/assemble-release-assets.sh' in main_workflow
 assert 'sha256sum --check ARCH-SHA256SUMS' in main_workflow
 assert 'sha256sum --check SHA256SUMS' in main_workflow
+assemble_script = (root / 'scripts/assemble-release-assets.sh').read_text()
+assert 'sha256sum -- "$archive"' in assemble_script
+assert 'rm -- "$out/SHA256SUMS" "$out/ARCH-SHA256SUMS"' in assemble_script
+assert 'DEB-SHA256SUMS-' not in assemble_script
+assert 'test "$(wc -l < SHA256SUMS)" -eq 4' in assemble_script
 assert 'gh release create' not in main_workflow and 'git push' not in main_workflow
 assert 'dpkg-shlibdeps -O' in build_script
 assert 'dpkg-deb --build --root-owner-group' in build_script
