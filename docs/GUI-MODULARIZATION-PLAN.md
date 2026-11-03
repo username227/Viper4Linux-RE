@@ -809,6 +809,13 @@ approximation, not measured or live audio. Static tests check the
 previous curve/marker scale and the explanatory UI copy. Maintainer
 native build and inspection are still needed before final acceptance.
 
+**Dynamic EQ follow-up (maintainer, 2026-11-03): focused retest
+appears satisfactory.** After restoring the original response-graph
+renderer and adding explanatory popup text, the maintainer reports
+Dynamic EQ still seems functional. This is a positive runtime
+smoke-test observation, not a measurement validating the illustrative
+curve against the actual native DSP transfer function.
+
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
