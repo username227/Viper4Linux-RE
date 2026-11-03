@@ -228,9 +228,9 @@ appeared to function correctly. This is the 4B GUI smoke-test acceptance;
 comprehensive precision and backend regression tests remain for final review.
 No merge to `main` without full refactor approval.
 
-### Checkpoint 4C — Graphic EQ detailed editor construction (BLOCKED: reported regression)
+### Checkpoint 4C — Graphic EQ detailed editor construction (GUI smoke test passed; final integration checks pending)
 
-**Targeted fix proposed (awaiting native compilation and retest):**
+**Targeted fix implemented and maintainer-retested:**
 Reapply the 10/15/25/31-column visibility invariant **after** the detailed
 editor's initial `show()`, as well as when loading a band-count layout.
 Previously `loadEqLayout()` updated visibility before the hidden nonmodal
@@ -256,7 +256,8 @@ then refreshes the overview. The observed divergence does not yet have a
 proven source-code cause. Check for simultaneous GUI instances and verify
 whether the clicked editor belongs to the same live main window, then
 reproduce with a single process before attempting a behavioral fix.
-Do not proceed to Checkpoint 5 until diagnosed and retested.
+This was subsequently addressed by enforcing active-column visibility and
+retested successfully; see the acceptance note below.
 
 
 Extracted the existing retained, nonmodal 31-fader Graphic EQ editor layout
@@ -287,7 +288,7 @@ Dynamic EQ interactions. If the compiler appears stalled, inspect live
 processes and memory while the build is active. This checkpoint has **not
 been natively built or tested by the assistant**; maintain verification gate.
 
-**Follow-up findings and fixes, 2026-11-03 (awaiting test):**
+**Follow-up findings and fixes, 2026-11-03 (maintainer-tested):**
 The maintainer confirmed the original 31-fader visibility problem was much
 improved, but reported (1) the overview's automatic vertical rescaling
 misrepresented relative gains across presets, and (2) switching band counts
@@ -301,6 +302,20 @@ visibility for preset selections. Check 10/15/25/31 modes *with editor open*,
 graph normalization using Flat/Acoustic/Bass Booster, real-time fader→graph
 updates, and preset→fader updates. Check that 0 dB remains centered regardless
 of gain extrema. No native build or visual test has been performed by assistant.
+
+**Maintainer confirmation, 2026-11-03:** Both fixes at commit
+`a3c2e61bb2e4` were verified: fixed, comparable Graphic EQ graph scales
+and immediate band appearance/disappearance while the editor remains open.
+The Graphic EQ faders, overview, and presets appeared synchronized. Dynamic EQ
+was also rechecked and appeared functional. The reported 4C GUI regression
+is resolved as far as the maintainer's visual/interactivity smoke test goes.
+
+**Remaining focused acceptance checks (before marking all of Checkpoint 4
+complete):** save/switch/reload a custom Graphic EQ preset, quit/reopen and
+verify EQ settings persist, and confirm real audio responds to fader
+changes. The full developer regression suite, CLI/backend precision and
+output-reconnect tests remain later integration gates. No need to exercise
+unmodified effects specifically for Checkpoint 4.
 
 ## Checkpoint 5 — Effect panels and layout construction
 
