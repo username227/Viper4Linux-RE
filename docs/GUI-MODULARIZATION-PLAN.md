@@ -151,17 +151,23 @@ once; do not create or delete existing user presets merely for testing.
 
 **Verification update (2026-11-03):** Maintainer reports that all previously tested save/load/rename/delete functions still work after the extraction. Checkpoint 3A accepted. Legacy migration was not separately exercised, and full integration checks remain outstanding.
 
-### Checkpoint 3B — Preset dialog extraction (awaiting verification)
+### Checkpoint 3B — Preset dialog extraction (accepted GUI smoke test)
 
 The dialog, buttons, confirmation prompts, output assignment flow, list refresh
 and reset action are moved to `src/viper-preset-dialog.h`. Main-window
 stateful operations are invoked through synchronous callbacks. UI text,
-identifiers, storage formats and status messages are unchanged. Pending
-native Qt build and functional tests; no merge to `main`.
+identifiers, storage formats and status messages are unchanged.
 
-Rebuild: `cmake --build build --target viper-gui -j4`. Check Save New,
-Save Existing, Load, Rename, Delete, Reset confirmation, and output assignment
-if safe. Verify prior presets and restart persistence.
+**Maintainer verification, 2026-11-03:** The maintainer reports that all
+preset-manager functionality still appears to work following the extraction.
+Checkpoint 3B is accepted at the GUI smoke-test level. This report does not
+independently establish that every branch of the Audio Output assignment,
+legacy migration, reset confirmation, and restart persistence has been
+exercised. Keep those cases in the final integration checklist.
+
+Native build command: `cmake --build build --target viper-gui -j4`.
+No merge to `main` before completion and explicit approval of the full GUI
+refactor.
 
 ## Checkpoint 4 — Graphic EQ and Dynamic EQ UI
 
