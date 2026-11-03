@@ -284,6 +284,44 @@ void load_saved_settings(viperbass::Controls& state) {
         break;
     }
 
+
+    // QSettings groups precision keys in a separate [precision] INI section.
+    // Apply them AFTER the older [General] slider values, independently of
+    // the order of sections on disk. Legacy configuration remains supported.
+    file.clear();
+    file.seekg(0);
+    bool precise = false;
+    while (std::getline(file, line)) {
+        if (!line.empty() && line.back() == '\\r') line.pop_back();
+        if (line.empty() || line[0] == ';' || line[0] == '#') continue;
+        if (line[0] == '[') {
+            precise = line == "[precision]";
+            continue;
+        }
+        if (!precise) continue;
+        const auto pos = line.find('=');
+        if (pos == std::string::npos) continue;
+        const auto key = line.substr(0, pos);
+        const auto value = line.substr(pos + 1);
+        try {
+            const int n = std::stoi(value);
+            if (key == "strength_centi" && n >= 50 && n <= 1000)
+                state.strength_centi.store(n);
+            else if (key == "bass_mono_strength_centi" && n >= 50 && n <= 1000)
+                state.bass_mono_strength_centi.store(n);
+            else if (key == "clarity_gain_milli" && n >= 0 && n <= 4500)
+                state.clarity_gain_milli.store(n);
+            else if (key == "spectrum_frequency_hz" && n >= 2200 && n <= 8200)
+                state.spectrum_frequency_hz.store(n);
+            else if (key == "spectrum_exciter_milli" && n >= 0 && n <= 6000)
+                state.spectrum_exciter_milli.store(n);
+            else if (key == "diff_lp_hz" && n >= 0 && n <= 20000)
+                state.diff_lp_hz.store(n);
+            else if (key == "field_depth" && (n == 0 || (n >= 200 && n <= 950)))
+                state.field_depth.store(n);
+        } catch (const std::exception&) { /* Ignore invalid override; keep the legacy value. */ }
+    }
+
 }
 
 std::mutex control_mutex;
