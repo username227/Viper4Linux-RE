@@ -55,6 +55,32 @@ Extract the self-contained widget classes from `src/viper-gui.cpp` (such as `Saf
 
 Rebuild and test: slider mouse wheel only when focused, switch hit targets/toggling, all icon styles, effect panel collapse/expand and high-DPI/scaled rendering.
 
+### Checkpoint 1 implementation — awaiting local build and acceptance
+
+The following classes were extracted **without changing their existing
+methods, signals, drawing logic or event handlers**:
+
+- `SafeSlider`, `EffectGlyph`, `EffectSwitch` → `src/widgets/effect-widgets.h`
+- `IrsComboBox` → `src/widgets/irs-combo-box.h`
+
+The `EqOverview` and `DynamicEqOverview` classes deliberately remain in
+`viper-gui.cpp` until the dedicated EQ refactoring stage (Checkpoint 4);
+their drawing and state interactions should be extracted together.
+
+These are self-contained inline Qt widget classes, so no new CMake sources or
+Qt meta-object processing are needed; `viper-gui.cpp` now includes the headers.
+The DSP, IPC, native preset format, and build configuration are unchanged.
+
+**Verification status:** mechanical source move checked; **native Qt compilation
+and live GUI regression checks must be performed by the maintainer**.
+Recommended command: `cmake --build build --target viper-gui -j4`.
+
+Quick manual checks: open the GUI, toggle a few effect switches; verify the
+slider scroll wheel still behaves correctly (focused vs. unfocused), all effect
+glyphs render normally, and the IRS drop-down opens/selects without unexpected
+list changes. Do not mark this checkpoint accepted until these checks pass.
+No changes may merge to `main`.
+
 ## Checkpoint 2 — Appearance and theme handling
 
 Isolate light/dark/classic themes, palette and widget styling, icon/theme selection and visual state updates. Keep user configuration keys and theme redraw behavior unchanged.
