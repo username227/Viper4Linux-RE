@@ -3,14 +3,20 @@
 viper4linux-ctl \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP controls
 .SH SYNOPSIS
 .B viper4linux-ctl
-.I COMMAND
+.I COMMAND1
 .RI [ ARGUMENTS ...]
+.I COMMAND2
+.RI [ ARGUMENTS ...]
+.RI ...
 .br
 .B viper4linux-ctl --help
 .br
 .B v4l-cli
-.I COMMAND
+.I COMMAND1
 .RI [ ARGUMENTS ...]
+.I COMMAND2
+.RI [ ARGUMENTS ...]
+.RI ...
 .SH DESCRIPTION
 .B viper4linux-ctl
 operates the active per-user ViPER4Linux-RE DSP control channel.
@@ -513,6 +519,19 @@ Use the 15-band graphic EQ mode.
 .TP
 .B viper4linux-ctl eq-level 2 -1.75
 Apply -1.75 dB to EQ band 2.
+.TP
+.B v4l-cli on bass-on clarity-gain 2.5
+Enable master processing and ViPER Bass, then set Clarity gain to 2.5
+in a single command invocation.
+.TP
+.B viper4linux-ctl eq-on eq-bands 15 eq-level 2 -1.75
+Enable the graphic EQ, select 15 bands, and set band 2 to -1.75 dB.
+The band index is validated against the selected 15-band layout.
+.TP
+.B viper4linux-ctl bass-mode 1 bass-gain 3.5 status --full
+Set Bass mode and gain, then display detailed status to check the
+resulting live configuration.
+
 .SH SEE ALSO
 .BR viper4linux (1),
 .BR pipewire (1)
