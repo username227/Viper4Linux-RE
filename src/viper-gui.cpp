@@ -3803,11 +3803,13 @@ private:
         auto* c = mapping_.get();
         // Preserve native precision when a different GUI control is edited.
         // Only a deliberate move of this slider replaces the DSP's precise value.
-        const auto preciseSlider = [this](QSlider* slider, int liveValue,
-                                          int projectedSlider, int sliderValue,
-                                          const char* setting) {
-            const int result = !replace_precision_on_push_ && slider->value() == projectedSlider
-                ? liveValue : sliderValue;
+        const QObject* editedControl = sender();
+        const auto preciseSlider = [this, editedControl](QSlider* slider, int liveValue,
+                                                         int sliderValue, const char* setting) {
+            // An unrelated edit must not quantize another slider, even before
+            // the next GUI poll has reflected a concurrent CLI/output change.
+            const int result = replace_precision_on_push_ || editedControl == slider
+                ? sliderValue : liveValue;
             settings_.setValue(setting, result);
             return result;
         };
@@ -3815,7 +3817,7 @@ private:
         c->enabled.store(enabled_->isChecked() ? 1 : 0);
         c->bass_mode.store(bass_mode_->currentIndex());
         c->strength_centi.store(preciseSlider(strength_.slider, c->strength_centi.load(),
-            c->strength_centi.load() / 10, strength_.slider->value() * 10,
+            strength_.slider->value() * 10,
             "precision/strength_centi"));
         c->frequency_hz.store(frequency_.slider->value());
         bool eq_changed = false;
@@ -3841,7 +3843,7 @@ private:
         c->bass_mono_enabled.store(mono_enabled_->isChecked() ? 1 : 0);
         c->bass_mono_mode.store(mono_mode_->currentIndex());
         c->bass_mono_strength_centi.store(preciseSlider(mono_strength_.slider,
-            c->bass_mono_strength_centi.load(), c->bass_mono_strength_centi.load() / 10,
+            c->bass_mono_strength_centi.load(),
             mono_strength_.slider->value() * 10, "precision/bass_mono_strength_centi"));
         c->bass_mono_frequency_hz.store(mono_frequency_.slider->value());
         c->psycho_enabled.store(psycho_enabled_->isChecked() ? 1 : 0);
@@ -3860,14 +3862,14 @@ private:
         c->clarity_enabled.store(clarity_enabled_->isChecked() ? 1 : 0);
         c->clarity_mode.store(clarity_mode_->currentIndex());
         c->clarity_gain_milli.store(preciseSlider(clarity_gain_.slider, c->clarity_gain_milli.load(),
-            c->clarity_gain_milli.load() / 100, clarity_gain_.slider->value() * 100,
+            clarity_gain_.slider->value() * 100,
             "precision/clarity_gain_milli"));
         c->spectrum_enabled.store(spectrum_enabled_->isChecked() ? 1 : 0);
         c->spectrum_frequency_hz.store(preciseSlider(spectrum_frequency_.slider,
-            c->spectrum_frequency_hz.load(), c->spectrum_frequency_hz.load() / 100,
+            c->spectrum_frequency_hz.load(),
             spectrum_frequency_.slider->value() * 100, "precision/spectrum_frequency_hz"));
         c->spectrum_exciter_milli.store(preciseSlider(spectrum_exciter_.slider,
-            c->spectrum_exciter_milli.load(), c->spectrum_exciter_milli.load() / 100,
+            c->spectrum_exciter_milli.load(),
             spectrum_exciter_.slider->value() * 100, "precision/spectrum_exciter_milli"));
         bool tube_changed = false;
         const auto setTubeValue = [&tube_changed](std::atomic<std::int32_t>& atom, int value) {
@@ -3980,15 +3982,13 @@ private:
         c->diff_reverse.store(diff_reverse_->isChecked() ? 1 : 0);
         c->diff_mix_percent.store(diff_mix_.slider->value());
         c->diff_lp_hz.store(preciseSlider(diff_lowpass_.slider, c->diff_lp_hz.load(),
-            c->diff_lp_hz.load() / 100, diff_lowpass_.slider->value() * 100,
+            diff_lowpass_.slider->value() * 100,
             "precision/diff_lp_hz"));
         c->field_enabled.store(field_enabled_->isChecked() ? 1 : 0);
         c->field_widen_tenths.store(field_widen_.slider->value());
         c->field_mid_hundredths.store(field_mid_.slider->value());
         const int liveFieldDepth = c->field_depth.load();
-        const int fieldPosition = liveFieldDepth == 0 ? 0
-            : std::clamp(static_cast<int>(std::lround((liveFieldDepth - 150) / 50.0)), 1, 16);
-        c->field_depth.store(preciseSlider(field_depth_.slider, liveFieldDepth, fieldPosition,
+        c->field_depth.store(preciseSlider(field_depth_.slider, liveFieldDepth,
             field_depth_.slider->value() == 0 ? 0 : 150 + 50 * field_depth_.slider->value(),
             "precision/field_depth"));
         c->reverb_enabled.store(reverb_enabled_->isChecked() ? 1 : 0);
