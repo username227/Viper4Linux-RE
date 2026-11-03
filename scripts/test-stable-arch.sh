@@ -12,7 +12,7 @@ archive="$release_dir/viper4linux-re-${version}-unified-source.tar.xz"
 test -f "$pkg" && test -f "$archive"
 
 # Only dependencies come from Arch repos. makepkg reuses the local source archive.
-pacman -Syu --noconfirm --needed base-devel cmake pkgconf qt6-base pipewire ladspa python
+pacman -Syu --noconfirm --needed base-devel cmake pkgconf qt6-base pipewire ladspa python git
 id -u builder >/dev/null 2>&1 || useradd -m builder
 mkdir -p "$release_dir/arch-build"
 cp "$pkg" "$release_dir/arch-build/PKGBUILD"
