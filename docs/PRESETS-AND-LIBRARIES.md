@@ -4,9 +4,15 @@
 
 Open **Presets…** from the main window or ☰ menu. The manager supports:
 
-- **Save Preset…** — enter a name; an existing case-insensitive match requires
-  confirmation before overwrite.
+- **Save Preset…** — choose **New Preset…** (the default) to enter a name, or
+  select an existing named preset from the dropdown. Replacing an existing
+  preset always requires confirmation, including a case-insensitive name match.
 - **Load** — confirm replacement of the currently active effect configuration.
+- **Apply to Audio Output…** — choose a remembered physical output (connected
+  or disconnected) and confirm replacement of its saved effect settings.
+  Assignment to the active output changes the live DSP; assignment to another
+  output leaves the current sound untouched and takes effect when that output
+  becomes active. This requires per-output memory to be enabled.
 - **Rename** — update a name without changing the preset file's UUID filename.
 - **Delete** — confirm removal of that saved file only.
 - **Reset Effects to Defaults…** — confirm restoring the application's built-in
@@ -27,12 +33,17 @@ an older preset do not get a fictitious imported entry.
 
 The Graphic EQ also maintains **separate named EQ curve presets** inside its
 editor. Those are not full-effect snapshots and remain stored in GUI settings.
+The chosen EQ curve identity is retained in new named effect presets and
+per-output snapshots; older presets that predate the EQ-name field may still
+appear as **Custom** until resaved. Changing an output's settings after
+assignment does not modify the original named preset.
 
 ## Data layout
 
 ```text
 ~/.local/share/viper4linux/
 ├── presets/    # named effect snapshots (.ini)
+├── outputs/    # independent physical-output inventory and snapshots (.json)
 ├── IRS/        # convolver impulse responses (.irs, supported .wav)
 └── VDC/        # headphone correction profiles (.vdc)
 ```
