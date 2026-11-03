@@ -6,6 +6,7 @@
 #include "widgets/effect-widgets.h"
 #include "widgets/irs-combo-box.h"
 #include "viper-theme.h"
+#include "viper-named-presets.h"
 #include "viper-build-info.h"
 #include <QApplication>
 #include <QAction>
@@ -1681,96 +1682,23 @@ private:
     // QSettings's existing org/app config store intact for preferences and
     // automatic session state, including older one-slot presets.
     QString presetLibraryDirectory() const {
-        return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-               + "/viper4linux/presets";
+        return viper_presets::presetLibraryDirectory();
     }
-    struct NamedPreset {
-        QString path;
-        QString name;
-    };
+    using NamedPreset = viper_presets::NamedPreset;
     QList<NamedPreset> namedPresets() const {
-        QList<NamedPreset> found;
-        QDir dir(presetLibraryDirectory());
-        for (const QFileInfo& file : dir.entryInfoList({"*.ini"}, QDir::Files | QDir::NoSymLinks)) {
-            QSettings preset(file.absoluteFilePath(), QSettings::IniFormat);
-            if (preset.value("format/version").toInt() != 1) continue;
-            const QString name = preset.value("format/name").toString().trimmed();
-            if (!name.isEmpty()) found.append({file.absoluteFilePath(), name});
-        }
-        std::sort(found.begin(), found.end(), [](const auto& a, const auto& b) {
-            return a.name.compare(b.name, Qt::CaseInsensitive) < 0;
-        });
-        return found;
+        return viper_presets::namedPresets();
     }
     static bool acceptablePresetName(const QString& name) {
-        if (name.isEmpty() || name.size() > 70) return false;
-        for (QChar c : name)
-            if (c == '/' || c == '\\' || c.isNull() || !c.isPrint()) return false;
-        return true;
+        return viper_presets::acceptablePresetName(name);
     }
-    // Writes a complete snapshot with atomic QSettings/INI replacement.
-    // Existing file identifiers are UUIDs, never derived from user input.
     bool writeNamedPreset(const QString& name, const QString& path, QString* error) {
-        if (!QDir().mkpath(presetLibraryDirectory())) {
-            *error = "Could not create the preset library directory.";
-            return false;
-        }
-        QSettings preset(path, QSettings::IniFormat);
-        preset.clear();
-        preset.setValue("format/version", 1);
-        preset.setValue("format/name", name);
-        const auto keys = settings_.allKeys();
-        for (const QString& key : keys) {
-            if (key.startsWith("preset/") && key != "preset/valid")
-                preset.setValue("effects/" + key.mid(7), settings_.value(key));
-        }
-        preset.sync();
-        if (preset.status() != QSettings::NoError) {
-            *error = "Could not write preset file: " + path;
-            return false;
-        }
-        return true;
+        return viper_presets::writeNamedPreset(settings_, name, path, error);
     }
-    // Older versions stored exactly one snapshot in QSettings. Preserve it as
-    // a standalone named preset before using that area as the staging buffer.
     bool migrateLegacyPreset(QString* error) {
-        if (settings_.value("presets/legacy_migrated", false).toBool()) return true;
-        // Mark even a first-run, empty one-slot store as migrated. Otherwise
-        // the next named Save would populate the staging keys and a future
-        // dialog open would incorrectly import that save as a legacy preset.
-        if (settings_.value("preset/valid", false).toBool()) {
-            const QString name = "Previously Saved Preset";
-            const QString path = QDir(presetLibraryDirectory()).filePath(
-                QUuid::createUuid().toString(QUuid::WithoutBraces) + ".ini");
-            if (!writeNamedPreset(name, path, error)) return false;
-        }
-        settings_.setValue("presets/legacy_migrated", true);
-        settings_.sync();
-        if (settings_.status() != QSettings::NoError) {
-            *error = "Could not record completion of the preset migration.";
-            return false;
-        }
-        return true;
+        return viper_presets::migrateLegacyPreset(settings_, error);
     }
     bool stageNamedPreset(const QString& path, QString* error) {
-        QSettings preset(path, QSettings::IniFormat);
-        if (preset.status() != QSettings::NoError ||
-            preset.value("format/version").toInt() != 1 ||
-            !preset.contains("effects/master_enabled") ||
-            !preset.contains("effects/enabled") ||
-            !preset.contains("effects/limiter_output_percent")) {
-            *error = "This file is not a valid ViPER for Linux effect preset.";
-            return false;
-        }
-        const QStringList keys = preset.allKeys();
-        // Do not change the active configuration until the file is validated.
-        settings_.remove("preset");
-        for (const QString& key : keys)
-            if (key.startsWith("effects/"))
-                settings_.setValue("preset/" + key.mid(8), preset.value(key));
-        settings_.setValue("preset/valid", true);
-        settings_.sync();
-        return true;
+        return viper_presets::stageNamedPreset(settings_, path, error);
     }
     void snapshotToPresetStaging() {
             settings_.setValue("preset/valid", true);
