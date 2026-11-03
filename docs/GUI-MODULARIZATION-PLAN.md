@@ -765,6 +765,13 @@ per-control coverage. Full Dynamic EQ, window/tray lifecycle, named
 preset save/load/reset, per-output memory A→B→A→B and valid DDC
 profile processing are not yet accepted as a result of this sample.
 
+**GUI lifecycle runtime tests (maintainer, 2026-11-03): PASS reported.**
+Five manual operations worked as expected: theme switching, window
+resizing, minimizing to system tray, restoring from tray and closing/
+reopening the GUI. These are live desktop observations, distinct from
+the automated source-contract suite. Startup preference variations
+were not separately reported by this result.
+
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
