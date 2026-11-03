@@ -86,7 +86,7 @@ launcher symlink, use `type -a viper4linux` to ensure it does not shadow
 
 | Package | Source | Versioning |
 |---|---|---|
-| `viper4linux-re` | Published versioned source tarball | Fixed release number (`1.0.0-1`, etc.) |
+| `viper4linux-re` | Published versioned source tarball | Fixed release number (`1.1.0-1`, etc.) |
 | `viper4linux-re-git` | Published Git remote | Commit-derived VCS `pkgver()` |
 
 The stable package should not need a Git checkout to build; its sources,
@@ -143,7 +143,7 @@ without GitHub Actions:
 
 ```bash
 mkdir -p release-candidate
-bash scripts/prepare-stable-release.sh 1.0.0 "$PWD/release-candidate"
+bash scripts/prepare-stable-release.sh 1.1.0 "$PWD/release-candidate"
 ```
 
 The resulting source archive contains the pinned, unpatched upstream DSP; the
