@@ -240,17 +240,6 @@ Built-in curves are identical to the GUI's original curves at each band
 count. User presets are loaded from the GUI's EQ preset library; presets for
 a different band count are log-frequency interpolated as in the GUI.
 .TP
-.B eq-presets
-List available built-in and user EQ presets. Works even if the DSP backend
-is stopped. No arguments.
-.TP
-.BI "eq-preset " NAME
-Apply a built-in or user EQ preset to the live EQ and save its selection.
-Names containing spaces must be quoted. A unique bare name is accepted;
-use builtin:NAME or user:NAME to resolve ambiguous names. Custom restores
-the saved custom curve for the current band layout. This does not enable
-the EQ automatically. No presets are overwritten.
-.TP
 .BR eq-on " and " eq-off
 Enable or disable the graphic equalizer. No arguments.
 .TP
@@ -265,6 +254,17 @@ the current number of bands, inclusive. DB accepts decimals from -12 through
 Changing a band marks the EQ preset as Custom; built-in preset curves remain
 unchanged. Example:
 .B viper4linux-ctl eq-level 3 -1.75
+.TP
+.B eq-presets
+List available built-in and user EQ presets. Works even if the DSP backend
+is stopped. No arguments.
+.TP
+.BI "eq-preset " NAME
+Apply a built-in or user EQ preset to the live EQ and save its selection.
+Names containing spaces must be quoted. A unique bare name is accepted;
+use builtin:NAME or user:NAME to resolve ambiguous names. Custom restores
+the saved custom curve for the current band layout. This does not enable
+the EQ automatically. No presets are overwritten.
 .SS "B. Dynamic EQ"
 .TP
 .BR deq-on " and " deq-off
