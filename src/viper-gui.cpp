@@ -352,6 +352,9 @@ public:
         auto* eq_reset = graphicEditor.reset;
         eq_overview_->openEditor = [this] {
             eq_editor_->show();
+            // The QScrollArea may show its children on the first dialog show.
+            // Enforce the active band layout after that transition, too.
+            syncGraphicEqEditorColumns();
             eq_editor_->raise();
             eq_editor_->activateWindow();
         };
@@ -2515,9 +2518,18 @@ private:
             }
             eq_columns_[i]->setVisible(i < n);
         }
+        syncGraphicEqEditorColumns();
+        updateEqOverview();
+    }
+    // A hidden nonmodal QDialog contains a QScrollArea that can reveal its
+    // children on first show. Inactive faders are retained for mode switching
+    // but must never be accessible or mistaken for the active EQ curve.
+    void syncGraphicEqEditorColumns() {
+        const int n = validEqBands(eq_active_bands_);
+        for (int i = 0; i < 31; ++i)
+            eq_columns_[i]->setHidden(i >= n);
         eq_fader_container_->setFixedWidth(n * 39 + 6);
         eq_fader_container_->updateGeometry();
-        updateEqOverview();
     }
     void persistCurrentSettings() {
         settings_.setValue("master_enabled", global_->isChecked());

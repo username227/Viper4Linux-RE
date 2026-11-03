@@ -230,6 +230,17 @@ No merge to `main` without full refactor approval.
 
 ### Checkpoint 4C — Graphic EQ detailed editor construction (BLOCKED: reported regression)
 
+**Targeted fix proposed (awaiting native compilation and retest):**
+Reapply the 10/15/25/31-column visibility invariant **after** the detailed
+editor's initial `show()`, as well as when loading a band-count layout.
+Previously `loadEqLayout()` updated visibility before the hidden nonmodal
+dialog was shown; the screenshot shows 31 displayed faders while the mode is
+10, with obsolete levels in inactive faders. Only active band faders feed
+the main overview, so moving an out-of-range fader creates apparent
+graph/editor disagreement. This is the most direct explanation for the
+reported symptoms, but is not validated until retested. No DSP or preset
+logic was changed.
+
 **Regression reported 2026-11-03 (not accepted):** During the clean-build test,
 manual Graphic EQ fader changes did not update the overview curve in the main
 window. Selecting another preset updated the overview, but the previously
