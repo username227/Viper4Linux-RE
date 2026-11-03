@@ -90,7 +90,7 @@ Isolate light/dark/classic themes, palette and widget styling, icon/theme select
 
 Rebuild and test: selected themes, system theme changes, tray/icon rendering, resize and restart persistence.
 
-### Checkpoint 2 implementation — awaiting native rebuild and visual acceptance
+### Checkpoint 2 implementation — core GUI smoke test accepted; dark mode unverified
 
 - Extracted the complete existing palette and QSS rendering code from
   `ViperWindow::applyTheme()` into `src/viper-theme.h`,
@@ -101,11 +101,20 @@ Rebuild and test: selected themes, system theme changes, tray/icon rendering, re
   is self-contained and CMake does not need new source targets. The extraction
   passes existing dialog/widget pointers explicitly instead of depending on
   private main-window fields. No audio-backend modifications.
-- **Still unverified:** successful native Qt rebuild and theme behavior.
-  Use `cmake --build build --target viper-gui -j4`, then check Modern/Classic
-  switching, light/dark under Cinnamon, EQ dialog palettes, combo arrows,
-  effect glyphs/switches, slider styles, and restart persistence.
-  Do **not** mark this checkpoint accepted before user confirmation.
+- **Maintainer GUI smoke test, 2026-11-03:** The user reports the
+  rebuilt GUI works after the extraction. Theme/style and interface controls
+  work in normal usage. This accepts the core appearance extraction smoke test,
+  but is not evidence of dark-mode validation or the full regression suite.
+- **Outstanding dark-mode check:** The user could not find a desktop theme
+  that caused ViPER4Linux to enter dark mode. The Modern teal/Classic Viper
+  selector changes style, **not** light/dark preference. Existing Cinnamon
+  logic queries `org.cinnamon.desktop.interface gtk-theme` with `gsettings`
+  and marks it dark only when its returned value includes "dark". Verify with
+  an actual dark GTK theme and investigate if the detection fails; do not
+  change detection heuristics as part of this mechanical extraction.
+- Other visual edge cases (theme change while open, EQ dialog palette,
+  startup persistence) can be spot-checked later if not already covered.
+  Full validation remains the final integration gate. No merge to `main`.
 
 ### Separate future issue — multiple simultaneous GUI instances
 
