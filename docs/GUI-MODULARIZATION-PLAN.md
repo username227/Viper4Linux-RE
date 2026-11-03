@@ -713,7 +713,7 @@ After verification proceed to Checkpoint 7 integration/cleanup,
 complete native developer/packaging and real-audio acceptance, and
 explicit maintainer approval before merging to `main`.
 
-## Checkpoint 7 — Main-window integration and cleanup (extracted; native regression pending)
+## Checkpoint 7 — Main-window integration and cleanup (automated regression passed; live acceptance pending)
 
 A second mechanical extraction moved seven **cohesive, ViperWindow-owned**
 method regions into `src/window/`:
@@ -748,8 +748,16 @@ behavioral requirements. The new integration contract is run by
 `check-developer.sh`. Full Qt compilation and hardware checks remain
 **pending**.
 
-**Full regression required:** Rebuild and run the entire
-`bash tests/check-developer.sh` suite, six-tab effect/audio
+**Automated suite (maintainer, 2026-11-03): PASS reported.** The
+maintainer successfully worked through the stale source-contract
+assertions caused by the module extraction and reported success after
+rerunning `tests/check-developer.sh`. The assistant independently
+reviewed the revised assertions against branch source but has not run
+the native Arch suite itself. Source-contract repairs were test-only
+and did not change DSP, GUI runtime or IPC code.
+
+**Live acceptance outstanding:** Rebuild and run the entire
+`bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
 tray/minimize/restore/startup preferences, Graphic/Dynamic EQ editors,
 DDC and Convolver import/popup behavior, GUI↔CLI precision,
