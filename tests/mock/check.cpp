@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
         assert(p->field_depth.load() == 537);
         d->cleanup(h);
         dlclose(lib);
-        std::printf("PASS: exact CLI values survive DSP initialization without the GUI\\n");
+        std::printf("PASS: exact CLI values survive DSP initialization without the GUI\n");
         return 0;
     }
     assert(p->strength_centi.load() == 500);
