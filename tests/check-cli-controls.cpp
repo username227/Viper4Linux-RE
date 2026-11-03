@@ -200,6 +200,8 @@ int main() {
     assert(help.str().find("  status ", global) < effectList);
     assert(help.str().find("  agc-max ", effectList) > effectList);
     assert(help.str().find("  toggle ") == std::string::npos);
+    assert(help.str().find("COMMAND1 [ARGUMENTS...] [COMMAND2 [ARGUMENTS...]] ...") != std::string::npos);
+    assert(help.str().find("  bass-toggle ") != std::string::npos);
     assert(help.str().find("bass-on") != std::string::npos);
     assert(help.str().find("bass-off") != std::string::npos);
     assert(help.str().find("bass-on/off") == std::string::npos);
