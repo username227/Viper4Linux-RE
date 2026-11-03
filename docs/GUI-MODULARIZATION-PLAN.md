@@ -90,7 +90,7 @@ Isolate light/dark/classic themes, palette and widget styling, icon/theme select
 
 Rebuild and test: selected themes, system theme changes, tray/icon rendering, resize and restart persistence.
 
-### Checkpoint 2 implementation — core GUI smoke test accepted; dark mode unverified
+### Checkpoint 2 implementation — accepted after native GUI testing
 
 - Extracted the complete existing palette and QSS rendering code from
   `ViperWindow::applyTheme()` into `src/viper-theme.h`,
@@ -101,20 +101,16 @@ Rebuild and test: selected themes, system theme changes, tray/icon rendering, re
   is self-contained and CMake does not need new source targets. The extraction
   passes existing dialog/widget pointers explicitly instead of depending on
   private main-window fields. No audio-backend modifications.
-- **Maintainer GUI smoke test, 2026-11-03:** The user reports the
-  rebuilt GUI works after the extraction. Theme/style and interface controls
-  work in normal usage. This accepts the core appearance extraction smoke test,
-  but is not evidence of dark-mode validation or the full regression suite.
-- **Outstanding dark-mode check:** The user could not find a desktop theme
-  that caused ViPER4Linux to enter dark mode. The Modern teal/Classic Viper
-  selector changes style, **not** light/dark preference. Existing Cinnamon
-  logic queries `org.cinnamon.desktop.interface gtk-theme` with `gsettings`
-  and marks it dark only when its returned value includes "dark". Verify with
-  an actual dark GTK theme and investigate if the detection fails; do not
-  change detection heuristics as part of this mechanical extraction.
-- Other visual edge cases (theme change while open, EQ dialog palette,
-  startup persistence) can be spot-checked later if not already covered.
-  Full validation remains the final integration gate. No merge to `main`.
+- **Maintainer acceptance, 2026-11-03:** The user confirmed that the rebuilt GUI
+  works, including visual controls and theme switching. The initially missing
+  dark-mode result was due to selecting the wrong control in Cinnamon's theme
+  settings; after choosing the appropriate setting, ViPER4Linux switched to
+  dark mode and retained correct theme colors. **Checkpoint 2 appearance
+  extraction is accepted.**
+- Remaining edge cases (EQ editor palettes, changes during an open session,
+  and restart persistence where not explicitly checked) stay on the final
+  integration checklist. Acceptance of this checkpoint is not a claim that
+  the full regression suite has been run. No merge to `main`.
 
 ### Separate future issue — multiple simultaneous GUI instances
 
