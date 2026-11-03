@@ -82,6 +82,9 @@ assert 'void showHelp()' in source
 assert 'QTextBrowser' in source
 assert 'stack->addWidget(descriptionLabel)' not in source
 assert 'Restart backend to apply it' not in source
+assert 'The neutral test profile verifies loading' not in source
+assert 'correction profile designed for your specific headphone model' in source
+assert 'this project is a proof of concept' not in source
 assert 'std::thread' in backend
 assert 'std::try_to_lock' in backend
 assert 'ir_worker_loop()' in backend
