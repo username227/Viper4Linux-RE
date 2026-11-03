@@ -209,7 +209,7 @@ revision refresh after the refactor, independently from GUI code movement.
 The detailed editor layout and state integration remain for Checkpoint 4B.
 No merge to `main` before the full refactor is accepted.
 
-### Checkpoint 4B — Dynamic EQ detailed editor construction (awaiting test)
+### Checkpoint 4B — Dynamic EQ detailed editor construction (accepted GUI smoke test)
 
 Moved the existing Dynamic EQ editor widget and layout construction into
 `src/widgets/dynamic-eq-editor.h`, returning its widget pointers to the main
@@ -222,8 +222,41 @@ Test with `cmake --build build --target viper-gui -j4`: open Dynamic EQ,
 change active band count, click graph markers and table rows, edit Q, gain,
 threshold and frequency, exercise Spread frequencies, close/reopen the dialog,
 and resize it. Preserve the numerical values to their existing precision.
-The Graphic EQ detailed editor remains for the next substep. No merge to
-`main` without full refactor approval.
+**Maintainer verification, 2026-11-03:** GUI reported the exact 4B commit
+`1.1.0-cdcccdbf4646`, and the maintainer reported the editor and overall GUI
+appeared to function correctly. This is the 4B GUI smoke-test acceptance;
+comprehensive precision and backend regression tests remain for final review.
+No merge to `main` without full refactor approval.
+
+### Checkpoint 4C — Graphic EQ detailed editor construction (awaiting clean build and test)
+
+Extracted the existing retained, nonmodal 31-fader Graphic EQ editor layout
+and its child controls into `src/widgets/graphic-eq-editor.h`. The factory
+returns the same Qt widget pointers to the main window. Its dimensions,
+scroll behavior, object names, fader minimum/maximum/step values (hundredths
+of a dB), 31-column layout, Flat and Close controls remain unchanged.
+Signal connections for fader value edits, precision persistence, EQ preset
+selection, backend sync, and the Flat action remain in the main window.
+
+**Clean build, explicitly requested by maintainer after apparent incremental
+build stalls:**
+
+```bash
+git pull --ff-only
+cmake -S . -B build-clean -DCMAKE_BUILD_TYPE=Release
+cmake --build build-clean --parallel 4
+```
+
+This uses a fresh out-of-tree build directory without deleting the existing
+`build/`. Execute `./build-clean/viper-gui` to test the newly compiled
+GUI and verify About shows the current HEAD revision. Run the actual project
+verification scripts (`./scripts/verify.sh` may target `build/`, so verify
+their behavior or run against the clean build explicitly). In the Graphic EQ,
+test 10/15/25/31 bands, fader edits and precision labels, Flat action, preset
+selection/save/delete, horizontal scrolling, resize, and Close/reopen. Recheck
+Dynamic EQ interactions. If the compiler appears stalled, inspect live
+processes and memory while the build is active. This checkpoint has **not
+been natively built or tested by the assistant**; maintain verification gate.
 
 ## Checkpoint 5 — Effect panels and layout construction
 

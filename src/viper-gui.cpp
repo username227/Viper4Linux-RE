@@ -5,6 +5,7 @@
 #include "viper-eq-presets.h"
 #include "widgets/eq-overviews.h"
 #include "widgets/dynamic-eq-editor.h"
+#include "widgets/graphic-eq-editor.h"
 #include "widgets/effect-widgets.h"
 #include "widgets/irs-combo-box.h"
 #include "viper-theme.h"
@@ -340,68 +341,15 @@ public:
         connect(deq_table_, &QTableWidget::itemChanged, this,
                 [this](QTableWidgetItem* item) { commitDeqTableItem(item); });
 
-        // The only 31-fader bank lives in a retained, nonmodal editor dialog.
-        // Closing the dialog HIDES it; switching modes never destroys faders.
-        eq_editor_ = new QDialog(this);
-        eq_editor_->setWindowTitle("ViPER Graphic EQ — Detailed Editor");
-        eq_editor_->setObjectName("viperEqEditor");
-        eq_editor_->resize(720, 355);
-        eq_editor_->setMinimumSize(340, 320);
-        auto* editorLayout = new QVBoxLayout(eq_editor_);
-        editorLayout->addWidget(new QLabel("Drag individual faders to adjust the current EQ curve.", eq_editor_));
-        auto* eq_scroll = new QScrollArea(eq_editor_);
-        eq_scroll->setObjectName("viperEqScroller");
-        eq_scroll->setWidgetResizable(false);
-        eq_scroll->setFrameShape(QFrame::NoFrame);
-        eq_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-        eq_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        eq_scroll->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        eq_fader_container_ = new QWidget(eq_scroll);
-        eq_fader_container_->setObjectName("viperEqFaders");
-        auto* eq_fader_row = new QHBoxLayout(eq_fader_container_);
-        eq_fader_row->setSpacing(3);
-        eq_fader_row->setContentsMargins(3, 0, 3, 3);
-        for (int i = 0; i < 31; ++i) {
-            auto* column = new QWidget(eq_fader_container_);
-            column->setFixedWidth(36);
-            auto* stack = new QVBoxLayout(column);
-            stack->setSpacing(2);
-            stack->setContentsMargins(0, 0, 0, 0);
-            auto* value = new QLabel("0", column);
-            value->setObjectName("viperEqValue");
-            value->setAlignment(Qt::AlignCenter);
-            value->setProperty("viperSliderValue", true);
-            auto* fader = new SafeSlider(Qt::Vertical, column);
-            fader->setObjectName("viperEqFader");
-            fader->setRange(-1200, 1200);  // hundredths of a decibel
-            fader->setSingleStep(5);
-            fader->setPageStep(25);
-            fader->setTickPosition(QSlider::NoTicks);
-            fader->setMinimumHeight(150);
-            fader->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
-            auto* frequency = new QLabel("", column);
-            frequency->setAlignment(Qt::AlignCenter);
-            stack->addWidget(value);
-            stack->addWidget(fader, 1, Qt::AlignHCenter);
-            stack->addWidget(frequency);
-            eq_columns_[i] = column;
-            eq_faders_[i] = fader;
-            eq_values_[i] = value;
-            eq_frequencies_[i] = frequency;
-            eq_fader_row->addWidget(column);
-        }
-        eq_fader_container_->setFixedSize(31 * 39 + 6, 235);
-        eq_scroll->setWidget(eq_fader_container_);
-        editorLayout->addWidget(eq_scroll, 1);
-        auto* editorActions = new QHBoxLayout();
-        auto* eq_reset = new QPushButton("Flat", eq_editor_);
-        eq_reset->setToolTip("Set all visible bands in the current layout to 0 dB.");
-        editorActions->addWidget(eq_reset);
-        editorActions->addStretch();
-        auto* eq_close = new QPushButton("Close", eq_editor_);
-        editorActions->addWidget(eq_close);
-        editorLayout->addLayout(editorActions);
-        connect(eq_close, &QPushButton::clicked, eq_editor_, &QDialog::hide);
+        // Retained nonmodal editor; state and callbacks remain with the window.
+        const auto graphicEditor = viper_eq_ui::createGraphicEqEditor(this);
+        eq_editor_ = graphicEditor.dialog;
+        eq_fader_container_ = graphicEditor.faderContainer;
+        eq_columns_ = graphicEditor.columns;
+        eq_faders_ = graphicEditor.faders;
+        eq_values_ = graphicEditor.values;
+        eq_frequencies_ = graphicEditor.frequencies;
+        auto* eq_reset = graphicEditor.reset;
         eq_overview_->openEditor = [this] {
             eq_editor_->show();
             eq_editor_->raise();
