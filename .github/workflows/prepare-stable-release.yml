@@ -14,6 +14,7 @@ permissions:
 
 jobs:
   prepare:
+    name: Arch Linux — Build and developer tests
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -41,7 +42,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/workspace:rw" \
             -w /workspace \
-            archlinux:latest \
+            archlinux/archlinux:latest \
             bash scripts/test-stable-arch.sh "$VERSION" /workspace/dist
 
       - name: Validate packaged artifacts
