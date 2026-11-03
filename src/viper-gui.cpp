@@ -2329,26 +2329,50 @@ private:
         QObject::connect(list, &QListWidget::itemSelectionChanged, &dialog, updateSelection);
         refresh(); updateSelection();
         QObject::connect(save, &QPushButton::clicked, &dialog, [&, this] {
+            // An existing preset can be selected without retyping its name.
+            // The first entry creates a new preset and is always selected by default.
+            const auto existing = namedPresets();
+            QStringList choices = {"New Preset…"};
+            for (const auto& preset : existing) choices << preset.name;
             bool accepted = false;
-            const QString name = QInputDialog::getText(&dialog, "Save Effect Preset",
-                "Preset name:", QLineEdit::Normal, "", &accepted).trimmed();
+            const QString choice = QInputDialog::getItem(&dialog, "Save Effect Preset",
+                "Save current effect settings as:", choices, 0, false, &accepted);
             if (!accepted) return;
-            if (!acceptablePresetName(name)) {
-                QMessageBox::warning(&dialog, "Invalid Name",
-                    "Enter 1–70 characters without slashes or control characters.");
-                return;
-            }
+            QString name;
             QString path;
-            for (const auto& preset : namedPresets()) {
-                if (preset.name.compare(name, Qt::CaseInsensitive) == 0) {
-                    path = preset.path;
-                    if (QMessageBox::question(&dialog, "Replace Preset",
-                        "Replace the saved preset '" + preset.name + "' with the current settings?",
-                        QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)
-                        != QMessageBox::Yes) return;
-                    break;
+            if (choice == choices.first()) {
+                name = QInputDialog::getText(&dialog, "New Effect Preset",
+                    "Preset name:", QLineEdit::Normal, "", &accepted).trimmed();
+                if (!accepted) return;
+                if (!acceptablePresetName(name)) {
+                    QMessageBox::warning(&dialog, "Invalid Name",
+                        "Enter 1–70 characters without slashes or control characters.");
+                    return;
                 }
+                // A name entered under New Preset may still match an existing
+                // preset; never silently overwrite it.
+                for (const auto& preset : existing) {
+                    if (preset.name.compare(name, Qt::CaseInsensitive) == 0) {
+                        name = preset.name;
+                        path = preset.path;
+                        break;
+                    }
+                }
+            } else {
+                for (const auto& preset : existing) {
+                    if (preset.name == choice) {
+                        name = preset.name;
+                        path = preset.path;
+                        break;
+                    }
+                }
+                if (path.isEmpty()) return;
             }
+            if (!path.isEmpty() &&
+                QMessageBox::question(&dialog, "Replace Preset",
+                    "Replace the saved preset '" + name + "' with the current settings?",
+                    QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)
+                != QMessageBox::Yes) return;
             if (path.isEmpty()) path = QDir(presetLibraryDirectory()).filePath(
                 QUuid::createUuid().toString(QUuid::WithoutBraces) + ".ini");
             snapshotToPresetStaging();
