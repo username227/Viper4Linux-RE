@@ -6,7 +6,7 @@
 #include "widgets/eq-overviews.h"
 #include "widgets/dynamic-eq-editor.h"
 #include "widgets/graphic-eq-editor.h"
-#include "panels/crossfeed-panel.h"
+#include "panels/spatial-panels.h"
 #include "widgets/effect-widgets.h"
 #include "widgets/irs-combo-box.h"
 #include "viper-theme.h"
@@ -730,78 +730,41 @@ public:
         spectrum_exciter_.slider->setToolTip("Added harmonic enhancement, 0.0–6.0.");
         addEffectPanel(effectLayout, spectrum_group, "spectrum", spectrum_enabled_);
 
-        const auto crossfeedPanel = viper_panels::createCrossfeedPanel(tabs_);
-        crossfeed_enabled_ = crossfeedPanel.enabled;
-        crossfeed_mode_ = crossfeedPanel.mode;
-        addEffectPanel(spatialLayout, crossfeedPanel.group, "crossfeed", crossfeed_enabled_);
-
-        auto* headphone_group = new QGroupBox("Headphone Surround+", tabs_);
-        auto* headphone_form = new QFormLayout(headphone_group);
-        headphone_enabled_ = new EffectSwitch(headphone_group);
-        headphone_form->addRow("Surround processing", headphone_enabled_);
-        headphone_quality_ = new QComboBox(headphone_group);
-        headphone_quality_->addItems({"Level 1", "Level 2", "Level 3", "Level 4", "Level 5"});
-        headphone_quality_->setToolTip("Five distinct upstream VHE surround profiles; higher levels are not necessarily better. Supported at 44.1 and 48 kHz.");
-        headphone_form->addRow("Surround level", headphone_quality_);
-        addEffectPanel(spatialLayout, headphone_group, "headphone", headphone_enabled_);
-
-        auto* diff_group = new QGroupBox("Differential Surround", tabs_);
-        auto* diff_form = new QFormLayout(diff_group);
-        diff_enabled_ = new EffectSwitch(diff_group);
-        diff_form->addRow("Surround processing", diff_enabled_);
-        diff_delay_ = addSlider(diff_form, "Channel delay", 1, 20);
-        diff_delay_.slider->setToolTip("Delay one stereo channel by 1–20 milliseconds.");
-        diff_reverse_ = new QCheckBox("Delay left instead of right", diff_group);
-        diff_form->addRow("Reverse channel", diff_reverse_);
-        diff_mix_ = addSlider(diff_form, "Delayed channel mix", 0, 100);
-        diff_mix_.slider->setToolTip("0% fully copies the direct channel; 100% uses only delayed channel.");
-        diff_lowpass_ = addSlider(diff_form, "Delayed-channel low-pass", 0, 200);
-        diff_lowpass_.slider->setToolTip("0 means off; other values are in 100 Hz steps, up to 20,000 Hz.");
-        addEffectPanel(spatialLayout, diff_group, "differential", diff_enabled_);
-
-        auto* field_group = new QGroupBox("Field Surround", tabs_);
-        auto* field_form = new QFormLayout(field_group);
-        field_enabled_ = new EffectSwitch(field_group);
-        field_form->addRow("Spatial processing", field_enabled_);
-        field_widen_ = addSlider(field_form, "Stereo widening", 0, 80);
-        field_widen_.slider->setToolTip("Upstream widening parameter, 0.0–8.0 in 0.1 steps. Start low.");
-        field_mid_ = addSlider(field_form, "Mid image", 100, 200);
-        field_mid_.slider->setToolTip("Upstream mid-image parameter, 1.00–2.00 in 0.01 steps.");
-        field_depth_ = addSlider(field_form, "Depth", 0, 16);
-        field_depth_.slider->setToolTip("0 disables depth; 1–16 select upstream 200–950 in steps of 50.");
-        addEffectPanel(spatialLayout, field_group, "field", field_enabled_);
-
-        auto* reverb_group = new QGroupBox("Reverberation", tabs_);
-        auto* reverb_form = new QFormLayout(reverb_group);
-        reverb_enabled_ = new EffectSwitch(reverb_group);
-        reverb_form->addRow("Room effect", reverb_enabled_);
-        reverb_room_ = addSlider(reverb_form, "Room size", 0, 100);
-        reverb_room_.slider->setToolTip("ViPERDSP room size, 0–100% (internally 0.0–1.0).");
-        reverb_width_ = addSlider(reverb_form, "Stereo width", 0, 100);
-        reverb_width_.slider->setToolTip("Width of the simulated reverberant field.");
-        reverb_damp_ = addSlider(reverb_form, "Damping", 0, 100);
-        reverb_damp_.slider->setToolTip("Higher damping reduces high-frequency reverberation.");
-        reverb_wet_ = addSlider(reverb_form, "Reverb wet level", 0, 100);
-        reverb_wet_.slider->setToolTip("Reverberant signal level. Start at 20% and adjust gently.");
-        reverb_dry_ = addSlider(reverb_form, "Reverb dry level", 0, 100);
-        reverb_dry_.slider->setToolTip("Original direct signal level in the reverberation model. Use 50% for unity dry gain (upstream scales dry by 2).");
-        addEffectPanel(spatialLayout, reverb_group, "reverb", reverb_enabled_);
-        // Native ViPERDSP Stereo Imager: independent low, mid and high width.
-        // Set 100% for neutral width and keep the entire effect off by default.
-        auto* imager_group = new QGroupBox("Stereo Imager", tabs_);
-        auto* imager_form = new QFormLayout(imager_group);
-        imager_enabled_ = new EffectSwitch(imager_group);
-        imager_form->addRow("Three-band stereo imaging", imager_enabled_);
-        imager_low_ = addSlider(imager_form, "Low-band width", 0, 200);
-        imager_mid_ = addSlider(imager_form, "Mid-band width", 0, 200);
-        imager_high_ = addSlider(imager_form, "High-band width", 0, 200);
-        for (const auto& r : {imager_low_, imager_mid_, imager_high_})
-            r.slider->setToolTip("100% = normal width; below narrows, above widens, up to 200%.");
-        imager_low_xover_ = addSlider(imager_form, "Low crossover", 80, 400);
-        imager_high_xover_ = addSlider(imager_form, "High crossover", 20, 80); // 100 Hz steps
-        imager_low_xover_.slider->setToolTip("Low/mid crossover: 80 to 400 Hz.");
-        imager_high_xover_.slider->setToolTip("Mid/high crossover: 2,000 to 8,000 Hz.");
-        addEffectPanel(spatialLayout, imager_group, "imager", imager_enabled_);
+        const auto spatialPanels = viper_panels::createSpatialPanels(tabs_,
+            [this](QFormLayout* form, const char* label, int min, int max) {
+                return addSlider(form, label, min, max);
+            });
+        crossfeed_enabled_ = spatialPanels.crossfeed_enabled;
+        crossfeed_mode_ = spatialPanels.crossfeed_mode;
+        headphone_enabled_ = spatialPanels.headphone_enabled;
+        headphone_quality_ = spatialPanels.headphone_quality;
+        diff_enabled_ = spatialPanels.diff_enabled;
+        diff_delay_ = spatialPanels.diff_delay;
+        diff_reverse_ = spatialPanels.diff_reverse;
+        diff_mix_ = spatialPanels.diff_mix;
+        diff_lowpass_ = spatialPanels.diff_lowpass;
+        field_enabled_ = spatialPanels.field_enabled;
+        field_widen_ = spatialPanels.field_widen;
+        field_mid_ = spatialPanels.field_mid;
+        field_depth_ = spatialPanels.field_depth;
+        reverb_enabled_ = spatialPanels.reverb_enabled;
+        reverb_room_ = spatialPanels.reverb_room;
+        reverb_width_ = spatialPanels.reverb_width;
+        reverb_damp_ = spatialPanels.reverb_damp;
+        reverb_wet_ = spatialPanels.reverb_wet;
+        reverb_dry_ = spatialPanels.reverb_dry;
+        imager_enabled_ = spatialPanels.imager_enabled;
+        imager_low_ = spatialPanels.imager_low;
+        imager_mid_ = spatialPanels.imager_mid;
+        imager_high_ = spatialPanels.imager_high;
+        imager_low_xover_ = spatialPanels.imager_low_xover;
+        imager_high_xover_ = spatialPanels.imager_high_xover;
+        addEffectPanel(spatialLayout, spatialPanels.crossfeedGroup, "crossfeed", crossfeed_enabled_);
+        addEffectPanel(spatialLayout, spatialPanels.headphoneGroup, "headphone", headphone_enabled_);
+        addEffectPanel(spatialLayout, spatialPanels.diffGroup, "differential", diff_enabled_);
+        addEffectPanel(spatialLayout, spatialPanels.fieldGroup, "field", field_enabled_);
+        addEffectPanel(spatialLayout, spatialPanels.reverbGroup, "reverb", reverb_enabled_);
+        addEffectPanel(spatialLayout, spatialPanels.imagerGroup, "imager", imager_enabled_);
 
         // Tube Simulator is the native ViPERDSP TubeSimulator: no third-party DSP.
         auto* tube_group = new QGroupBox("Tube Simulator", tabs_);

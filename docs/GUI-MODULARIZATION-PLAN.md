@@ -358,6 +358,34 @@ The follow-on Checkpoint 5B can group the remaining Spatial components
 Stereo Imager) for one tab-wide verification gate; preserve panel ordering,
 switch/collapse separation, slider controls, and backend mappings.
 
+### Checkpoint 5B — Spatial tab consolidation (awaiting maintainer test)
+
+Consolidated Crossfeed, Headphone Surround+, Differential Surround, Field
+Surround, Reverberation and Stereo Imager construction into the single
+`src/panels/spatial-panels.h` file. The Crossfeed-only 5A file has been
+removed. A typed factory returns the original switch, mode and slider
+pointers to `ViperWindow` and delegates slider construction to the
+existing `addSlider()` helper. All six card wrappers, expansion settings,
+saved controls, signal connections, tooltips, ranges, and DSP publishing
+remain unchanged. The main window retains responsibility for signal hookups.
+The six-panel card ordering has been preserved.
+
+**Clean-build verification:** use a *new* `build-stage5b/` directory
+with `cmake -S . -B build-stage5b -DCMAKE_BUILD_TYPE=Release` and
+`cmake --build build-stage5b --parallel 4 --verbose`, capturing the log.
+Test all six Spatial cards, independent on/off vs expand/collapse,
+mode selections, sliders, previous values, saved settings, and audible
+processing. This is the first complete-tab checkpoint; other five
+tab files have not yet been extracted. Do not proceed until the maintainer
+reports a successful build and functional checks. No native Qt compilation
+has been run by the assistant.
+
+**Target organization:** exactly six files under `src/panels/`:
+`output-panels.h`, `bass-panels.h`, `eq-tone-panels.h`,
+`spatial-panels.h`, `dynamics-panels.h`, and
+`correction-panels.h`. Do not create empty files for unfinished tabs.
+Keep the ability to split an unusually complex tab later.
+
 ## Checkpoint 6 — Settings/backend synchronization
 
 Isolate synchronization and transport adapter responsibilities from presentation. This is the riskiest GUI stage: preserve the existing shared-memory control contract and version; do not change DSP/LADSPA internals or settings precision. Preserve the GUI's ability to reflect CLI edits without overwriting them, backend independence, source restoration and state update timing.
