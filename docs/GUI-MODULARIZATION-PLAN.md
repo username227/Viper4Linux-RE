@@ -564,7 +564,7 @@ considering `main`.
 Sound Correction remains. Next are Checkpoints 6 and 7, then complete
 integration acceptance and explicit maintainer merge approval.
 
-### Checkpoint 5G — Sound Correction tab extraction (partial maintainer verification; DDC test deferred/pending)
+### Checkpoint 5G — Sound Correction tab extraction (accepted with deferred DDC profile testing)
 
 All three Sound Correction widget constructors are now in
 `src/panels/correction-panels.h`, divided into
@@ -600,10 +600,11 @@ have not been exhaustively retested field by field in this revision.
 Static checks of the new module and unchanged callbacks passed.
 A native build was identified by its GUI version, but the full developer
 suite and comprehensive hardware regression have not yet run.
-**Do not claim 5G fully accepted or begin Checkpoint 6 as if all gates
-passed.** A realistic .vdc profile test, or an explicit maintainer
-decision to defer that one test to the final regression gate, is needed
-before moving on. Keep any deferred DDC coverage visible in the plan.
+**Maintainer exception decision, 2026-11-03:** Defer .vdc
+profile import, selection and processing to final regression. This
+explicitly authorizes proceeding to Checkpoint 6 without falsely
+marking DDC tested; the DDC exception remains a final acceptance
+blocker until tested or explicitly dispositioned by the maintainer.
 
 **Test 5G:** Fresh `build-stage5g/` build of `viper-gui`, launched
 with `./build-stage5g/viper-gui &` to avoid blocking the terminal.
@@ -626,11 +627,56 @@ is outside this mechanical extraction.
 full regression/packaging verification and explicit maintainer approval
 still precede any merge to `main`.
 
-## Checkpoint 6 — Settings/backend synchronization
+## Checkpoint 6 — Settings/backend synchronization (extracted; native testing pending)
 
-Isolate synchronization and transport adapter responsibilities from presentation. This is the riskiest GUI stage: preserve the existing shared-memory control contract and version; do not change DSP/LADSPA internals or settings precision. Preserve the GUI's ability to reflect CLI edits without overwriting them, backend independence, source restoration and state update timing.
+Mechanically moved six ViperWindow member implementations into
+`src/sync/gui-settings-bridge.inc` and
+`src/sync/gui-backend-bridge.inc`: `persistCurrentSettings()`,
+`ensureBackend()`, `publishToBackend()`, `liveUiSnapshot()`,
+`readBackend()` and `pollBackend()`. Both .inc files are included
+**inside the original class scope** once. The implementation remains
+bound to ViperWindow as a deliberate intermediate encapsulation:
+no new QObject, threads, APIs or reordered signal handlers. Its
+existing control loads/stores, request serials, signal blockers,
+live slider guards, offline pending edits, audio activity status,
+500ms polling and 300ms QSettings debounce remain in their original
+method order. This does not yet claim a fully independent model layer.
 
-Rebuild and test: GUI→DSP, CLI→GUI, CLI→DSP, GUI quit/reopen, backend restart after updates, saved precision overrides, independent per-output memory, device reconnections, session state.
+New `src/sync/gui-control-channel.h` isolates two directly testable,
+Qt-free policies: named IPC mapping reconnect and preservation of
+precise live native values unless the actual GUI slider is edited or
+a complete preset/reset replaces them. Integration changes only
+delegate these existing decisions; the rest of the method bodies
+are preserved. IPC `Controls` layout/version, CLI settings key names,
+DSP/LADSPA implementation, ViPERDSP submodule and packaging unchanged.
+
+Added `tests/check-gui-sync-contract.py`, compiling/running fake
+reconnect and precision cases in a temporary C++17 fixture, hooked
+into `tests/check-developer.sh`. Updated the precision source-contract
+to follow the synchronization implementation files. **Note:** older
+GUI static source-contract tests still contain assumptions about files
+already extracted during Checkpoint 5 and must be updated at full
+regression while retaining substantive assertions.
+
+**Status: native build/GUI/audio testing PENDING.** Source-level
+checks verified every method transferred once and the critical pending-
+edit, precision, guarded CLI readback and persistence guards. No
+on-device Qt build or backend interaction has been run by the assistant.
+
+**Verify Checkpoint 6:** Build `viper-gui` in a fresh `build-stage6/`,
+then run `./build-stage6/viper-gui &`. Test GUI-to-DSP changes,
+CLI-to-GUI readback without feedback loops, CLI native precision
+preserved while unrelated GUI sliders change, deliberate override on
+edited slider or preset/reset, pending offline edits applied after DSP
+reconnect, readback UI updates persisted on GUI restart, per-output
+memory and output-device reconnection, and activity/idle status.
+Then run the complete developer regression suite and audit any
+test-contract failures against the moved source rather than deleting
+coverage. **Final DDC .vdc import/processing test still outstanding.**
+
+After verification proceed to Checkpoint 7 integration/cleanup,
+complete native developer/packaging and real-audio acceptance, and
+explicit maintainer approval before merging to `main`.
 
 ## Checkpoint 7 — Main-window integration and cleanup
 
