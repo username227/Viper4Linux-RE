@@ -8,6 +8,7 @@
 #include "widgets/graphic-eq-editor.h"
 #include "panels/bass-panels.h"
 #include "panels/eq-tone-panels.h"
+#include "panels/dynamics-panels.h"
 #include "panels/output-panels.h"
 #include "panels/spatial-panels.h"
 #include "widgets/effect-widgets.h"
@@ -327,75 +328,27 @@ public:
             updateEqDeleteButton();
         });
 
-        auto* fet_group = new QGroupBox("FET Compressor", tabs_);
-        auto* fet_form = new QFormLayout(fet_group);
-        fet_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        fet_enabled_ = new EffectSwitch(fet_group);
-        fet_form->addRow("Enable FET dynamic compression", fet_enabled_);
-        fet_threshold_ = addSlider(fet_form, "Threshold", -48, 0);
-        fet_ratio_ = addSlider(fet_form, "Compression ratio", 10, 100);
-        fet_knee_ = addSlider(fet_form, "Soft knee", 0, 12);
-        fet_gain_ = addSlider(fet_form, "Makeup gain", 0, 24);
-        fet_attack_ = addSlider(fet_form, "Attack", 1, 100);
-        fet_release_ = addSlider(fet_form, "Release", 5, 500);
-        auto* fet_note = new QLabel("Native ViPERDSP FET compression; start with conservative settings. "
-                                    "Keep off when you want to preserve recording dynamics.", fet_group);
-        fet_note->setWordWrap(true);
-        fet_form->addRow(fet_note);
-        addEffectPanel(dynamicsLayout, fet_group, "fet", fet_enabled_);
-        auto* mb_group = new QGroupBox("Multiband Compressor", tabs_);
-        auto* mb_form = new QFormLayout(mb_group);
-        mb_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        mb_enabled_ = new EffectSwitch(mb_group);
-        mb_form->addRow("Enable native multiband compression", mb_enabled_);
-        mb_band_count_ = new QComboBox(mb_group);
-        mb_band_count_->addItems({"3 bands", "5 bands"});
-        mb_form->addRow("Processing bands", mb_band_count_);
-        // Frequency bands follow bass -> treble. Select one to edit; all five
-        // native compressor instances and their saved values remain intact.
-        mb_band_tabs_ = new QTabWidget(mb_group);
-        mb_band_tabs_->setObjectName("viperMultibandBandSelector");
-        mb_band_tabs_->setDocumentMode(true);
-        mb_band_tabs_->setUsesScrollButtons(true);
-        mb_band_tabs_->tabBar()->setExpanding(true);
-        mb_band_tabs_->setMinimumWidth(0);
-        mb_band_tabs_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-        mb_band_tabs_->setAccessibleName("Multiband frequency bands, bass to treble");
-        for (int i = 0; i < 5; ++i) {
-            auto* page = new QWidget(mb_band_tabs_);
-            auto* form = new QFormLayout(page);
-            form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-            mb_band_ranges_[i] = new QLabel(page);
-            mb_band_ranges_[i]->setWordWrap(true);
-            form->addRow(mb_band_ranges_[i]);
-            mb_bands_[i].enabled = new QCheckBox("Compress this band", page);
-            form->addRow(mb_bands_[i].enabled);
-            mb_bands_[i].threshold = addSlider(form, "Threshold", -48, 0);
-            mb_bands_[i].ratio = addSlider(form, "Ratio", 10, 100);
-            mb_bands_[i].knee = addSlider(form, "Soft knee", 0, 12);
-            mb_bands_[i].gain = addSlider(form, "Makeup gain", 0, 24);
-            mb_bands_[i].attack = addSlider(form, "Attack", 1, 100);
-            mb_bands_[i].release = addSlider(form, "Release", 5, 500);
-            mb_band_tabs_->addTab(page, QString("Band %1").arg(i+1));
-        }
-        mb_form->addRow(mb_band_tabs_);
-        auto* mb_crossover_toggle = new QToolButton(mb_group);
-        mb_crossover_toggle->setObjectName("viperMultibandCrossoverToggle");
-        mb_crossover_toggle->setText("Edit crossover frequencies");
-        mb_crossover_toggle->setCheckable(true);
-        mb_crossover_toggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        mb_crossover_toggle->setArrowType(Qt::RightArrow);
-        mb_crossover_toggle->setToolTip("Adjust boundaries between the frequency bands");
-        mb_form->addRow(mb_crossover_toggle);
-        mb_crossover_panel_ = new QWidget(mb_group);
-        auto* mb_crossover_form = new QFormLayout(mb_crossover_panel_);
-        mb_crossover_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        for (int i = 0; i < 4; ++i) {
-            const QByteArray caption = QString("Crossover %1").arg(i+1).toUtf8();
-            mb_crossovers_[i] = addSlider(mb_crossover_form, caption.constData(), 80, 15000);
-        }
-        mb_form->addRow(mb_crossover_panel_);
-        mb_crossover_panel_->setVisible(false);
+        const auto dynamicsFet = viper_panels::createFetPanel(
+            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
+                return addSlider(form, label, min, max);
+            });
+        fet_enabled_ = dynamicsFet.fet_enabled;
+        fet_threshold_ = dynamicsFet.fet_threshold;
+        fet_ratio_ = dynamicsFet.fet_ratio;
+        fet_knee_ = dynamicsFet.fet_knee;
+        fet_gain_ = dynamicsFet.fet_gain;
+        fet_attack_ = dynamicsFet.fet_attack;
+        fet_release_ = dynamicsFet.fet_release;
+        addEffectPanel(dynamicsLayout, dynamicsFet.group, "fet", fet_enabled_);
+        const auto dynamicsMb = viper_panels::createMultibandPanel(
+            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
+                return addSlider(form, label, min, max);
+            }, mb_crossovers_, mb_band_ranges_, mb_bands_);
+        mb_enabled_ = dynamicsMb.mb_enabled;
+        mb_band_count_ = dynamicsMb.mb_band_count;
+        mb_band_tabs_ = dynamicsMb.mb_band_tabs;
+        mb_crossover_panel_ = dynamicsMb.mb_crossover_panel;
+        auto* mb_crossover_toggle = dynamicsMb.crossoverToggle;
         connect(mb_crossover_toggle, &QToolButton::toggled, this,
                 [this, mb_crossover_toggle](bool expanded) {
             mb_crossover_panel_->setVisible(expanded);
@@ -405,11 +358,7 @@ public:
         connect(mb_band_tabs_, &QTabWidget::currentChanged, this, [this](int index) {
             if (index >= 0) settings_.setValue("ui/mb_selected_band", index);
         });
-        auto* mb_note = new QLabel("Each active band uses native ViPERDSP FET compression. "
-                                   "Start with low ratios and watch loudness; crossovers must increase.", mb_group);
-        mb_note->setWordWrap(true);
-        mb_form->addRow(mb_note);
-        addEffectPanel(dynamicsLayout, mb_group, "multiband", mb_enabled_);
+        addEffectPanel(dynamicsLayout, dynamicsMb.group, "multiband", mb_enabled_);
         auto* ddc_group = new QGroupBox("ViPER-DDC", tabs_);
         auto* ddc_form = new QFormLayout(ddc_group);
         ddc_form->setRowWrapPolicy(QFormLayout::WrapLongRows);

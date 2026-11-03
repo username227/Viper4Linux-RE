@@ -471,7 +471,7 @@ record process state and log output before interrupting it.
 outstanding EQ & Tone, Dynamics, Sound Correction. No merging or
 releasing to `main` before full acceptance and explicit approval.
 
-### Checkpoint 5E — EQ & Tone tab extraction (native test pending)
+### Checkpoint 5E — EQ & Tone tab extraction (maintainer accepted)
 
 All six EQ & Tone card constructors have been moved to
 `src/panels/eq-tone-panels.h`: Graphic EQ, Dynamic EQ, ViPER Clarity,
@@ -493,11 +493,14 @@ presets/combo entries, slider ranges and effect ordering. The separate
 DSP/native controls are unchanged. No CMake source-target, submodule,
 shared-memory ABI or external format changes.
 
-**Verification status: PENDING.** Structural checks verify six wrappers,
-matching literal labels/options, slider limits and preservation of GUI
-callback/preset source references; no native Qt compilation or live GUI/audio
-tests have been performed by the assistant. **Do not accept 5E or proceed
-to Dynamics until maintainer tests pass.**
+**Acceptance, 2026-11-03 — maintainer confirmation: PASSED.**
+All eight EQ & Tone acceptance checks were explicitly confirmed: six cards
+and enable/expand behavior; Graphic EQ bands, fixed axis, presets,
+fader updates and visibility; Dynamic EQ controls and editor interactions;
+Clarity/Spectrum; Tube/AnalogX; persistence, audible effects, and other tabs.
+Checkpoint 5E is **accepted** at native-build and GUI/audio smoke-test
+level. The final developer suite, CLI precision and device-reconnect
+regression gate remains outstanding.
 
 **Acceptance checklist:** Build current refactor branch from a clean
 `build-stage5e/` directory and launch `./build-stage5e/viper-gui &`
@@ -515,6 +518,48 @@ changes to the other five tabs, preset round trips or audio processing.
 **Panel extraction count:** 4/6 (Output, Bass, EQ & Tone, Spatial).
 Dynamics and Sound Correction remain to extract. No merge/release to
 `main` before the complete refactor is accepted.
+
+### Checkpoint 5F — Dynamics tab extraction (code committed; native test pending)
+
+Extracted FET Compressor and Multiband Compressor widget construction to
+`src/panels/dynamics-panels.h`, with separate `createFetPanel()` and
+`createMultibandPanel()` factories. The full original FET slider set,
+Multiband three/five processing-band choices, all five per-band editor pages,
+per-band enable switches, frequency labels, and four crossover sliders
+retain their labels, tooltips, ranges, tab names, Qt object properties,
+and initial hidden/visible state. The Multiband factory fills the existing
+main-window band/crossover arrays by reference, avoiding copies or changed
+ownership of the saved widget rows.
+
+The main window still adds the two independently collapsible effect cards
+with their original keys (`fet`, `multiband`), wires the crossover
+expand/collapse toggle to arrow and visibility changes, restores/persists
+`ui/mb_selected_band`, handles dynamic 3/5-band views and frequency labels,
+and retains all QSettings, effects state, GUI↔CLI/backend synchronization,
+DSP publishing, and native parameter precision. No DSP, LADSPA, ViPERDSP,
+shared-memory ABI, presets, CMake or packaging changes.
+
+**Verification: PENDING.** Source checks confirmed unchanged literal
+labels/options and slider ranges, preserved event/persistence callbacks
+and two effect-card wrappers. Native Qt build, full regression tests and
+real GUI/audio testing have not yet been performed by the assistant.
+Do not call 5F accepted or proceed to Sound Correction until the maintainer
+reports passing tests.
+
+**Test 5F:** Use a fresh `build-stage5f` directory and build the
+`viper-gui` target, then launch `./build-stage5f/viper-gui &` so the
+Qt event loop doesn't appear to hang the terminal. Check FET and Multiband
+card order; independent enable and collapse controls; six FET parameter
+sliders and labels; 3/5-band selector and five per-band editors; per-band
+enable/disable and precision; four crossover frequencies with the edit
+expander/arrow and updated band-range labels; tab selection persistence
+after GUI restart; saved preset recall and cautiously audible processing.
+Check other tabs remain functional. Run final full developer tests before
+considering `main`.
+
+**Panel files extracted:** 5/6 (Output, Bass, EQ & Tone, Spatial, Dynamics);
+Sound Correction remains. Next are Checkpoints 6 and 7, then complete
+integration acceptance and explicit maintainer merge approval.
 
 ## Checkpoint 6 — Settings/backend synchronization
 
