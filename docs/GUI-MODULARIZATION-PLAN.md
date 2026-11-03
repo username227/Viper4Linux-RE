@@ -175,6 +175,24 @@ Extract EQ widget composition, graphical overview, popup/editor controls, select
 
 Rebuild and test: full EQ edit/save/reopen/load round-trips, mouse interactions, resizing and external CLI changes.
 
+### Checkpoint 4A — Graphic/Dynamic EQ overview widgets (awaiting test)
+
+Moved the two existing self-contained overview widgets, `EqOverview` and
+`DynamicEqOverview`, together with their shared `DeqBand` structure into
+`src/widgets/eq-overviews.h`. The widget bodies are byte-for-byte identical
+to their previous implementations. No changes were made to cubic curve
+smoothing, log-frequency coordinates, Q/gain/threshold units, visual marker
+clustering, mouse selection behavior, or value storage. No editor or backend
+state transitions were changed.
+
+Run `cmake --build build --target viper-gui -j4`. Test the Graphic EQ overview
+with varying band-count/preset curves; click to open the detailed editor.
+Test the Dynamic EQ overview markers (including coincident frequencies),
+click a marker to select the matching band, and resize the window/editor.
+This is only **4A**, not completion of Checkpoint 4; editor layout and state
+integration remain for 4B. Hold at this checkpoint pending maintainer test;
+do not merge to `main`.
+
 ## Checkpoint 5 — Effect panels and layout construction
 
 Move construction and hookup of the six tab panels into reasonably scoped components (potentially grouped by tab) without changing signal connections, visibility, disabled/default states, effect labels or settings values. Avoid a single giant 'panels' file.
