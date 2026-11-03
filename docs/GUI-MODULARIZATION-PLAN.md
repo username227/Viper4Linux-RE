@@ -131,7 +131,7 @@ Rebuild and test: complete preset round-trip, legacy migration, overwrite/rename
 
 **Keep the separate Android-export experiment on its own branch** (`feature/viper4android-preset-export`). It is not part of the refactor; reconcile after the GUI restructuring is accepted. Avoid mixing that feature into a code-movement commit.
 
-### Checkpoint 3A — Named-preset storage extraction (awaiting verification)
+### Checkpoint 3A — Named-preset storage extraction (accepted)
 
 Moved the existing named-preset library directory, list/sort, name validation,
 INI read/write, one-slot migration, and loading-to-staging operations into
@@ -142,12 +142,14 @@ restore-to-controls, CLI assignment, UUID selection and reset-to-defaults
 remain in `ViperWindow` unchanged. Existing keys, `format/version=1`, and
 error text are preserved. This is a **partial checkpoint**: the user must
 verify the native Qt compilation and preset round-trip before proceeding to
-further UI separation; not accepted yet. Do not merge to `main`.
+further UI separation. Maintainer test passed on 2026-11-03; do not merge to `main`.
 
 Quick test: rebuild `viper-gui`; save a test preset, load it back, rename it,
 confirm overwrite and delete behavior, restart, and verify previously saved
 presets still appear. If a legacy one-slot preset is available, test migration
 once; do not create or delete existing user presets merely for testing.
+
+**Verification update (2026-11-03):** Maintainer reports that all previously tested save/load/rename/delete functions still work after the extraction. Checkpoint 3A accepted. Legacy migration was not separately exercised, and full integration checks remain outstanding.
 
 ## Checkpoint 4 — Graphic EQ and Dynamic EQ UI
 
