@@ -9,6 +9,7 @@
 #include "panels/bass-panels.h"
 #include "panels/eq-tone-panels.h"
 #include "panels/dynamics-panels.h"
+#include "panels/correction-panels.h"
 #include "panels/output-panels.h"
 #include "panels/spatial-panels.h"
 #include "widgets/effect-widgets.h"
@@ -359,43 +360,19 @@ public:
             if (index >= 0) settings_.setValue("ui/mb_selected_band", index);
         });
         addEffectPanel(dynamicsLayout, dynamicsMb.group, "multiband", mb_enabled_);
-        auto* ddc_group = new QGroupBox("ViPER-DDC", tabs_);
-        auto* ddc_form = new QFormLayout(ddc_group);
-        ddc_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        ddc_enabled_ = new EffectSwitch(ddc_group);
-        ddc_form->addRow("Enable device correction", ddc_enabled_);
-        auto* ddc_file_row = new QWidget(ddc_group);
-        auto* ddc_buttons = new QHBoxLayout(ddc_file_row);
-        ddc_buttons->setContentsMargins(0,0,0,0);
-        ddc_file_row->setMinimumWidth(0);
-        ddc_file_row->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-        ddc_library_ = new IrsComboBox(ddc_file_row);
-        ddc_library_->setMinimumWidth(0);
-        ddc_library_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        ddc_library_->setToolTip("Select a .vdc profile from your local VDC library");
+        // UI construction extracted; keep library state, watchers and
+        // all import/refresh callbacks in the main window.
+        const auto correctionDdc = viper_panels::createDdcPanel(tabs_);
+        ddc_enabled_ = correctionDdc.ddc_enabled;
+        ddc_library_ = correctionDdc.ddc_library;
+        ddc_file_name_ = correctionDdc.ddc_file_name;
+        ddc_status_ = correctionDdc.ddc_status;
+        auto* importDdc = correctionDdc.importDdc;
+        auto* refreshDdc = correctionDdc.refreshDdc;
         ddc_library_->beforeOpen = [this] {
             if (ddc_library_dirty_) refreshDdcLibrary();
         };
-        auto* importDdc = new QPushButton("Import…", ddc_file_row);
-        auto* refreshDdc = new QPushButton("Refresh", ddc_file_row);
-        ddc_buttons->addWidget(ddc_library_, 1);
-        ddc_buttons->addWidget(importDdc);
-        ddc_buttons->addWidget(refreshDdc);
-        ddc_form->addRow("Correction profile", ddc_file_row);
-        ddc_file_name_ = new QLabel(ddc_group);
-        ddc_file_name_->setWordWrap(true);
-        ddc_file_name_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        ddc_form->addRow(ddc_file_name_);
-        ddc_status_ = new QLabel("No DDC profile loaded.", ddc_group);
-        ddc_status_->setWordWrap(true);
-        ddc_form->addRow(ddc_status_);
-        auto* ddc_note = new QLabel(
-            "Select a .vdc correction profile designed for your specific headphone model. "
-            "Correction is available at 44.1 and 48 kHz; at other processing rates, "
-            "ViPER-DDC is bypassed. Default: off.", ddc_group);
-        ddc_note->setWordWrap(true);
-        ddc_form->addRow(ddc_note);
-        addEffectPanel(correctionLayout, ddc_group, "ddc", ddc_enabled_);
+        addEffectPanel(correctionLayout, correctionDdc.group, "ddc", ddc_enabled_);
         refreshDdcLibrary();
         ddc_watcher_ = new QFileSystemWatcher(this);
         ddc_watcher_->addPath(ddcDirectory());
@@ -436,65 +413,26 @@ public:
             }
             selectDdcProfile(destination);
         });
-        auto* speaker_group = new QGroupBox("Speaker Correction", tabs_);
-        auto* speaker_form = new QFormLayout(speaker_group);
-        speaker_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        speaker_enabled_ = new EffectSwitch(speaker_group);
-        speaker_form->addRow("Enable native speaker correction", speaker_enabled_);
-        auto* speaker_note = new QLabel(
-            "For loudspeakers only, not headphones. Uses ViPERDSP's built-in high-pass, "
-            "low-pass and band-pass filters; no correction file required. Default: off.", speaker_group);
-        speaker_note->setWordWrap(true);
-        speaker_form->addRow(speaker_note);
-        addEffectPanel(correctionLayout, speaker_group, "speaker_correction", speaker_enabled_);
-        auto* conv_group = new QGroupBox("Convolver", tabs_);
-        auto* conv_form = new QFormLayout(conv_group);
-        // On a narrow screen, put the controls on a new line rather than
-        // allowing a long label/row to force horizontal overflow.
-        conv_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        convolver_enabled_ = new EffectSwitch(conv_group);
-        conv_form->addRow("Enable native convolution", convolver_enabled_);
-        auto* fileRow = new QWidget(conv_group);
-        auto* fileLayout = new QHBoxLayout(fileRow);
-        fileLayout->setContentsMargins(0,0,0,0);
-        fileLayout->setSpacing(6);
-        fileRow->setMinimumWidth(0);
-        fileRow->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-        convolver_library_ = new IrsComboBox(fileRow);
+        const auto correctionSpeaker = viper_panels::createSpeakerCorrectionPanel(tabs_);
+        speaker_enabled_ = correctionSpeaker.speaker_enabled;
+        addEffectPanel(correctionLayout, correctionSpeaker.group, "speaker_correction", speaker_enabled_);
+        const auto correctionConvolver = viper_panels::createConvolverPanel(
+            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
+                return addSlider(form, label, min, max);
+            });
+        convolver_enabled_ = correctionConvolver.convolver_enabled;
+        convolver_library_ = correctionConvolver.convolver_library;
+        convolver_full_name_ = correctionConvolver.convolver_full_name;
+        convolver_cross_ = correctionConvolver.convolver_cross;
+        convolver_status_ = correctionConvolver.convolver_status;
+        auto* browse = correctionConvolver.browse;
+        auto* refresh = correctionConvolver.refresh;
         convolver_library_->beforeOpen = [this] {
             // Refresh only after closing and reopening if the library changed
             // while the dropdown was open. Never reset an open popup's scroll.
             if (irs_library_dirty_) refreshIrsLibrary();
         };
-        convolver_library_->setToolTip("Select an impulse response. Hover to see the full filename.");
-        auto* browse = new QPushButton("Import…", fileRow);
-        auto* refresh = new QPushButton("Refresh / Reload", fileRow);
-        fileLayout->addWidget(convolver_library_, 1);
-        fileLayout->addWidget(browse);
-        fileLayout->addWidget(refresh);
-        conv_form->addRow("Impulse response", fileRow);
-        // Unlike the compact combo box, this line shows the complete selected
-        // filename. It can wrap and be selected/copied even on a small screen.
-        convolver_full_name_ = new QPlainTextEdit(conv_group);
-        convolver_full_name_->setObjectName("viperIrsFullName");
-        convolver_full_name_->setReadOnly(true);
-        convolver_full_name_->setLineWrapMode(QPlainTextEdit::WidgetWidth);
-        // Unlike QLabel wordWrap, this works even with 250 uninterrupted
-        // characters. The entire original name remains selectable/copyable;
-        // excess lines can scroll vertically, never horizontally.
-        convolver_full_name_->setWordWrapMode(QTextOption::WrapAnywhere);
-        convolver_full_name_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        convolver_full_name_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-        convolver_full_name_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
-        convolver_full_name_->setFixedHeight(52);
-        convolver_full_name_->setMinimumWidth(0);
-        convolver_full_name_->setAccessibleName("Full selected IRS filename");
-        conv_form->addRow(convolver_full_name_);
-        convolver_cross_ = addSlider(conv_form, "Cross-channel mix", 0, 100);
-        convolver_status_ = new QLabel("Select a kernel to load it into the running audio backend.", conv_group);
-        convolver_status_->setWordWrap(true);
-        conv_form->addRow(convolver_status_);
-        addEffectPanel(correctionLayout, conv_group, "convolver", convolver_enabled_);
+        addEffectPanel(correctionLayout, correctionConvolver.group, "convolver", convolver_enabled_);
         refreshIrsLibrary();
         irs_watcher_ = new QFileSystemWatcher(this);
         irs_watcher_->addPath(irsDirectory());

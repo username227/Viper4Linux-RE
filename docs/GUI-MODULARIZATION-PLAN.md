@@ -519,7 +519,7 @@ changes to the other five tabs, preset round trips or audio processing.
 Dynamics and Sound Correction remain to extract. No merge/release to
 `main` before the complete refactor is accepted.
 
-### Checkpoint 5F — Dynamics tab extraction (code committed; native test pending)
+### Checkpoint 5F — Dynamics tab extraction (maintainer accepted)
 
 Extracted FET Compressor and Multiband Compressor widget construction to
 `src/panels/dynamics-panels.h`, with separate `createFetPanel()` and
@@ -539,12 +539,15 @@ and retains all QSettings, effects state, GUI↔CLI/backend synchronization,
 DSP publishing, and native parameter precision. No DSP, LADSPA, ViPERDSP,
 shared-memory ABI, presets, CMake or packaging changes.
 
-**Verification: PENDING.** Source checks confirmed unchanged literal
-labels/options and slider ranges, preserved event/persistence callbacks
-and two effect-card wrappers. Native Qt build, full regression tests and
-real GUI/audio testing have not yet been performed by the assistant.
-Do not call 5F accepted or proceed to Sound Correction until the maintainer
-reports passing tests.
+**Acceptance, 2026-11-03 — maintainer confirmation: PASSED.**
+All seven Dynamics acceptance checks passed using a correctly identified
+`1.1.0-b5b0ba605002` build: FET and Multiband cards, independent toggles
+versus collapsing, six FET sliders, 3/5-band switching, five band editors
+and per-band switches, crossover controls/labels/expander, selected-band
+and parameter persistence, preset recall, and audible DSP behavior with
+other tabs unaffected. **Checkpoint 5F accepted** at native-build,
+GUI and audio smoke-test level; the final full developer, CLI precision
+and output-reconnect regression gates still apply.
 
 **Test 5F:** Use a fresh `build-stage5f` directory and build the
 `viper-gui` target, then launch `./build-stage5f/viper-gui &` so the
@@ -560,6 +563,55 @@ considering `main`.
 **Panel files extracted:** 5/6 (Output, Bass, EQ & Tone, Spatial, Dynamics);
 Sound Correction remains. Next are Checkpoints 6 and 7, then complete
 integration acceptance and explicit maintainer merge approval.
+
+### Checkpoint 5G — Sound Correction tab extraction (code committed; native test pending)
+
+All three Sound Correction widget constructors are now in
+`src/panels/correction-panels.h`, divided into
+`createDdcPanel()`, `createSpeakerCorrectionPanel()`, and
+`createConvolverPanel()`. Control labels, selection/refresh/import
+buttons, tooltips, layout policies and status widgets are unchanged.
+The DDC combo remains an `IrsComboBox`, with a selectable complete
+profile label and .vdc warning. Speaker Correction retains its explanatory
+warning. Convolver retains its `IrsComboBox` selector, refresh/reload and
+import buttons, read-only, selectable wrap-anywhere long-filename field,
+cross-channel mix slider (0–100) and backend status line.
+
+**Behavioral boundary:** `ViperWindow` still owns both
+`beforeOpen` lazy-refresh callbacks, both `QFileSystemWatcher` objects
+and directory-change callbacks, DDC and IRS import file validation and
+copy/duplicate naming, guarded live selection and reload callbacks,
+QSettings state and all native DSP/CLI publishing. The original card keys
+`ddc`, `speaker_correction`, and `convolver` and their independent
+enable-versus-expansion state are unchanged. No changes to the DSP engine,
+LADSPA, shared-memory ABI, CMake, third-party submodule, or preset formats.
+
+**Verification: PENDING.** Static checks confirm unchanged UI string
+literals, slider ranges, button references and exact retention of the
+main-window callbacks, import handlers and watchers. Native Qt compilation
+and GUI/audio acceptance have not been performed by the assistant.
+**Do not mark 5G accepted or start Checkpoint 6 until maintainer tests pass.**
+
+**Test 5G:** Fresh `build-stage5g/` build of `viper-gui`, launched
+with `./build-stage5g/viper-gui &` to avoid blocking the terminal.
+Verify all three cards in order, enable/expand separation, DDC .vdc
+selection/import/refresh and visible profile name, Speaker Correction
+toggle and advisory, and Convolver .irs/.wav imports, instant kernel
+switching, Refresh/Reload, full very-long filename wrapping/selectability,
+cross-channel mix and status/errors. With an open combo popup, a folder
+change must not reset its scroll or rebuild it; deferred refresh should
+appear after reopening. Test duplicate/unreadable files non-destructively;
+ensure GUI quit/restart retains selection and settings. Verify audible
+convolution conservatively and no regressions in other tabs. Sample-rate
+mismatch behavior must remain safe, but fixing the existing audio engine
+is outside this mechanical extraction.
+
+**Six of six panel files now exist:** `output-panels.h`, `bass-panels.h`,
+`eq-tone-panels.h`, `spatial-panels.h`, `dynamics-panels.h`,
+`correction-panels.h`. The full refactor is **not finished**: Checkpoint 6
+(settings/backend synchronization), Checkpoint 7 (main-window integration),
+full regression/packaging verification and explicit maintainer approval
+still precede any merge to `main`.
 
 ## Checkpoint 6 — Settings/backend synchronization
 
