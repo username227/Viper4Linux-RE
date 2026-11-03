@@ -707,13 +707,15 @@ reconnect, readback UI updates persisted on GUI restart, per-output
 memory and output-device reconnection, and activity/idle status.
 Then run the complete developer regression suite and audit any
 test-contract failures against the moved source rather than deleting
-coverage. **Final DDC .vdc import/processing test still outstanding.**
+coverage. **Subsequent Checkpoint 7 acceptance (2026-11-03):**
+   valid-profile DDC processing and enable/disable listening checks passed;
+   the unsupported-rate negative case remains unverified.
 
 After verification proceed to Checkpoint 7 integration/cleanup,
 complete native developer/packaging and real-audio acceptance, and
 explicit maintainer approval before merging to `main`.
 
-## Checkpoint 7 — Main-window integration and cleanup (automated regression passed; live acceptance pending)
+## Checkpoint 7 — Main-window integration and cleanup (focused live tests passed; final verification pending)
 
 A second mechanical extraction moved seven **cohesive, ViperWindow-owned**
 method regions into `src/window/`:
@@ -862,17 +864,16 @@ visible window. The maintainer built the native Qt GUI successfully
 for this live test; the separate isolated regression suite's result
 was not explicitly reported.
 
-**Live acceptance outstanding:** Rebuild and run the entire
-`bash tests/check-developer.sh` suite as needed, six-tab effect/audio
-functionality, preset save/load/delete/reset, theme switching,
-tray/minimize/restore/startup preferences, Graphic/Dynamic EQ editors,
-Convolver import/popup behavior, GUI↔CLI precision,
-disconnected-backend edits/reconnect, remaining Audio Output memory
-edge cases (memory-off, precision and two-GUI interference), and
-package/archive content. Native DDC valid-profile processing and
-enable/disable A/B passed; unsupported sample-rate behavior remains
-unverified. Do not mark the whole refactor complete or
-merge to `main` until maintainer acceptance.
+**Final acceptance still outstanding:** Run the full
+`bash tests/check-developer.sh` suite on the latest branch revision,
+including the two-process single-GUI integration test; perform a clean
+native Arch build and inspect staged package and unified source archive
+contents. The maintainer's earlier focused GUI, per-output memory,
+CLI precision, tray activation, Convolver, preset and DDC listening
+checks passed as documented above; these do not replace the final
+clean-build gate. The native DDC unsupported-sample-rate negative case
+is optional follow-up, not a blocker for the already confirmed 44.1/48 kHz
+processing. Do not merge into `main` until explicit maintainer acceptance.
 
 ## Per-stage verification gate
 
