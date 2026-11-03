@@ -397,11 +397,124 @@ static bool restoreState(Controls& c, const QJsonObject& snapshot, QSettings& se
         bumped("convolver", c.convolver_request_serial);
     return true;
 }
+
+static QJsonObject snapshotFromNamedPreset(const QString& path, Controls& controls,
+                                             QSettings& settings, QString* error) {
+    QSettings preset(path, QSettings::IniFormat);
+    if (preset.status() != QSettings::NoError ||
+        preset.value("format/version").toInt() != 1 ||
+        !preset.contains("effects/master_enabled") ||
+        !preset.contains("effects/limiter_output_percent")) {
+        *error = "Invalid named effect preset";
+        return {};
+    }
+    QJsonObject state = captureState(controls, settings);
+    QJsonObject values = state.value("values").toObject();
+    auto readInt = [&](const QString& key, int& result) -> bool {
+        const QString setting = "effects/" + key;
+        if (!preset.contains(setting)) { *error = "Missing preset field: " + key; return false; }
+        const QVariant v = preset.value(setting);
+        if (v.toString().compare("true", Qt::CaseInsensitive) == 0) { result = 1; return true; }
+        if (v.toString().compare("false", Qt::CaseInsensitive) == 0) { result = 0; return true; }
+        bool ok = false;
+        result = v.toString().toInt(&ok);
+        if (!ok) *error = "Invalid preset field: " + key;
+        return ok;
+    };
+    for (const auto& field : fields) {
+        const QString name = QLatin1String(field.key);
+        QString key = settingName(name);
+        if (name == "imager_high_crossover_hz") key = "imager_high_crossover_hundreds";
+        int value = 0;
+        if (!readInt(key, value)) return {};
+        if (name == "strength_centi") value *= 10;
+        else if (name == "clarity_gain_milli" || name == "spectrum_exciter_milli") value *= 100;
+        else if (name == "spectrum_frequency_hz" || name == "diff_lp_hz" ||
+                 name == "imager_high_crossover_hz") value *= 100;
+        else if (name == "field_depth") value = value == 0 ? 0 : value * 50 + 150;
+        values.insert(name, value);
+    }
+    state.insert("values", values);
+    QJsonArray mb;
+    for (int i = 0; i < 5; ++i) {
+        QJsonObject band;
+        for (const auto& field : mbFields) {
+            int value = 0;
+            if (!readInt(QString("mb_b%1_%2").arg(i).arg(field.key), value)) return {};
+            band.insert(field.key, value);
+        }
+        mb.append(band);
+    }
+    state.insert("mb_bands", mb);
+    QJsonArray xovers;
+    for (int i = 0; i < 4; ++i) {
+        int value = 0;
+        if (!readInt(QString("mb_x%1_hz").arg(i), value)) return {};
+        xovers.append(value);
+    }
+    state.insert("mb_crossovers", xovers);
+    QJsonArray deq;
+    QJsonObject ui;
+    ui.insert("eq_selected_preset", "custom");
+    const std::pair<const char*,const char*> deqNames[] = {
+        {"frequency_hz","freq"}, {"q_hundredths","q"}, {"gain_hundredths","gain"},
+        {"threshold_tenths","threshold"}, {"attack_ms","attack"},
+        {"release_ms","release"}, {"filter_type","type"}
+    };
+    for (int i = 0; i < 10; ++i) {
+        QJsonObject band;
+        for (const auto& pair : deqNames) {
+            int value = 0;
+            if (!readInt(QString("deq_b%1_%2").arg(i).arg(pair.second), value)) return {};
+            band.insert(pair.first, value);
+        }
+        deq.append(band);
+        int modified = 0;
+        if (!readInt(QString("deq_b%1_user_modified").arg(i), modified)) return {};
+        ui.insert(QString("deq_b%1_user_modified").arg(i), modified != 0);
+    }
+    state.insert("deq_bands", deq);
+    const int count = values.value("eq_band_count").toInt();
+    QJsonArray eq;
+    for (int i = 0; i < 31; ++i) eq.append(0);
+    for (int bands : {10,15,25,31}) {
+        const QString key = QString("eq_levels_%1").arg(bands);
+        const QStringList list = preset.value("effects/" + key).toString().split(',');
+        if (list.size() != bands) { *error = "Invalid preset EQ levels: " + key; return {}; }
+        QStringList normalized;
+        for (const auto& entry : list) {
+            bool ok = false;
+            const int level = entry.trimmed().toInt(&ok);
+            if (!ok || level < -1200 || level > 1200) {
+                *error = "Invalid preset EQ level: " + key; return {};
+            }
+            normalized.append(QString::number(level));
+        }
+        if (bands == count) {
+            for (int i = 0; i < bands; ++i) eq[i] = normalized[i].toInt();
+        } else {
+            ui.insert(key, normalized.join(','));
+        }
+    }
+    state.insert("eq_levels", eq);
+    state.insert("ui", ui);
+    QJsonObject files;
+    for (const QString key : {"ddc_profile", "convolver_kernel"})
+        files.insert(key, preset.value("effects/" + key, "").toString());
+    state.insert("files", files);
+    if (!validateState(state)) {
+        *error = "Preset values or referenced IRS/VDC files are invalid";
+        return {};
+    }
+    return state;
+}
+
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
-    if (argc != 2 || (std::string(argv[1]) != "capture" &&
-                      std::string(argv[1]) != "restore")) {
-        std::cerr << "Usage: viper4linux-output-state capture|restore\n";
+    if (argc < 2 || ((std::string(argv[1]) == "preset" && argc != 3) ||
+        (std::string(argv[1]) != "preset" && (argc != 2 ||
+         (std::string(argv[1]) != "capture" && std::string(argv[1]) != "restore"))))) {
+        std::cerr << "Usage: viper4linux-output-state capture|restore|preset FILE\n";
         return 2;
     }
     const std::string mode = argv[1];
@@ -413,6 +526,16 @@ int main(int argc, char** argv) {
     QSettings settings("ViPERforLinux", "ViPERClean");
     settings.sync();
     if (settings.status() != QSettings::NoError) return 1;
+    if (mode == "preset") {
+        QString error;
+        const QJsonObject snapshot = snapshotFromNamedPreset(QString::fromLocal8Bit(argv[2]), *mapping.get(), settings, &error);
+        if (snapshot.isEmpty() || !mapping.current()) {
+            std::cerr << error.toStdString() << "\n";
+            return 2;
+        }
+        std::cout << QJsonDocument(snapshot).toJson(QJsonDocument::Compact).toStdString() << "\n";
+        return 0;
+    }
     if (mode == "capture") {
         auto snapshot = captureState(*mapping.get(), settings);
         if (!mapping.current()) return 1;
