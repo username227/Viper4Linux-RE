@@ -10,6 +10,7 @@ gui = "\n".join([
     (root / "src/sync/gui-settings-bridge.inc").read_text(),
     (root / "src/sync/gui-backend-bridge.inc").read_text(),
     (root / "src/sync/gui-control-channel.h").read_text(),
+    (root / "src/window/window-effect-actions.inc").read_text(),
 ])
 output = (root / "src/viper-output-state.cpp").read_text()
 mock = (root / "tests/check-mock.sh").read_text()
