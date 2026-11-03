@@ -108,6 +108,10 @@ int main(int argc, char** argv) {
     assert(settings.value("mb_x0_hz").toInt() == 350);
     assert(settings.value("eq_levels_15").toString().startsWith("-145,"));
     assert(settings.value("eq/selected_preset").toString() == "builtin:Acoustic");
+    assert(settings.value("precision/strength_centi").toInt() == 475);
+    assert(settings.value("precision/spectrum_frequency_hz").toInt() ==
+           c->spectrum_frequency_hz.load());
+    assert(settings.value("precision/field_depth").toInt() == c->field_depth.load());
     assert(c->tube_model.load() == 2 && c->tube_drive_percent.load() == 73);
     assert(c->analogx_mode.load() == 2 && c->crossfeed_preset.load() == 2);
     assert(c->fet_threshold_db.load() == -27 && c->mb_band_count.load() == 5);
