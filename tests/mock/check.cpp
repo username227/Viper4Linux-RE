@@ -22,7 +22,7 @@ static void near(float got, float want) {
     }
 }
 int main(int argc, char** argv) {
-    assert(argc == 2);
+    assert(argc == 2 || (argc == 3 && std::string(argv[2]) == "--precision"));
     // Catch accidental regressions to the production IPC namespace.
     assert(viperbass::name().find("/viperlinux-unified-v5-mock-") == 0);
     void *lib = dlopen(argv[1], RTLD_NOW);
@@ -37,6 +37,21 @@ int main(int argc, char** argv) {
     viperbass::Mapping page;
     assert(page.attach());
     auto* p = page.get();
+    if (argc == 3) {
+        // A second independent instantiation verifies that exact native values
+        // override the legacy [General] GUI sliders during backend startup.
+        assert(p->strength_centi.load() == 238);
+        assert(p->bass_mono_strength_centi.load() == 247);
+        assert(p->clarity_gain_milli.load() == 2675);
+        assert(p->spectrum_frequency_hz.load() == 8024);
+        assert(p->spectrum_exciter_milli.load() == 2345);
+        assert(p->diff_lp_hz.load() == 4267);
+        assert(p->field_depth.load() == 537);
+        d->cleanup(h);
+        dlclose(lib);
+        std::printf("PASS: exact CLI values survive DSP initialization without the GUI\\n");
+        return 0;
+    }
     assert(p->strength_centi.load() == 500);
     assert(p->frequency_hz.load() == 90);
     assert(p->bass_mode.load() == 2); // restored from config without GUI launch
