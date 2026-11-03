@@ -1,5 +1,5 @@
 #pragma once
-// Generated at CMake configure time from Git HEAD or RELEASE-REVISION.
+// Generated at configure time from the Git tag/revision or archive metadata.
 #define VIPER4LINUX_DEV_REVISION "@V4L_REVISION@"
 #define VIPER4LINUX_DEV_VERSION "@V4L_DEV_VERSION@"
 #define VIPER4LINUX_VIPERDSP_REVISION "6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933"

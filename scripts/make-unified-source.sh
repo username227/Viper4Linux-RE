@@ -57,6 +57,7 @@ git -C "$root/$upstream_path" archive --format=tar "$expected" \
     | tar -xf - -C "$stage/$release_dir/$upstream_path"
 # A unified release has real dependency sources, not an unresolved Git link.
 rm -f -- "$stage/$release_dir/.gitmodules"
+printf '%s\n' "$version" > "$stage/$release_dir/RELEASE-VERSION"
 printf '%s\n' "$revision" > "$stage/$release_dir/RELEASE-REVISION"
 printf 'ViPERDSP repository: https://github.com/likelikeslike/ViPERDSP.git\nViPERDSP commit: %s\nApplication commit: %s\nDownstream patches: present but not applied; apply at build time to a private copy\n' \
     "$expected" "$(git -C "$root" rev-parse HEAD)" > "$stage/$release_dir/SOURCE-MANIFEST.txt"

@@ -45,6 +45,8 @@ with tempfile.TemporaryDirectory(prefix='v4l-release-test-') as tmp:
         base = 'viper4linux-re-0.1.0/'
         assert base + 'third_party/ViPERDSP/CMakeLists.txt' in members
         assert base + 'RELEASE-REVISION' in members
+        assert base + 'RELEASE-VERSION' in members
+        assert tar.extractfile(base + 'RELEASE-VERSION').read() == b'0.1.0\n'
         assert base + 'SOURCE-MANIFEST.txt' in members
         assert all('/.git/' not in n and not n.endswith('/.git') for n in members)
         assert base + '.gitmodules' not in members

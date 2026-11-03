@@ -10,6 +10,7 @@ python3 tests/check-native-state-contract.py
 python3 tests/check-precision-persistence-contract.py
 python3 tests/check-gui-sync-contract.py
 python3 tests/check-window-integration-contract.py
+python3 tests/check-version.py
 python3 tests/check-single-gui.py
 python3 tests/check-theme-contract.py
 python3 tests/check-ui-contract.py

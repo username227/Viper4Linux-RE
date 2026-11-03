@@ -2,7 +2,8 @@
 # Stable release package built from the unified source archive.
 
 pkgname=viper4linux-re
-pkgver=1.1.0
+# Template placeholder: render-stable-pkgbuild.py writes the requested version.
+pkgver=0.0.0
 pkgrel=1
 pkgdesc='ViPERDSP audio effects for PipeWire with a Qt6 interface'
 arch=('x86_64')

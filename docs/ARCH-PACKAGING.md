@@ -111,8 +111,12 @@ then builds the unified source, the native Arch package, an Ubuntu 24.04/Mint
 releases or binary packages, or update the AUR.
 
 1. Open **Actions → Prepare stable release → Run workflow**. Select the release
-   source revision and enter the target version (without `v`). The version must
-   match `V4L_BASE_VERSION` in CMake.
+   source revision and enter the target version (without `v`). This single
+   version input is written into `RELEASE-VERSION` inside the unified archive;
+   the rendered PKGBUILD and release checks use that same input. No CMake
+   version edit is needed. In a Git checkout, CMake identifies development
+   builds using the nearest reachable `vMAJOR.MINOR.PATCH` tag and Git SHA;
+   archive builds use `RELEASE-VERSION` and `RELEASE-REVISION`.
 2. The Arch preparation job generates the unified source, SHA-256, stable
    `PKGBUILD` and `.SRCINFO`; it builds and tests the package from the generated
    tarball, not the Git checkout.
@@ -143,7 +147,7 @@ without GitHub Actions:
 
 ```bash
 mkdir -p release-candidate
-bash scripts/prepare-stable-release.sh 1.1.0 "$PWD/release-candidate"
+bash scripts/prepare-stable-release.sh 1.1.1 "$PWD/release-candidate"
 ```
 
 The resulting source archive contains the pinned, unpatched upstream DSP; the
