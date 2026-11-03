@@ -21,6 +21,8 @@ if [[ -f .gitmodules ]]; then
 fi
 if [[ -f .github/workflows/prepare-stable-release.yml ]]; then
     python3 tests/check-native-deb-workflow.py
+    python3 tests/check-assembled-release.py
+    python3 tests/check-stable-release.py
 fi
 
 echo 'PASS: full developer regression suite'
