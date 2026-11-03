@@ -829,16 +829,25 @@ Audio Output monitor and identified the headphones. Direct
 or monitor. This positive live test does not yet cover the memory-off
 mode, exact native precision, or two-GUI interference.
 
+**Native ViPER-DDC live processing (maintainer, 2026-11-03):
+audible-effect PASS reported.** A deliberately non-neutral, dual-rate
+`.vdc` low-pass test profile was provided for 44.1/48 kHz. The
+maintainer enabled it and reported that it muted the treble
+considerably, which supports that the selected coefficients were
+actually processed rather than merely displayed as loaded. This is a
+subjective listening confirmation, not a measured frequency-response
+validation. A specific DDC-off versus DDC-on A/B toggle and unsupported
+sample-rate case remain worth checking.
+
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
 tray/minimize/restore/startup preferences, Graphic/Dynamic EQ editors,
-DDC and Convolver import/popup behavior, GUI↔CLI precision,
-disconnected-backend edits/reconnect, remaining Audio Output memory
-edge cases (memory-off, precision and two-GUI interference), and
-package/archive content. Verify full DDC
-`.vdc` profile selection, import and real DSP processing where a
-valid profile is available. Do not mark the whole refactor complete or
+DDC on/off behavior and Convolver import/popup behavior, GUI↔CLI
+precision, disconnected-backend edits/reconnect, remaining Audio Output
+memory edge cases (memory-off, precision and two-GUI interference), and
+package/archive content. DDC has a positive live audible-effect test;
+complete explicit A/B and sample-rate checks before final acceptance. Do not mark the whole refactor complete or
 merge to `main` until maintainer acceptance.
 
 ## Per-stage verification gate
