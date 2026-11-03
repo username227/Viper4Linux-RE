@@ -2291,11 +2291,13 @@ private:
         auto* load = new QPushButton("Load", &dialog);
         auto* rename = new QPushButton("Rename", &dialog);
         auto* remove = new QPushButton("Delete", &dialog);
+        auto* assign = new QPushButton("Apply to Audio Output…", &dialog);
         buttons->addWidget(save);
         buttons->addWidget(load);
         buttons->addWidget(rename);
         buttons->addWidget(remove);
         column->addLayout(buttons);
+        column->addWidget(assign);
         auto* bottom = new QHBoxLayout();
         auto* reset = new QPushButton("Reset Effects to Defaults…", &dialog);
         auto* close = new QPushButton("Close", &dialog);
@@ -2316,11 +2318,12 @@ private:
             }
             if (!list->currentItem() && list->count()) list->setCurrentRow(0);
         };
-        auto updateSelection = [list, load, rename, remove] {
+        auto updateSelection = [list, load, rename, remove, assign] {
             const bool selected = list->currentItem() != nullptr;
             load->setEnabled(selected);
             rename->setEnabled(selected);
             remove->setEnabled(selected);
+            assign->setEnabled(selected);
         };
         QObject::connect(list, &QListWidget::itemSelectionChanged, &dialog, updateSelection);
         refresh(); updateSelection();
@@ -2355,6 +2358,78 @@ private:
             }
             refresh(path);
             statusMessage("Effect preset saved: " + name);
+        });
+        QObject::connect(assign, &QPushButton::clicked, &dialog, [&, this] {
+            const QString preset = selectedPath();
+            if (preset.isEmpty()) return;
+            QFile inventoryFile(outputMemoryDirectory() + "/inventory.json");
+            if (!inventoryFile.open(QIODevice::ReadOnly)) {
+                QMessageBox::warning(&dialog, "Audio Outputs", "No remembered Audio Outputs found.");
+                return;
+            }
+            const QJsonDocument inventory = QJsonDocument::fromJson(inventoryFile.readAll());
+            const QJsonObject outputs = inventory.object().value("outputs").toObject();
+            if (inventory.object().value("format").toInt() != 1 || outputs.isEmpty()) {
+                QMessageBox::warning(&dialog, "Audio Outputs", "No remembered Audio Outputs found.");
+                return;
+            }
+            QString current;
+            QFile statusFile(QDir(qEnvironmentVariable("XDG_RUNTIME_DIR"))
+                .filePath("viper4linux-output-status.json"));
+            if (statusFile.open(QIODevice::ReadOnly)) {
+                const QJsonObject status = QJsonDocument::fromJson(statusFile.readAll()).object();
+                if (std::abs(status.value("timestamp").toDouble() -
+                             double(QDateTime::currentSecsSinceEpoch())) < 5.0)
+                    current = status.value("active").toObject().value("key").toString();
+            }
+            QDialog picker(&dialog);
+            picker.setWindowTitle("Assign Preset to Audio Output");
+            picker.setMinimumWidth(440);
+            auto* layout = new QVBoxLayout(&picker);
+            auto* explanation = new QLabel(
+                "Select the physical Audio Output whose saved effect settings will be replaced.", &picker);
+            explanation->setWordWrap(true);
+            layout->addWidget(explanation);
+            auto* targets = new QComboBox(&picker);
+            for (auto it = outputs.begin(); it != outputs.end(); ++it) {
+                const QString name = it.value().toObject().value("description").toString();
+                targets->addItem(name + (it.key() == current ? " (active)" : " (remembered)"),
+                                 it.key());
+            }
+            layout->addWidget(targets);
+            auto* controls = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &picker);
+            controls->button(QDialogButtonBox::Ok)->setText("Apply Preset");
+            layout->addWidget(controls);
+            connect(controls, &QDialogButtonBox::accepted, &picker, &QDialog::accept);
+            connect(controls, &QDialogButtonBox::rejected, &picker, &QDialog::reject);
+            if (picker.exec() != QDialog::Accepted) return;
+            const QString target = targets->currentData().toString();
+            if (target.size() != 64) return;
+            const QString selectedName = targets->currentText();
+            if (QMessageBox::question(&dialog, "Replace Audio Output Settings",
+                "Assign '" + list->currentItem()->text() + "' to " + selectedName + "?\n\n"
+                "This replaces that output's saved effect settings. "
+                "The original named preset and other Audio Outputs are unchanged.",
+                QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel)
+                != QMessageBox::Yes) return;
+            QString program = "/usr/bin/viper4linux-output";
+            QStringList args = {"--assign-preset", preset, "--target", target};
+            if (!QFileInfo::exists(program)) {
+                program = "python3";
+                args.prepend(QDir(QCoreApplication::applicationDirPath())
+                    .filePath("../src/viper_output_info.py"));
+            }
+            QProcess process;
+            process.start(program, args);
+            if (!process.waitForStarted(3000) || !process.waitForFinished(13000) ||
+                process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+                QMessageBox::warning(&dialog, "Preset Assignment Failed",
+                    QString::fromUtf8(process.readAllStandardError()).trimmed() +
+                    "\n" + QString::fromUtf8(process.readAllStandardOutput()).trimmed());
+                return;
+            }
+            statusMessage("Preset assigned to " + selectedName);
+            updateAudioOutputDisplay();
         });
         QObject::connect(load, &QPushButton::clicked, &dialog, [&, this] {
             const QString path = selectedPath();
