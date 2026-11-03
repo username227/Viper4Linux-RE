@@ -850,8 +850,15 @@ on settings, Checkpoint 7 now introduces one-GUI-per-user-session
 ownership in the GUI executable itself: a later launch requests the
 existing window to be shown/raised (including from the tray) and exits
 without creating a second `ViperWindow`. The independent backend and
-Audio Output monitor lifecycles are unchanged. Qt native compile and
-live Cinnamon/X11 acceptance of the new guard remain pending.
+Audio Output monitor lifecycles are unchanged.
+
+**Single-instance live acceptance (maintainer, 2026-11-03): PASS for
+normal activation.** On Arch/Cinnamon, launching Viper4Linux a second
+time brought the existing GUI to the foreground and the second process
+exited promptly, without creating a second GUI window. A separate
+tray-hidden/minimized activation test remains unreported. The maintainer
+also built the new native Qt GUI successfully for this live test; the
+separate isolated regression suite's result was not explicitly reported.
 
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
