@@ -71,7 +71,7 @@ inline const ArgSpec* withArgs(const std::string& cmd) {
 inline bool noArgs(const std::string& cmd) {
     static const char* const commands[] = {
         "on", "off", "all-on", "all-off", "status", "eq-presets",
-        "bass-on", "bass-off", "bass-toggle", "toggle", "mono-on", "mono-off",
+        "bass-on", "bass-off", "bass-toggle", "mono-on", "mono-off",
         "psycho-on", "psycho-off", "dynamic-on", "dynamic-off",
         "eq-on", "eq-off", "deq-on", "deq-off", "clarity-on", "clarity-off",
         "spectrum-on", "spectrum-off", "tube-on", "tube-off",
