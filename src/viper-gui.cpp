@@ -686,7 +686,7 @@ public:
         audio_output_label_ = new QLabel("Audio Output: detecting…", central);
         audio_output_label_->setObjectName("viperCurrentAudioOutput");
         audio_output_label_->setStyleSheet("color: palette(mid);");
-        audio_output_label_->setToolTip("Current physical Audio Output. Automatic per-output settings are not enabled yet.");
+        audio_output_label_->setToolTip("Current physical Audio Output; enable independent settings under Preferences.");
         layout->addWidget(audio_output_label_);
 
         // Master bypass lives outside both tabs, as in the previous working UI.
@@ -3352,7 +3352,7 @@ private:
             if (rememberOutputs->isChecked() && !ensureBackend()) {
                 QMessageBox::warning(this, "Audio Output Settings",
                     "Audio processing must be ready before enabling per-output memory. "
-                    "Start playback and try again.");
+                    "Check that the ViPER backend and native DSP channel are running, then try again.");
             } else {
                 QString error;
                 if (!setOutputMemoryEnabled(rememberOutputs->isChecked(), &error))
