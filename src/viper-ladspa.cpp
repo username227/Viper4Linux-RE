@@ -292,7 +292,7 @@ void load_saved_settings(viperbass::Controls& state) {
     file.seekg(0);
     bool precise = false;
     while (std::getline(file, line)) {
-        if (!line.empty() && line.back() == '\\r') line.pop_back();
+        if (!line.empty() && line.back() == '\r') line.pop_back();
         if (line.empty() || line[0] == ';' || line[0] == '#') continue;
         if (line[0] == '[') {
             precise = line == "[precision]";
