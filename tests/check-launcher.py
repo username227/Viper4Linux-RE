@@ -60,6 +60,8 @@ with TemporaryDirectory() as tmp:
     new_proc.pid = 444
     new_proc.poll.return_value = None
     def spawn_new(*a, **kw):
+        # Verify actual subprocess argument, not just the source text.
+        assert a[0] == [str(root / 'scripts/start.sh')], a
         events.append('spawn')
         return new_proc
     def stop_old(pid, sig):
@@ -85,5 +87,17 @@ with TemporaryDirectory() as tmp:
         else:
             raise AssertionError('should refuse a duplicate backend')
         spawn.assert_not_called()
+
+# All five relocated scripts must exist and remain executable in a checkout.
+# This runs from any working directory; it does not start audio.
+checkout = Path(__file__).resolve().parents[1]
+for name in ('start.sh', 'stop.sh', 'status.sh', 'gui.sh', 'verify.sh'):
+    relocated = checkout / 'scripts' / name
+    assert relocated.is_file(), relocated
+    assert os.access(relocated, os.X_OK), relocated
+    assert not (checkout / name).exists(), name
+source_launcher = (checkout / 'src/viper_launcher.py').read_text()
+assert "else root / 'scripts/start.sh'" in source_launcher
+assert "else root / 'start.sh'" not in source_launcher
 
 print('PASS: launcher fingerprints build, reuses matching backend, restarts old one, refuses duplicates')

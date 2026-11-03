@@ -117,8 +117,8 @@ switches control the opt-in store; `--assign-preset FILE --target OUTPUT_KEY`
 uses the monitored, acknowledged assignment path. The keys are exact,
 remembered physical identifiers, not display-name matches.
 
-For a direct-source development build, useful scripts are `./status.sh`,
-`./verify.sh`, `./stop.sh` and `./start.sh`. The source installer builds
+For a direct-source development build, useful scripts are `./scripts/status.sh`,
+`./scripts/verify.sh`, `./scripts/stop.sh` and `./scripts/start.sh`. The source installer builds
 `build/viper-ctl`, `build/viper-gui`, and `build/viper_dsp_ladspa.so`.
 
 Backend startup logs are under `$XDG_STATE_HOME/viper4linux/backend.log`

@@ -65,6 +65,8 @@ with tempfile.TemporaryDirectory(prefix='viper-release-e2e-') as temp:
     assert run('sha256sum', '-c', 'SHA256SUMS', cwd=out).strip().endswith(': OK')
     with tarfile.open(out / 'viper4linux-re-1.1.0-unified-source.tar.xz') as tar:
         assert 'viper4linux-re-1.1.0/third_party/ViPERDSP/CMakeLists.txt' in tar.getnames()
+        assert tar.extractfile('viper4linux-re-1.1.0/RELEASE-VERSION').read() == b'1.1.0\n'
+        assert 'viper4linux-re-1.1.0/cmake/Version.cmake' in tar.getnames()
     # Fail rather than silently publishing the wrong revision under an existing tag.
     run('git', 'tag', 'v1.1.0', cwd=app)
     (app / 'README.md').write_text((app / 'README.md').read_text() + '\nfixture change\n')

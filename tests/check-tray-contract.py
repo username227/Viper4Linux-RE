@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Source-level tray/menu lifecycle contracts (live Cinnamon/KDE still needed)."""
 from pathlib import Path
-s = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
+from gui_source_contract import read_gui_sources
+s = read_gui_sources(Path(__file__).resolve().parents[1])
 assert 'app.setQuitOnLastWindowClosed(false);' in s
 assert 'window.showAtStartup();' in s
 assert 'menuButton->setMenu(makeApplicationMenu(menuButton));' in s

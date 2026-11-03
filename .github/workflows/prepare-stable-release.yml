@@ -4,10 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to prepare (without v prefix); do not publish a tag yet"
+        description: "Candidate version (MAJOR.MINOR.PATCH; written into source archive)"
         required: true
         type: string
-        default: "1.0.0"
 
 permissions:
   contents: read

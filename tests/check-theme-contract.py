@@ -2,7 +2,8 @@
 """Static theme-contract checks. Runtime color verification still needs Qt on Arch."""
 from pathlib import Path
 import re
-source = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
+from gui_source_contract import read_gui_sources
+source = read_gui_sources(Path(__file__).resolve().parents[1])
 checks = (
     'theme_selector_->setObjectName("viperThemeSelector")',
     'QComboBox::drop-down',
@@ -101,5 +102,5 @@ assert 'QComboBox#viperThemeSelector::' not in source, 'No Theme-only cap: all c
 # All application combo instances are created in the main window, including
 # the special IRS library combo with its own popup update logic.
 assert 'class IrsComboBox final : public QComboBox' in source
-assert 'convolver_library_ = new IrsComboBox(' in source
+assert 'out.convolver_library = new IrsComboBox(' in source
 assert source.count('new QComboBox(') >= 12

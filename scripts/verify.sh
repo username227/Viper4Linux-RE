@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verify an isolated fresh build and report live DSP data (no system changes).
 set -euo pipefail
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 printf '== Complete source and three renamed outputs ==\n'
 for f in CMakeLists.txt src/viper-ladspa.cpp src/viper-gui.cpp src/viper-ctl.cpp src/viper-control.h src/viperdsp_compat.h \
          build/viper_dsp_ladspa.so build/viper-gui build/viper-ctl; do
@@ -22,9 +22,9 @@ fi
 printf '\n== Mock regression suite ==\n'
 ./tests/check-mock.sh
 printf '\n== DSP backend and callback counter (play Rhythmbox first) ==\n'
-./status.sh
+./scripts/status.sh
 sleep 3
-./status.sh
+./scripts/status.sh
 printf '\n== PipeWire links for ViPER and Rhythmbox ==\n'
 if command -v pw-link >/dev/null; then
   pw-link -l | grep -E -A 3 'Rhythmbox:output_|viperbass.smart.capture:input_|viperbass.smart.playback:output_' || :

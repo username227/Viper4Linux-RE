@@ -24,36 +24,17 @@ target_include_directories(viper_dsp_ladspa PRIVATE src)
 target_link_libraries(viper_dsp_ladspa PRIVATE ViPERDSP Threads::Threads)
 target_compile_options(viper_dsp_ladspa PRIVATE -Wall -Wextra -Wpedantic)
 
-# Development identity follows a SemVer placeholder plus the Git revision.
-# The Git checkout determines HEAD; source-only exports may use RELEASE-REVISION.
-set(V4L_BASE_VERSION "1.1.0")
-set(V4L_REVISION "unknown")
-find_package(Git QUIET)
-if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-  execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --short=12 HEAD
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    OUTPUT_VARIABLE V4L_REVISION OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE V4L_GIT_RESULT ERROR_QUIET)
-  if(NOT V4L_GIT_RESULT EQUAL 0)
-    set(V4L_REVISION "unknown")
-  endif()
-elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RELEASE-REVISION")
-  file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/RELEASE-REVISION" V4L_REVISION LIMIT_COUNT 1)
-endif()
-string(LENGTH "${V4L_REVISION}" V4L_REVISION_LENGTH)
-if(NOT V4L_REVISION MATCHES "^[0-9a-f]+$"
-   OR V4L_REVISION_LENGTH LESS 7 OR V4L_REVISION_LENGTH GREATER 40)
-  set(V4L_REVISION "unknown")
-endif()
-set(V4L_DEV_VERSION "${V4L_BASE_VERSION}-${V4L_REVISION}")
+# About/build identity comes from a Git release tag or archive metadata.
+# No version number is maintained manually in CMakeLists.txt.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake")
 configure_file(src/viper-build-info.h.in
   "${CMAKE_CURRENT_BINARY_DIR}/generated/viper-build-info.h" @ONLY)
 
-find_package(Qt6 6.4 COMPONENTS Widgets REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Widgets Network REQUIRED)
 add_executable(viper-gui src/viper-gui.cpp resources/viper4linux-icons.qrc)
 set_target_properties(viper-gui PROPERTIES AUTORCC ON)
 target_include_directories(viper-gui PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(viper-gui PRIVATE Qt6::Widgets)
+target_link_libraries(viper-gui PRIVATE Qt6::Widgets Qt6::Network)
 target_compile_options(viper-gui PRIVATE -Wall -Wextra -Wpedantic)
 
 # Non-realtime native DSP snapshot transport for per-output settings.

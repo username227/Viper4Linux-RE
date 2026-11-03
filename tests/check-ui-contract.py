@@ -2,7 +2,10 @@
 """Read-only source checks for the GUI-only redesign (not a Qt runtime test)."""
 from pathlib import Path
 import re
-source = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
+from gui_source_contract import read_gui_sources
+root = Path(__file__).resolve().parents[1]
+source = read_gui_sources(root)
+overview = (root / "src/widgets/eq-overviews.h").read_text()
 required = {
     'Bass': 'enabled_',
     'Clarity': 'clarity_enabled_',
@@ -14,17 +17,18 @@ required = {
 }
 for title, variable in required.items():
     assert title in source, title
-    assert f'{variable} = new EffectSwitch(' in source, variable
+    field = variable.rstrip('_')
+    assert re.search(r'\b(?:out\.)?' + re.escape(field) + r'_?\s*=\s*new EffectSwitch\(', source), variable
     assert f'connect({variable}, &QCheckBox::toggled' in source, variable
 assert 'addEffectsTab("Bass")' in source
 assert 'addEffectsTab("EQ & Tone")' in source
 assert 'addEffectsTab("Spatial")' in source
 assert 'addEffectsTab("Output")' in source
-assert 'limiter_indicator_->setChecked(true)' in source
-assert 'limiter_indicator_->setEnabled(false)' in source
-assert 'limiter_threshold_ = addSlider(' in source
-assert 'agc_enabled_ = new EffectSwitch(' in source
-assert 'lufs_enabled_ = new EffectSwitch(' in source
+assert 'out.limiter_indicator->setChecked(true)' in source
+assert 'out.limiter_indicator->setEnabled(false)' in source
+assert 'out.limiter_threshold = addSlider(' in source
+assert 'out.agc_enabled = new EffectSwitch(' in source
+assert 'out.lufs_enabled = new EffectSwitch(' in source
 assert 'output_warning_' in source
 assert 'saveOutputPreset();' in source
 assert 'restoreOutputPreset();' in source
@@ -45,15 +49,16 @@ assert 'const float l = in_l && std::isfinite(in_l[ix]) ? in_l[ix] : 0.0f;' in b
 assert 'const float r = in_r && std::isfinite(in_r[ix]) ? in_r[ix] : 0.0f;' in backend
 routing = (Path(__file__).resolve().parents[1] / 'routing-config/filter-chain.conf.d/99-viper-smart.conf').read_text()
 assert 'Input Scale' not in routing
-assert 'addEffectPanel(dynamicsLayout, fet_group, "fet", fet_enabled_)' in source
-assert 'addEffectPanel(dynamicsLayout, mb_group, "multiband", mb_enabled_)' in source
-assert 'addEffectPanel(correctionLayout, conv_group, "convolver", convolver_enabled_)' in source
+assert 'addEffectPanel(dynamicsLayout, dynamicsFet.group, "fet", fet_enabled_)' in source
+assert 'addEffectPanel(dynamicsLayout, dynamicsMb.group, "multiband", mb_enabled_)' in source
+assert 'addEffectPanel(correctionLayout, correctionConvolver.group, "convolver", convolver_enabled_)' in source
 assert 'Load' not in source or 'No impulse response' in source
 assert 'if (initialTabName == "Enhancements") initialTabName = "EQ & Tone";' in source
 assert 'if (initialTabName == "Surround") initialTabName = "Spatial";' in source
 for title,control in [('ViPER Bass Mono','mono_enabled_'),('Psychoacoustic Bass','psycho_enabled_'),('Dynamic System','dyn_enabled_')]:
     assert title in source
-    assert f'{control} = new EffectSwitch(' in source
+    field = control.rstrip('_')
+    assert re.search(r'\b(?:out\.)?' + re.escape(field) + r'_?\s*=\s*new EffectSwitch\(', source), control
     assert f'connect({control}, &QCheckBox::toggled' in source
 for key in ['bass', 'bass_mono', 'psycho_bass', 'dynamic_bass', 'clarity', 'spectrum', 'headphone', 'differential', 'field', 'reverb', 'convolver', 'limiter', 'agc', 'lufs']:
     assert f'"{key}"' in source, key
@@ -76,7 +81,7 @@ print('PASS: native Convolver GUI contract + six tabs, independent collapse, set
 assert 'QStandardPaths::GenericDataLocation' in source
 assert '"/viper4linux/IRS"' in source
 assert 'QFile::copy(selectedFile, destination)' in source
-assert 'convolver_library_ = new IrsComboBox' in source
+assert 'out.convolver_library = new IrsComboBox' in source
 assert 'convolver_request_serial.fetch_add(1' in source
 assert 'void showHelp()' in source
 assert 'QTextBrowser' in source
@@ -112,10 +117,10 @@ for token in [
     'view()->setTextElideMode(Qt::ElideMiddle)',
     'fileRow->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred)',
     'conv_form->setRowWrapPolicy(QFormLayout::WrapLongRows)',
-    'convolver_full_name_->setReadOnly(true)',
-    'convolver_full_name_->setWordWrapMode(QTextOption::WrapAnywhere)',
-    'convolver_full_name_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff)',
-    'convolver_full_name_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed)',
+    'out.convolver_full_name->setReadOnly(true)',
+    'out.convolver_full_name->setWordWrapMode(QTextOption::WrapAnywhere)',
+    'out.convolver_full_name->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff)',
+    'out.convolver_full_name->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed)',
     'convolver_library_->setItemData(index, entry.first, Qt::ToolTipRole)',
     'void updateIrsName(const QString& path)',
     'convolver_full_name_->setPlainText("Selected IRS: " + name)',
@@ -131,9 +136,9 @@ assert 'for (int i = 0; i < 31; ++i)' in source
 assert 'eq_columns_[i]->setVisible(i < n);' in source
 assert 'eq_fader_container_->setFixedWidth(n * 39 + 6);' in source
 assert 'QSlider::groove:vertical' in source
-assert 'eq_fader_container_->setObjectName("viperEqFaders")' in source
+assert 'widgets.faderContainer->setObjectName("viperEqFaders")' in source
 assert 'connect(eq_mode_, QOverload<int>::of(&QComboBox::currentIndexChanged)' in source
-assert 'eq_fader_container_->setFixedSize(31 * 39 + 6, 235)' in source
+assert 'widgets.faderContainer->setFixedSize(31 * 39 + 6, 235)' in source
 assert 'eq_request_serial.fetch_add(1' in source
 assert 'wet.ApplyEqualizer(p);' in backend
 assert 'if (changing_layout)' in backend
@@ -149,8 +154,8 @@ for token in [
     'viper_eq::frequencies(static_cast<int>(levels_.size()))',
     'eq_overview_->openEditor = [this]',
     'eq_editor_->show();',
-    'eq_mode_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed)',
-    'eq_preset_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed)',
+    'out.eq_mode->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed)',
+    'out.eq_preset->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed)',
     'eq_fader_row->setSpacing(3);',
     'eq_columns_[i]->setVisible(i < n);',
     'eq_preset_->addItem("Custom", "custom")',
@@ -162,7 +167,7 @@ for token in [
     assert token in source, 'Missing compact EQ feature: ' + token
 assert 'eq_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded)' in source
 assert 'QTimer' in source  # Existing settings debounce; no new EQ polling timers
-assert 'viper_eq::normalizedY(levels_[i], *minimum, *maximum)' in source
+assert 'const qreal zeroY = plot.center().y()' in source
 assert 'migrateEqPrecision();' in source
 assert 'vals = item.levels(eq_active_bands_)' in source
 assert 'fader->setRange(-1200, 1200)' in source
@@ -176,9 +181,9 @@ for token in [
     'addEffectsTab("Sound Correction")',
     'setWindowTitle("Viper4Linux")',
     'auto* title = new QLabel("Viper4Linux", central)',
-    'tube_enabled_ = new EffectSwitch(',
-    'tube_model_->addItems({"12AX7 (High Gain)", "12AU7 (Low Gain)", "6N1P (Medium Gain)"})',
-    'addEffectPanel(effectLayout, tube_group, "tube", tube_enabled_)',
+    'out.tube_enabled = new EffectSwitch(',
+    'out.tube_model->addItems({"12AX7 (High Gain)", "12AU7 (Low Gain)", "6N1P (Medium Gain)"})',
+    'addEffectPanel(effectLayout, eqToneTube.tubeGroup, "tube", tube_enabled_)',
     'settings_.setValue("tube_enabled", tube_enabled_->isChecked())',
     'setTubeValue(c->tube_enabled, tube_enabled_->isChecked() ? 1 : 0)',
     'void applyTubeSettings(bool enabled, int model, int drive, int mix)',
@@ -193,9 +198,9 @@ for token in [
 assert 'Proof of concept · Native ViPERDSP · PipeWire smart routing' not in source
 assert 'Closing the GUI doesn\'t stop audio or affect routing.' not in source
 for token in (
-    'analogx_enabled_ = new EffectSwitch(',
-    'analogx_mode_->addItems({"Mild", "Medium", "Strong"})',
-    'addEffectPanel(effectLayout, analogx_group, "analogx", analogx_enabled_)',
+    'out.analogx_enabled = new EffectSwitch(',
+    'out.analogx_mode->addItems({"Mild", "Medium", "Strong"})',
+    'addEffectPanel(effectLayout, eqToneTube.analogxGroup, "analogx", analogx_enabled_)',
     'settings_.setValue("analogx_enabled", analogx_enabled_->isChecked())',
     'settings_.setValue("preset/analogx_enabled", analogx_enabled_->isChecked())',
     'setAnalogXValue(c->analogx_enabled, analogx_enabled_->isChecked() ? 1 : 0)',
@@ -210,7 +215,7 @@ for token in (
 print('PASS: Tube Simulator, native AnalogX and simplified Viper4Linux GUI controls')
 for token in ('imager_enabled_', 'imager_low_', 'imager_mid_', 'imager_high_',
               'imager_low_xover_', 'imager_high_xover_', 'preset/imager_enabled',
-              'setImager(c->imager_enabled', 'addEffectPanel(spatialLayout, imager_group, "imager", imager_enabled_)'):
+              'setImager(c->imager_enabled', 'addEffectPanel(spatialLayout, spatialPanels.imagerGroup, "imager", imager_enabled_)'):
     assert token in source, f'Stereo Imager missing {token}'
 assert 'wet.ApplyStereoImager(p);' in backend
 assert 'imager_request_serial' in backend
@@ -230,7 +235,7 @@ assert 'setAttribute(Qt::WA_TransparentForMouseEvents)' in glyph_code
 # Qt6 forbids findChildren<EffectGlyph*>() without Q_OBJECT. Use the Qt
 # widget hierarchy and a checked downcast, preserving theme color updates.
 assert 'findChildren<EffectGlyph*>()' not in source
-assert 'for (auto* widget : findChildren<QWidget*>())' in source
+assert 'for (auto* widget : window->findChildren<QWidget*>())' in source
 assert 'dynamic_cast<EffectGlyph*>(widget)' in source
 print('PASS: 24 unique monochrome effect glyphs, full icon coverage, no font-dependent fallback')
 
@@ -240,22 +245,22 @@ for token in [
  'setObjectName("viperDynamicEqOverview")',
  'deq_overview_->openEditor',
  'deq_editor_->show()',
- 'deq_count_->setRange(1, 10)',
- 'deq_frequency_->setRange(20,20000)',
- 'deq_gain_->setRange(-12,12)',
- 'deq_threshold_->setRange(-80,0)',
- 'deq_attack_->setRange(1,100)',
- 'deq_release_->setRange(10,500)',
+ 'out.deq_count->setRange(1, 10)',
+ 'result.frequency->setRange(20,20000)',
+ 'result.gain->setRange(-12,12)',
+ 'result.threshold->setRange(-80,0)',
+ 'result.attack->setRange(1,100)',
+ 'result.release->setRange(10,500)',
  'void commitDeqEditorBand()',
  'void restoreDeqPreset()',
  'void saveDeqPreset()',
- 'addEffectPanel(effectLayout, deq_group, "dynamic_eq", deq_enabled_)',
+ 'addEffectPanel(effectLayout, eqToneEq.deqGroup, "dynamic_eq", deq_enabled_)',
  'tabName == "EQ & Tone" ? "EQ && Tone" : tabName',
 ]:
     assert token in source, "Missing Dynamic EQ UI: " + token
-assert source.index('addEffectPanel(effectLayout, eq_group') < source.index('addEffectPanel(effectLayout, deq_group') < source.index('addEffectPanel(effectLayout, clarity_group')
+assert source.index('addEffectPanel(effectLayout, eqToneEq.eqGroup') < source.index('addEffectPanel(effectLayout, eqToneEq.deqGroup') < source.index('addEffectPanel(effectLayout, eqToneClarity.clarityGroup')
 assert 'Dynamic EQ is not implemented yet.' not in source
-assert 'QTimer' not in source[source.index('class DynamicEqOverview'):source.index('class ViperWindow')], 'Static preview must not have polling'
+assert 'QTimer' not in overview[overview.index('class DynamicEqOverview final'):], 'Static preview must not have polling'
 assert 'wet.ApplyDynamicEq(' in backend
 assert 'deq_request_serial' in backend
 assert 'apply_dynamic_eq_from_controls();' in backend
@@ -265,22 +270,26 @@ print('PASS: Dynamic EQ static preview, independent click editor, native filter 
 # Stable, native Qt resources for theme-specific header and fixed blue WM icon.
 from pathlib import Path as _BrandPath
 brand_root = _BrandPath(__file__).resolve().parent.parent
-brand_gui = (brand_root / "src/viper-gui.cpp").read_text()
+brand_gui = read_gui_sources(brand_root)
 brand_cmake = (brand_root / "CMakeLists.txt").read_text()
 brand_qrc = (brand_root / "resources/viper4linux-icons.qrc").read_text()
 assert 'resources/viper4linux-icons.qrc' in brand_cmake
 assert 'PROPERTIES AUTORCC ON' in brand_cmake
 assert 'app.setWindowIcon(QIcon(":/viper4linux/blue.png"))' in brand_gui
 assert 'setWindowIcon(QIcon(":/viper4linux/blue.png"))' in brand_gui
-assert 'header_icon_->setPixmap' in brand_gui
+# The main window owns the label; theme painting sets its pixmap through
+# the helper's headerIcon parameter. Both sides of the connection must survive.
+assert 'header_icon_ = new QLabel(central);' in brand_gui
+assert 'tabs_, header_icon_, status_' in brand_gui
+assert 'headerIcon->setPixmap(logo.scaled(36,36,Qt::KeepAspectRatio,Qt::SmoothTransformation))' in brand_gui
 assert 'classic ? ":/viper4linux/blue.png" : ":/viper4linux/teal.png"' in brand_gui
 assert 'viper4linux-teal.png' in brand_qrc and 'viper4linux-blue.png' in brand_qrc
 for palette in ('teal','blue'):
     png=(brand_root / f'resources/viper4linux-{palette}.png').read_bytes()
     assert png[:8] == bytes.fromhex('89504e470d0a1a0a') and png[25] == 6, palette+' must have RGBA transparency'
 # Preserve the original Graphic EQ click handler; only Dynamic EQ is selectable.
-normal = brand_gui.split('class EqOverview final')[1].split('class DynamicEqOverview final')[0]
-dynamic = brand_gui.split('class DynamicEqOverview final')[1].split('class ViperWindow final')[0]
+normal = overview.split('class EqOverview final')[1].split('class DynamicEqOverview final')[0]
+dynamic = overview.split('class DynamicEqOverview final')[1]
 assert 'if (editor_mode_ && selectBand)' not in normal
 assert 'if (nearest >= 0 && (editor_mode_ || distance <= 19.0))' in dynamic
 assert 'if (selectBand) selectBand(nearest);' in dynamic
@@ -293,9 +302,9 @@ print('PASS: transparent Qt-branded logos, stable blue X11 icon, selected-theme 
 
 # Native Cure Crossfeed: independent switch, three presets, saved state and IPC.
 for token in (
-    'crossfeed_enabled_ = new EffectSwitch(',
-    'crossfeed_mode_->addItems({"Mild", "Medium", "Strong"})',
-    'addEffectPanel(spatialLayout, crossfeed_group, "crossfeed", crossfeed_enabled_)',
+    'out.crossfeed_enabled = new EffectSwitch(',
+    'out.crossfeed_mode->addItems({"Mild", "Medium", "Strong"})',
+    'addEffectPanel(spatialLayout, spatialPanels.crossfeedGroup, "crossfeed", crossfeed_enabled_)',
     'settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked())',
     'settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked())',
     'setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0)',
@@ -310,7 +319,7 @@ print('PASS: native Crossfeed UI and presets, no substitute DSP')
 # DDC: dedicated library, no disposable test profile in package.
 for token in [
     '"/viper4linux/VDC"',
-    'ddc_library_ = new IrsComboBox(',
+    'out.ddc_library = new IrsComboBox(',
     'QFileSystemWatcher::directoryChanged',
     'void refreshDdcLibrary()',
     'QFile::copy(selected, destination)',
@@ -323,8 +332,8 @@ print('PASS: dedicated VDC profile library, import, refresh and selection')
 # Sound Correction tab keeps the independent effect controls, without a
 # redundant introductory Device correction notice taking up vertical space.
 assert 'addTabNotice(correctionLayout, "Device correction"' not in source
-assert 'addEffectPanel(correctionLayout, ddc_group, "ddc", ddc_enabled_)' in source
-assert 'addEffectPanel(correctionLayout, speaker_group, "speaker_correction", speaker_enabled_)' in source
+assert 'addEffectPanel(correctionLayout, correctionDdc.group, "ddc", ddc_enabled_)' in source
+assert 'addEffectPanel(correctionLayout, correctionSpeaker.group, "speaker_correction", speaker_enabled_)' in source
 print('PASS: compact Sound Correction tab without redundant notice')
 
 # CLI-to-GUI readback: worker-managed effect switches must not trigger a

@@ -12,7 +12,8 @@ assert 'configure_dynamic_eq(enabled, count, bands);' in method
 assert 'ir_transition.store(true' not in method
 assert 'sleep_for' not in method
 assert 'wet.ApplyDynamicEq(p)' in s
-ui = (r / 'src/viper-gui.cpp').read_text()
+from gui_source_contract import read_gui_sources
+ui = read_gui_sources(r)
 # About moved from the footer to the compact application menu.
 assert 'menuButton->setObjectName("viperApplicationMenuButton")' in ui
 assert 'menuButton->setMenu(makeApplicationMenu(menuButton));' in ui
@@ -24,10 +25,13 @@ assert 'VIPER4LINUX_DEV_REVISION' in ui
 assert 'VIPER4LINUX_VIPERDSP_REVISION' in ui
 assert 'about.setWindowIcon(QIcon(":/viper4linux/blue.png"));' in ui
 cm = (r / 'CMakeLists.txt').read_text()
-assert 'execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --short=12 HEAD' in cm
-assert 'RELEASE-REVISION' in cm
-assert 'set(V4L_BASE_VERSION "1.1.0")' in cm
-assert 'set(V4L_DEV_VERSION "${V4L_BASE_VERSION}-${V4L_REVISION}")' in cm
+assert 'include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake")' in cm
+assert 'set(V4L_BASE_VERSION "1.1.0")' not in cm
+version_rules = (r / 'cmake/Version.cmake').read_text()
+assert 'describe --tags --abbrev=0' in version_rules
+assert 'RELEASE-VERSION' in version_rules
+assert 'RELEASE-REVISION' in version_rules
+assert 'set(V4L_DEV_VERSION "${V4L_BASE_VERSION}-${V4L_REVISION}")' in version_rules
 assert 'configure_file(src/viper-build-info.h.in' in cm
 assert 'QString("Version: <b>%1</b><br>"' in ui
-print('PASS: Dynamic EQ edits avoid global dry crossfade; native controls and 1.1.0-hash About revision wiring')
+print('PASS: Dynamic EQ avoids global dry crossfade; About uses tag/archive version and revision')
