@@ -57,7 +57,16 @@ with tempfile.TemporaryDirectory(prefix='viper-assembled-native-') as d:
     assert len(list(output.glob('*.deb'))) == 2
     assert (output / arch_filename).exists()
     assert (output / '.SRCINFO').exists()
-    assert all((output / f'DEB-SHA256SUMS-{target}').is_file() for target in debs)
+    checksums = list(output.glob('*SHA256SUMS*'))
+    assert [f.name for f in checksums] == ['SHA256SUMS'], checksums
+    lines = (output / 'SHA256SUMS').read_text().splitlines()
+    assert len(lines) == 4, lines
+    assert {line.split('  ', 1)[1] for line in lines} == {
+        source, arch_filename, *(path.name for path in debs.values())
+    }, lines
+    run = subprocess.run(['sha256sum', '--check', 'SHA256SUMS'], cwd=output,
+                         capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr + run.stdout
 
     res = invoke(artifacts, temp / 'bad-commit', '0'*40)
     assert res.returncode != 0 and 'Source commit does not match' in res.stderr
