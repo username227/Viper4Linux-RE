@@ -35,8 +35,8 @@ for target in ubuntu24.04-mint22 debian13-lmde7; do
         exit 1
     }
     cp -- "${debs[0]}" "$out/"
-    cp -- "$input/SHA256SUMS" "$out/DEB-SHA256SUMS-${target}"
-    (cd "$out" && sha256sum --check "DEB-SHA256SUMS-${target}")
+    # The per-target checksum was already checked above; keep it out of the
+    # release bundle. The final SHA256SUMS covers every distributable file.
 done
 main_packages=("$out"/viper4linux-re-"$version"-*.pkg.tar.zst)
 test "${#main_packages[@]}" -eq 1 || {
@@ -48,4 +48,16 @@ test "$(find "$out" -maxdepth 1 -name '*.deb' | wc -l)" -eq 2
     echo 'Debug-symbol package must not be distributed.' >&2
     exit 1
 }
+# The prep/Arch checksum files are internal to the build workflow. Replace
+# them with a single release-facing manifest containing only the four
+# distributable binaries/source artifacts, in a deterministic order.
+rm -- "$out/SHA256SUMS" "$out/ARCH-SHA256SUMS"
+(
+    cd "$out"
+    sha256sum -- "$archive" "${main_packages[0]##*/}" \
+        "viper4linux-re_${version}-1~ubuntu24.04mint22_amd64.deb" \
+        "viper4linux-re_${version}-1~debian13lmde7_amd64.deb" > SHA256SUMS
+    test "$(wc -l < SHA256SUMS)" -eq 4
+    sha256sum --check SHA256SUMS
+)
 echo 'PASS: unified source, Arch and two .deb packages, hashes and commit all verified.'
