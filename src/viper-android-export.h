@@ -61,7 +61,7 @@ inline bool convert(const QString& path, QJsonObject* output, QString* warning, 
         {"enable", flag("bass_mono_enabled")},
         {"mode", n("bass_mono_mode", 0)},
         {"frequency", n("bass_mono_frequency_hz", 65)},
-        {"gain", scaled("bass_mono_strength_centi", 100, 100.0)},
+        {"gain", scaled("bass_mono_strength_centi", 200, 100.0)},
         {"antiPop", true}};
     json["clarity"] = QJsonObject{
         {"enable", flag("clarity_enabled")},
@@ -151,6 +151,15 @@ inline bool convert(const QString& path, QJsonObject* output, QString* warning, 
         {"freqs", freqs}, {"qs", qs}, {"gains", gains},
         {"thresholds", thresholds}, {"attacks", attacks},
         {"releases", releases}, {"filterTypes", types}};
+    // Android deserializes on top of its current live state. Explicitly disable
+    // unsupported effects so they cannot remain active from an earlier preset.
+    // A later converter revision can add their full, verified parameter maps.
+    json["fetCompressor"] = QJsonObject{{"enable", false}};
+    json["multibandCompressor"] = QJsonObject{{"enable", false}};
+    json["fieldSurround"] = QJsonObject{{"enable", false}};
+    json["dynamicSystem"] = QJsonObject{{"enable", false}};
+    json["psychoacousticBass"] = QJsonObject{{"enable", false}};
+    json["cure"] = QJsonObject{{"enable", false}};
     // Our convolver/DDC reference external assets; a file path from Linux
     // cannot be used as an Android device-local kernel/profile path.
     json["convolver"] = QJsonObject{
