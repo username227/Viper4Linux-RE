@@ -564,7 +564,7 @@ considering `main`.
 Sound Correction remains. Next are Checkpoints 6 and 7, then complete
 integration acceptance and explicit maintainer merge approval.
 
-### Checkpoint 5G — Sound Correction tab extraction (code committed; native test pending)
+### Checkpoint 5G — Sound Correction tab extraction (partial maintainer verification; DDC test deferred/pending)
 
 All three Sound Correction widget constructors are now in
 `src/panels/correction-panels.h`, divided into
@@ -586,11 +586,24 @@ QSettings state and all native DSP/CLI publishing. The original card keys
 enable-versus-expansion state are unchanged. No changes to the DSP engine,
 LADSPA, shared-memory ABI, CMake, third-party submodule, or preset formats.
 
-**Verification: PENDING.** Static checks confirm unchanged UI string
-literals, slider ranges, button references and exact retention of the
-main-window callbacks, import handlers and watchers. Native Qt compilation
-and GUI/audio acceptance have not been performed by the assistant.
-**Do not mark 5G accepted or start Checkpoint 6 until maintainer tests pass.**
+**Verification: PARTIAL; DDC profile tests outstanding (2026-11-03).**
+The maintainer confirmed that the GUI reports `1.1.0-3a73c3b3aa27`,
+matching this checkpoint's commit, and that the IRS full-filename field
+does wrap correctly; the expanding-width dropdown popup is also working as
+intended and must not be made to wrap or truncate unnecessarily. Convolver
+and other Sound Correction behavior appear to work as intended in the
+maintainer's manual testing. The maintainer has **no .vdc test files**,
+so DDC profile import/selection/processing cannot be considered tested.
+The other five tabs were visually/smoke checked and appear fine, but
+have not been exhaustively retested field by field in this revision.
+
+Static checks of the new module and unchanged callbacks passed.
+A native build was identified by its GUI version, but the full developer
+suite and comprehensive hardware regression have not yet run.
+**Do not claim 5G fully accepted or begin Checkpoint 6 as if all gates
+passed.** A realistic .vdc profile test, or an explicit maintainer
+decision to defer that one test to the final regression gate, is needed
+before moving on. Keep any deferred DDC coverage visible in the plan.
 
 **Test 5G:** Fresh `build-stage5g/` build of `viper-gui`, launched
 with `./build-stage5g/viper-gui &` to avoid blocking the terminal.
