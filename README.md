@@ -48,6 +48,9 @@ like to see what the community can make of it.
   system tray, optional login autostart, and configurable minimize/close behavior.
 - **Named presets and external libraries** for impulse responses (`IRS`) and
   headphone correction profiles (`VDC`), plus a CLI for selected live controls.
+- **Per-output effect memory** for independently remembered physical speakers
+  and headphones, with saved-preset assignment to connected or disconnected
+  outputs and restoration before music starts.
 
 ### Effect categories
 
@@ -129,7 +132,9 @@ viper4linux-ctl status
 viper4linux-ctl --help
 ```
 
-The CLI does not yet expose every GUI setting or manage named presets. The
+The effects CLI does not expose every GUI setting or manage complete named
+presets; the separate `viper4linux-output` utility supports per-output preset
+assignment. The
 installed man pages (`man viper4linux` and `man viper4linux-ctl`) document
 the supported commands.
 
@@ -145,6 +150,7 @@ Typical user data layout:
 ```text
 ~/.local/share/viper4linux/
 ├── presets/       named effect configurations
+├── outputs/       physical Audio Output snapshots and inventory
 ├── IRS/           impulse responses for Convolver
 └── VDC/           ViPER-DDC correction profiles
 ```
