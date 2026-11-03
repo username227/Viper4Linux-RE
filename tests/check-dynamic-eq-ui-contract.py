@@ -5,10 +5,11 @@ Only source-level checks; the real Qt6 render and X11 sizing require Arch testin
 """
 from pathlib import Path
 import re
-source = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
-start = source.index('class DynamicEqOverview final')
-end = source.index('class ViperWindow final', start)
-plot = source[start:end]
+from gui_source_contract import read_gui_sources
+root = Path(__file__).resolve().parents[1]
+source = read_gui_sources(root)
+overview = (root / "src/widgets/eq-overviews.h").read_text()
+plot = overview[overview.index('class DynamicEqOverview final'):]
 assert 'for (int i = 0; i < count_; ++i)' in plot
 assert 'QString::number(i+1)' in plot
 assert 'std::hypot(markers_[i].x() - event->position().x()' in plot
@@ -19,9 +20,9 @@ assert 'deq_overview_->selectBand = [this](int index)' in source
 assert 'deq_band_select_->setCurrentIndex(index);' in source
 assert 'if (deq_overview_) deq_overview_->setSelectedBand(index);' in source
 assert 'if (editor_mode_) {' not in plot[plot.index('// Each active band gets'):]
-assert 'deq_count_ = new QSpinBox(deq_group)' in source
-assert 'deq_editor_count_ = new QSpinBox(deq_content)' in source
-assert 'deq_spread = new QPushButton("Spread frequencies"' in source
+assert 'out.deq_count = new QSpinBox(deq_group)' in source
+assert 'result.bandCount = new QSpinBox(deq_content)' in source
+assert 'result.spread = new QPushButton("Spread frequencies"' in source
 assert 'const QSignalBlocker mainBlock(deq_count_), editorBlock(deq_editor_count_)' in source
 assert 'if (!deq_user_modified_[i])' in source
 assert 'settings_.contains(k + "user_modified")' in source

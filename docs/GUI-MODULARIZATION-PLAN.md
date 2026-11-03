@@ -654,9 +654,13 @@ Added `tests/check-gui-sync-contract.py`, compiling/running fake
 reconnect and precision cases in a temporary C++17 fixture, hooked
 into `tests/check-developer.sh`. Updated the precision source-contract
 to follow the synchronization implementation files. **Note:** older
-GUI static source-contract tests still contain assumptions about files
-already extracted during Checkpoint 5 and must be updated at full
-regression while retaining substantive assertions.
+GUI source-contract tests now inspect the actual extracted panel,
+widget, theme and synchronization implementations while preserving
+their substantive control/behavior checks.
+
+**Isolated control policy test: PASSED.** A standalone C++17
+reconnection/precision test passed with exact Git-blob-verified
+test and helper bytes. This is not a native Qt/PipeWire regression test.
 
 **Status: native build/GUI/audio testing PENDING.** Source-level
 checks verified every method transferred once and the critical pending-
