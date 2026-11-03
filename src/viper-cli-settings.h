@@ -32,13 +32,13 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
     } else if (oneOf({"bass-on", "bass-off", "bass-toggle", "toggle", "bass-mode", "bass-gain", "bass-freq"})) {
         flag("enabled", c.enabled);
         num("bass_mode", c.bass_mode);
-        s.setValue("strength_tenths", (value(c.strength_centi) + 5) / 10);
+        s.setValue("strength_tenths", value(c.strength_centi) / 10);
         num("precision/strength_centi", c.strength_centi);
         num("frequency", c.frequency_hz);
     } else if (begins("mono-")) {
         flag("bass_mono_enabled", c.bass_mono_enabled);
         num("bass_mono_mode", c.bass_mono_mode);
-        s.setValue("bass_mono_strength_centi", ((value(c.bass_mono_strength_centi) + 5) / 10) * 10);
+        s.setValue("bass_mono_strength_centi", (value(c.bass_mono_strength_centi) / 10) * 10);
         num("precision/bass_mono_strength_centi", c.bass_mono_strength_centi);
         num("bass_mono_frequency_hz", c.bass_mono_frequency_hz);
     } else if (begins("psycho-")) {
@@ -74,13 +74,13 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
     } else if (begins("clarity-")) {
         flag("clarity_enabled", c.clarity_enabled);
         num("clarity_mode", c.clarity_mode);
-        s.setValue("clarity_gain_tenths", (value(c.clarity_gain_milli) + 50) / 100);
+        s.setValue("clarity_gain_tenths", value(c.clarity_gain_milli) / 100);
         num("precision/clarity_gain_milli", c.clarity_gain_milli);
     } else if (begins("spectrum-")) {
         flag("spectrum_enabled", c.spectrum_enabled);
-        s.setValue("spectrum_frequency_hundreds", (value(c.spectrum_frequency_hz) + 50) / 100);
+        s.setValue("spectrum_frequency_hundreds", value(c.spectrum_frequency_hz) / 100);
         num("precision/spectrum_frequency_hz", c.spectrum_frequency_hz);
-        s.setValue("spectrum_exciter_tenths", (value(c.spectrum_exciter_milli) + 50) / 100);
+        s.setValue("spectrum_exciter_tenths", value(c.spectrum_exciter_milli) / 100);
         num("precision/spectrum_exciter_milli", c.spectrum_exciter_milli);
     } else if (begins("tube-")) {
         flag("tube_enabled", c.tube_enabled);
@@ -101,7 +101,7 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
         num("diff_delay_ms", c.diff_delay_ms);
         flag("diff_reverse", c.diff_reverse);
         num("diff_mix_percent", c.diff_mix_percent);
-        s.setValue("diff_lp_hundreds", (value(c.diff_lp_hz) + 50) / 100);
+        s.setValue("diff_lp_hundreds", value(c.diff_lp_hz) / 100);
         num("precision/diff_lp_hz", c.diff_lp_hz);
     } else if (begins("field-")) {
         flag("field_enabled", c.field_enabled);
