@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+from pathlib import Path
+import tempfile
+import time
+import uuid
 import subprocess
 import sys
 
 from viper_output_graph import PipeWireGraph
 from viper_output_store import OutputStore
+from viper_output_monitor import write_status
 
 
 def main() -> int:
@@ -21,9 +27,40 @@ def main() -> int:
                          help='stop automatic switching; keep saved output profiles')
     p.add_argument('--remember-discovered', action='store_true',
                    help='add discovered device descriptions to the local inventory (no DSP changes)')
+    p.add_argument('--assign-preset', metavar='PRESET_INI', help='assign complete named preset to remembered output')
+    p.add_argument('--target', metavar='OUTPUT_KEY', help='64-digit remembered output identity')
     args = p.parse_args()
     try:
         store = OutputStore()
+        if args.assign_preset or args.target:
+            if not args.assign_preset or not args.target:
+                p.error('--assign-preset and --target must be supplied together')
+            if args.target not in store.inventory():
+                raise ValueError('Unknown remembered Audio Output')
+            if not store.enabled():
+                raise ValueError('Per-output memory is disabled')
+            runtime = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
+            if not runtime.is_dir() or runtime.stat().st_uid != os.getuid():
+                raise ValueError('Invalid PipeWire runtime directory')
+            token = uuid.uuid4().hex
+            request = runtime / f'viper4linux-assign-{token}.request.json'
+            result = runtime / f'viper4linux-assign-{token}.result.json'
+            write_status(request, {'target': args.target,
+                                   'preset': str(Path(args.assign_preset).resolve())})
+            try:
+                deadline = time.monotonic() + 10.0
+                while time.monotonic() < deadline:
+                    if result.exists():
+                        ack = json.loads(result.read_text())
+                        if not ack.get('ok'):
+                            raise ValueError(ack.get('error', 'Preset assignment rejected'))
+                        print('Preset assigned to Audio Output ' + args.target[:12])
+                        return 0
+                    time.sleep(0.1)
+                raise ValueError('Audio Output monitor did not acknowledge assignment')
+            finally:
+                request.unlink(missing_ok=True)
+                result.unlink(missing_ok=True)
         if args.enable_memory or args.disable_memory:
             store.set_enabled(args.enable_memory)
             print('Remember settings per Audio Output: ' +
