@@ -29,7 +29,7 @@ int main() {
     assert(execute({"bass-gain", "2.38"}) == 0);
     s.sync();
     assert(s.value("strength_tenths").toInt() == 23);
-    assert(s.value("precision/strength_centi").toInt() == 238); // Round to the GUI's tenths.
+    assert(s.value("precision/strength_centi").toInt() == 238); // Full native precision, with GUI coarse projection.
     assert(execute({"bass-freq", "74.6"}) == 0);
     s.sync();
     assert(s.value("frequency").toInt() == 75);
@@ -37,7 +37,8 @@ int main() {
     assert(execute({"gain", "9"}) == 2);
     assert(execute({"freq", "100"}) == 2);
     s.sync();
-    assert(s.value("strength_tenths").toInt() == 24);
+    assert(s.value("strength_tenths").toInt() == 23);
+    assert(s.value("precision/strength_centi").toInt() == 238);
     assert(s.value("frequency").toInt() == 75);
     assert(execute({"psycho-intensity", "34.6"}) == 0);
     s.sync();
