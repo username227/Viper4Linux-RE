@@ -19,6 +19,7 @@
 #include "viper-named-presets.h"
 #include "viper-preset-dialog.h"
 #include "viper-build-info.h"
+#include "gui-single-instance.h"
 #include <QApplication>
 #include <QAction>
 #include <QButtonGroup>
@@ -944,6 +945,8 @@ public:
         setupTray();
         pollBackend();
     }
+    // Public entry used only when a second launch asks us to show this window.
+    void activateFromSecondLaunch() { restoreFromTray(); }
     void showAtStartup() {
         const QString choice = settings_.value("ui/startupBehavior", "show").toString();
         if (choice == "tray") {
@@ -1204,7 +1207,13 @@ int main(int argc, char* argv[]) {
     // A tray-only launch has no visible top-level window. Explicit Quit GUI
     // and closeEvent remain the only reasons for the GUI to terminate.
     app.setQuitOnLastWindowClosed(false);
+    // Claim this user's GUI before creating a second settings-owning window.
+    ViperGuiInstance guiInstance;
+    const auto instance = guiInstance.claim();
+    if (instance == ViperGuiInstance::StartResult::Forwarded) return 0;
+    if (instance == ViperGuiInstance::StartResult::Error) return 1;
     ViperWindow window;
+    guiInstance.onActivation(&window, [&window] { window.activateFromSecondLaunch(); });
     window.showAtStartup();
     return app.exec();
 }

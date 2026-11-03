@@ -842,6 +842,17 @@ treble; switching it on again restored the attenuation. Mark the
 valid-profile native processing and live enable/disable test **PASS**.
 Unsupported sample-rate behavior remains unverified.
 
+**Audio Output memory edge cases (maintainer, 2026-11-03):
+memory-off and precision preservation PASS reported.** The maintainer
+confirmed the two remaining per-output memory behaviors, but deliberately
+did not open a second GUI. Rather than allow two GUI instances to race
+on settings, Checkpoint 7 now introduces one-GUI-per-user-session
+ownership in the GUI executable itself: a later launch requests the
+existing window to be shown/raised (including from the tray) and exits
+without creating a second `ViperWindow`. The independent backend and
+Audio Output monitor lifecycles are unchanged. Qt native compile and
+live Cinnamon/X11 acceptance of the new guard remain pending.
+
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,

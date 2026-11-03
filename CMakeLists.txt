@@ -49,11 +49,11 @@ set(V4L_DEV_VERSION "${V4L_BASE_VERSION}-${V4L_REVISION}")
 configure_file(src/viper-build-info.h.in
   "${CMAKE_CURRENT_BINARY_DIR}/generated/viper-build-info.h" @ONLY)
 
-find_package(Qt6 6.4 COMPONENTS Widgets REQUIRED)
+find_package(Qt6 6.4 COMPONENTS Widgets Network REQUIRED)
 add_executable(viper-gui src/viper-gui.cpp resources/viper4linux-icons.qrc)
 set_target_properties(viper-gui PROPERTIES AUTORCC ON)
 target_include_directories(viper-gui PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(viper-gui PRIVATE Qt6::Widgets)
+target_link_libraries(viper-gui PRIVATE Qt6::Widgets Qt6::Network)
 target_compile_options(viper-gui PRIVATE -Wall -Wextra -Wpedantic)
 
 # Non-realtime native DSP snapshot transport for per-output settings.
