@@ -16,7 +16,7 @@
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
-    out << R"V4LHELP(Usage: viper4linux-ctl COMMAND [ARGUMENTS...]
+    out << R"V4LHELP(Usage: viper4linux-ctl COMMAND1 [ARGUMENTS...] COMMAND2 [ARGUMENTS...] ...
 
 Commands (alphabetical):
   agc-max <1..10>                          Set automatic gain control maximum gain
