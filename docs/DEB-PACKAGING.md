@@ -36,15 +36,17 @@ and enter the version without the `v` prefix (for example, `1.1.0`).
    `viper4linux-re-VERSION-complete-release-candidate` artifact.
 4. Download that ZIP, review its contents, and ensure the `vVERSION` tag points
    to the recorded `SOURCE-COMMIT`. Attach the unified source archive, the
-   main Arch package, and the two `.deb` files to the GitHub release manually.
+   main Arch package, the two `.deb` files, and the single consolidated
+   `SHA256SUMS` file to the GitHub release manually.
    The `-debug` Arch package is intentionally excluded.
 5. The stable and VCS AUR packages are updated in your **separate local AUR
    checkouts**, not by the workflow. Regenerate `.SRCINFO` before pushing.
 
 No workflow creates a tag, publishes a release, pushes an AUR package, or
 builds Flatpak. The automatically generated GitHub source archive is not a
-substitute for the uploaded unified source archive. Use the checksum files
-included in the complete release candidate to verify the downloaded files.
+substitute for the uploaded unified source archive. The complete release candidate contains one consolidated `SHA256SUMS`
+covering the unified source archive, Arch package, and both `.deb` packages;
+verify it with `sha256sum --check SHA256SUMS` from the extracted directory.
 
 For a desktop install, users can open the matching `.deb` in their graphical
 package manager or use `sudo apt install ./filename.deb` to resolve runtime
