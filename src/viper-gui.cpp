@@ -2414,7 +2414,7 @@ private:
                 != QMessageBox::Yes) return;
             QString program = "/usr/bin/viper4linux-output";
             QStringList args = {"--assign-preset", preset, "--target", target};
-            if (!QFileInfo::exists(program)) {
+            if (QCoreApplication::applicationDirPath() != "/usr/bin") {
                 program = "python3";
                 args.prepend(QDir(QCoreApplication::applicationDirPath())
                     .filePath("../src/viper_output_info.py"));
