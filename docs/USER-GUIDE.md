@@ -62,11 +62,12 @@ Backend status distinguishes the following conditions:
   or restarting the DSP. A second sample is needed to classify active versus idle.
 
 - **Ready to process audio:** the dedicated, marked PipeWire backend process is
-  running, but its DSP control channel is not active yet. This is expected
-  before the first audio stream activates the filter-chain processor. GUI and
-  `viper4linux-ctl status` show this state instead of inaccurately saying the
-  backend is offline. The status command returns success (exit code 0), but
-  effect-setting commands fail (exit code 1) until the control channel exists.
+  running, but its DSP control channel has not appeared yet. The smart filter
+  is configured to initialize the DSP even without music, so this should be
+  transient at startup rather than requiring playback. The status command
+  returns success (exit code 0), but effect-setting commands fail (exit code 1)
+  until the control channel exists. A persistent state warrants checking the
+  backend log and filter-chain configuration.
 - **Offline:** no marked ViPER backend process is detected. Start `viper4linux`.
 
 `viper4linux-ctl status` is instantaneous and reports the current callback
@@ -93,6 +94,28 @@ name is `headphone-level`; the older `headphone-quality` name was retired
 during the CLI cleanup. Invalid values return exit status 2 without changing
 the current level. Use `status` to inspect the live level before and after
 setting it.
+
+## Audio Output memory and preset assignment
+
+**Preferences → Remember settings per Audio Output** enables independent DSP
+settings for each positively identified physical output. The monitored
+selection follows PipeWire's physical sink and continues after the GUI closes.
+The monitor waits for the output to settle before saving or restoring settings;
+switching outputs while playback is paused is supported.
+
+Open **☰ → Presets…** to save complete effect settings. **Save Preset…**
+defaults to **New Preset…**, or you can pick an existing preset for a confirmed
+overwrite. To assign a saved preset to internal speakers, headphones, or a
+remembered disconnected output, select it and choose **Apply to Audio Output…**.
+Confirm the target device. If it's active, settings are applied immediately;
+otherwise, the existing audio stays unchanged until that output becomes active.
+Saved output settings subsequently evolve independently of the named preset.
+
+For an inspection of current outputs use `viper4linux-output --json`.
+The companion `viper4linux-output --enable-memory` and `--disable-memory`
+switches control the opt-in store; `--assign-preset FILE --target OUTPUT_KEY`
+uses the monitored, acknowledged assignment path. The keys are exact,
+remembered physical identifiers, not display-name matches.
 
 For a direct-source development build, useful scripts are `./status.sh`,
 `./verify.sh`, `./stop.sh` and `./start.sh`. The source installer builds
