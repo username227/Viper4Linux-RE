@@ -1,50 +1,51 @@
-# Audio Output memory — staged implementation
+# Audio Output memory — implementation reference
 
-The feature deliberately keeps **Audio Outputs** separate from named effect
-presets. Output identification is based on structured PipeWire properties; a
-substring of a display name is never a device identifier.
+Audio Output memory is separate from the named full-effect preset library.
+The GUI's **Preferences → Remember settings per Audio Output** option is
+disabled until the user enables it. Enabling memory keeps the current sound
+and records an independent state for the identified physical output.
 
-## Stage 1: safe, read-only discovery
+## Physical output identity and safety
 
-The first implementation provides `src/viper_output_graph.py` and
-`src/viper_output_info.py`. It distinguishes ViPER's virtual smart-filter node
-from an actual device-backed `Audio/Sink`; when the smart-filter playback node
-is linked, its physical destination takes precedence over default metadata.
-Unresolved/ambiguous or device-less outputs are never guessed.
+`src/viper_output_graph.py` discovers PipeWire's actual physical destination,
+excluding ViPER's own virtual sink. A stable identity is derived from
+structured device and node properties, not display-name substring matches or
+short-lived PipeWire object IDs. Ambiguous, disconnected and unresolved states
+must not trigger speculative restores.
 
-The exact device association key is computed from the stable `device.name` and
-`node.name` properties. PipeWire's numeric object ID is used *only* within an
-active graph snapshot, never as a persistent key. Future work must verify
-profile, port, and multi-output behavior against actual hardware traces.
+The monitor (`src/viper_output_monitor.py`) runs independently of the GUI,
+under the launcher, and waits for a stable output before checkpointing or
+restoring its complete DSP state. A change to a previously remembered output
+restores its saved snapshot. Physical-output JSON state is kept under
+`$XDG_DATA_HOME/viper4linux/outputs/`; each output has independent settings.
 
-Run locally (no audio changes):
+## Native snapshots and preset assignments
 
-```sh
-python3 src/viper_output_info.py --json
-python3 -m unittest discover -s tests -p 'test_output_*.py' -v
-```
+`src/viper-output-state.cpp` captures, validates and restores complete native
+DSP controls with the appropriate effect rebuild requests and IRS/VDC file
+checks. Changes to the IPC state layout require corresponding snapshot
+regression updates. Output snapshot restoration also refreshes full-precision
+settings keys for CLI values that cannot be represented exactly by GUI sliders.
 
-`src/viper_output_store.py` supplies atomic, independently versioned storage
-under `$XDG_DATA_HOME/viper4linux/outputs/` for remembered outputs and their
-settings snapshots, isolated from the named preset library.
+The Presets manager can assign a named full-effect preset to an active or
+previously remembered inactive output. Requests are handled by the same monitor
+thread that checkpoints output state, with an acknowledgement/result file.
+Assigning to the active output applies settings immediately; assigning to a
+different output only updates its saved memory and does not change the current
+sound. Subsequent edits to the output do not modify the named preset.
 
-## Stage 2: tested transition rules, still offline
+The separate `viper4linux-output` utility lists outputs, enables/disables
+memory, and supports `--assign-preset FILE --target OUTPUT_KEY`.
 
-`src/viper_output_memory.py` implements the policy using an injected DSP
-adapter. On first use of a new output, it *keeps the current sound* and makes
-an independent snapshot; later output changes restore previously remembered
-settings. Opting out retains the saved memories; ambiguous/disappeared PipeWire
-outputs never trigger an unexpected change. A failed restore is reported,
-not silently committed as success. Unit tests use a fake effect adapter and
-do not touch real audio.
+## Verification
 
-## Not implemented in this stage
+Unit tests exercise discovery, stable identities, output transitions and
+assignment. `tests/check-output-state.cpp` tests native snapshot round-trips,
+validation and persistence; `bash tests/check-developer.sh` includes the mock
+DSP and package checks. Live acceptance still requires checking hardware
+switching, idle/no-playback initialization, Bluetooth reconnection and
+per-output preset assignment. These were exercised on Cinnamon/X11 with the
+project's primary tested hardware; wider hardware and desktop coverage remains
+necessary.
 
-Automatic capture and restoration of **all** DSP effect values, an output
-monitor process managed by the existing backend launcher, UI/CLI integration,
-and applying saved full-effect presets to a remembered output require subsequent
-commits. Merely enabling the store option does not switch DSP configurations.
-Do not wire the store into live audio before a complete, tested serialization
-and restoration path exists.
-
-No systemd units are required or installed by this stage.
+No dedicated systemd unit is required by this feature.
