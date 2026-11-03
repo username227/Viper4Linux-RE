@@ -836,18 +836,22 @@ maintainer enabled it and reported that it muted the treble
 considerably, which supports that the selected coefficients were
 actually processed rather than merely displayed as loaded. This is a
 subjective listening confirmation, not a measured frequency-response
-validation. A specific DDC-off versus DDC-on A/B toggle and unsupported
-sample-rate case remain worth checking.
+validation. The maintainer explicitly confirmed the A/B sequence: DDC enabled
+attenuated treble considerably; switching DDC off restored normal
+treble; switching it on again restored the attenuation. Mark the
+valid-profile native processing and live enable/disable test **PASS**.
+Unsupported sample-rate behavior remains unverified.
 
 **Live acceptance outstanding:** Rebuild and run the entire
 `bash tests/check-developer.sh` suite as needed, six-tab effect/audio
 functionality, preset save/load/delete/reset, theme switching,
 tray/minimize/restore/startup preferences, Graphic/Dynamic EQ editors,
-DDC on/off behavior and Convolver import/popup behavior, GUI↔CLI
-precision, disconnected-backend edits/reconnect, remaining Audio Output
-memory edge cases (memory-off, precision and two-GUI interference), and
-package/archive content. DDC has a positive live audible-effect test;
-complete explicit A/B and sample-rate checks before final acceptance. Do not mark the whole refactor complete or
+Convolver import/popup behavior, GUI↔CLI precision,
+disconnected-backend edits/reconnect, remaining Audio Output memory
+edge cases (memory-off, precision and two-GUI interference), and
+package/archive content. Native DDC valid-profile processing and
+enable/disable A/B passed; unsupported sample-rate behavior remains
+unverified. Do not mark the whole refactor complete or
 merge to `main` until maintainer acceptance.
 
 ## Per-stage verification gate
