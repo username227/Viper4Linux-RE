@@ -35,6 +35,20 @@ Verification: `bash -n` on all moved and modified scripts; execute `./scripts/st
 
 Acceptance: root directory is simpler; documentation is accurate; no broken internal paths, file modes or package behavior.
 
+### Checkpoint 0 verification record — 2026-11-03
+
+**Result: ACCEPTED; proceed to Checkpoint 1.** The maintainer confirmed a successful native build of the refactor branch and provided output from `./scripts/status.sh` followed by `./scripts/verify.sh` on Arch Linux/Cinnamon.
+
+- Relocated scripts resolved their repository-relative paths even though the checkout path contained spaces.
+- The status script detected the running ViPER backend and printed native DSP control state.
+- The verification script found the expected CMake/source and compiled binaries, confirmed the LADSPA plugin reference, and ran the mock regressions successfully.
+- The mock results passed native effect dispatch, resampling/IR/DDC, EQ, compressors, CLI precision, native state capture, and settings tests.
+- Native processing ran at 48 kHz with an advancing audio callback counter (836034 to 837119).
+- PipeWire link inspection showed Rhythmbox feeding the ViPER filter and the filter feeding the ALSA speaker sink.
+- Deliberate invalid-command and missing-IRS diagnostics appeared in the passing negative-test cases; they were not unexpected failures.
+
+**Scope of acceptance:** relocating shell utilities and updating their paths. This does **not** certify the future GUI modularization stages, and the manual GUI checklist was not performed at this checkpoint. No work is approved for merge into `main`.
+
 ## Checkpoint 1 — Custom Qt widgets
 
 Extract the self-contained widget classes from `src/viper-gui.cpp` (such as `SafeSlider`, `EffectGlyph`, `EffectSwitch` and other reusable visual widgets) into named widget source/header components. Preserve behavior, signals, event propagation, accessible names, painting, colors, and size policies exactly. Prefer proper headers/translation units over gratuitous header-only implementations; avoid changing Qt meta-object requirements.
