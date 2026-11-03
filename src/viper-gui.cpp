@@ -3801,10 +3801,21 @@ private:
             return false;
         }
         auto* c = mapping_.get();
+        // Preserve native precision when a different GUI control is edited.
+        // Only a deliberate move of this slider replaces the DSP's precise value.
+        const auto preciseSlider = [this](QSlider* slider, int liveValue,
+                                          int projectedSlider, int sliderValue,
+                                          const char* setting) {
+            const int result = slider->value() == projectedSlider ? liveValue : sliderValue;
+            settings_.setValue(setting, result);
+            return result;
+        };
         c->master_enabled.store(global_->isChecked() ? 1 : 0);
         c->enabled.store(enabled_->isChecked() ? 1 : 0);
         c->bass_mode.store(bass_mode_->currentIndex());
-        c->strength_centi.store(strength_.slider->value() * 10);
+        c->strength_centi.store(preciseSlider(strength_.slider, c->strength_centi.load(),
+            c->strength_centi.load() / 10, strength_.slider->value() * 10,
+            "precision/strength_centi"));
         c->frequency_hz.store(frequency_.slider->value());
         bool eq_changed = false;
         const auto setEqValue = [&eq_changed](std::atomic<std::int32_t>& atom, int value) {
@@ -3828,7 +3839,9 @@ private:
         c->convolver_cross_percent.store(convolver_cross_.slider->value());
         c->bass_mono_enabled.store(mono_enabled_->isChecked() ? 1 : 0);
         c->bass_mono_mode.store(mono_mode_->currentIndex());
-        c->bass_mono_strength_centi.store(mono_strength_.slider->value()*10);
+        c->bass_mono_strength_centi.store(preciseSlider(mono_strength_.slider,
+            c->bass_mono_strength_centi.load(), c->bass_mono_strength_centi.load() / 10,
+            mono_strength_.slider->value() * 10, "precision/bass_mono_strength_centi"));
         c->bass_mono_frequency_hz.store(mono_frequency_.slider->value());
         c->psycho_enabled.store(psycho_enabled_->isChecked() ? 1 : 0);
         c->psycho_cutoff_hz.store(psycho_cutoff_.slider->value());
@@ -3845,10 +3858,16 @@ private:
         c->dynamic_strength_percent.store(dyn_strength_.slider->value());
         c->clarity_enabled.store(clarity_enabled_->isChecked() ? 1 : 0);
         c->clarity_mode.store(clarity_mode_->currentIndex());
-        c->clarity_gain_milli.store(clarity_gain_.slider->value() * 100);
+        c->clarity_gain_milli.store(preciseSlider(clarity_gain_.slider, c->clarity_gain_milli.load(),
+            c->clarity_gain_milli.load() / 100, clarity_gain_.slider->value() * 100,
+            "precision/clarity_gain_milli"));
         c->spectrum_enabled.store(spectrum_enabled_->isChecked() ? 1 : 0);
-        c->spectrum_frequency_hz.store(spectrum_frequency_.slider->value() * 100);
-        c->spectrum_exciter_milli.store(spectrum_exciter_.slider->value() * 100);
+        c->spectrum_frequency_hz.store(preciseSlider(spectrum_frequency_.slider,
+            c->spectrum_frequency_hz.load(), c->spectrum_frequency_hz.load() / 100,
+            spectrum_frequency_.slider->value() * 100, "precision/spectrum_frequency_hz"));
+        c->spectrum_exciter_milli.store(preciseSlider(spectrum_exciter_.slider,
+            c->spectrum_exciter_milli.load(), c->spectrum_exciter_milli.load() / 100,
+            spectrum_exciter_.slider->value() * 100, "precision/spectrum_exciter_milli"));
         bool tube_changed = false;
         const auto setTubeValue = [&tube_changed](std::atomic<std::int32_t>& atom, int value) {
             if (atom.load(std::memory_order_relaxed) != value) {
@@ -3959,11 +3978,18 @@ private:
         c->diff_delay_ms.store(diff_delay_.slider->value());
         c->diff_reverse.store(diff_reverse_->isChecked() ? 1 : 0);
         c->diff_mix_percent.store(diff_mix_.slider->value());
-        c->diff_lp_hz.store(diff_lowpass_.slider->value() * 100);
+        c->diff_lp_hz.store(preciseSlider(diff_lowpass_.slider, c->diff_lp_hz.load(),
+            c->diff_lp_hz.load() / 100, diff_lowpass_.slider->value() * 100,
+            "precision/diff_lp_hz"));
         c->field_enabled.store(field_enabled_->isChecked() ? 1 : 0);
         c->field_widen_tenths.store(field_widen_.slider->value());
         c->field_mid_hundredths.store(field_mid_.slider->value());
-        c->field_depth.store(field_depth_.slider->value() == 0 ? 0 : 150 + 50 * field_depth_.slider->value());
+        const int liveFieldDepth = c->field_depth.load();
+        const int fieldPosition = liveFieldDepth == 0 ? 0
+            : std::clamp(static_cast<int>(std::lround((liveFieldDepth - 150) / 50.0)), 1, 16);
+        c->field_depth.store(preciseSlider(field_depth_.slider, liveFieldDepth, fieldPosition,
+            field_depth_.slider->value() == 0 ? 0 : 150 + 50 * field_depth_.slider->value(),
+            "precision/field_depth"));
         c->reverb_enabled.store(reverb_enabled_->isChecked() ? 1 : 0);
         c->reverb_room_percent.store(reverb_room_.slider->value());
         c->reverb_width_percent.store(reverb_width_.slider->value());
@@ -4372,6 +4398,9 @@ private:
                        bool diff_on, int diff_delay, bool diff_reverse, int diff_mix, int diff_lp,
                        bool field_on, int field_widen, int field_mid, int field_depth_step,
                        bool reverb_on, int reverb_room, int reverb_width, int reverb_damp, int reverb_wet, int reverb_dry) {
+        // Loading a complete named preset or resetting to defaults explicitly
+        // replaces the previous full-precision CLI values.
+        settings_.remove("precision");
         // Suppress intermediate updates: don't send four DSP changes per reset.
         const QSignalBlocker block0(global_);
         const QSignalBlocker block1(enabled_);
