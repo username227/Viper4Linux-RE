@@ -36,7 +36,11 @@ assert '"Delete Preset"' in presets
 assert '"Reset Effects to Defaults…"' in presets
 assert '"Your named presets will not be deleted."' in presets
 assert 'confirm.setDefaultButton(qobject_cast<QPushButton*>(cancelButton));' in presets
-assert presets.index('if (confirm.clickedButton() != resetButton) return;') < presets.index('applySettings(true, true, 0, 100, 65')
+# Confirm before replacing current controls with the current defaults:
+# master on, optional Bass off, and all other optional effects off.
+assert presets.index('if (confirm.clickedButton() != resetButton) return;') < presets.index('applySettings(true, false, 0, 100, 65')
+assert 'resetOutputControls();' in presets
+assert 'resetNewBassControls();' in presets
 assert 'settings_.clear();' not in presets
 assert 'settings_.remove("presets")' not in presets
 assert '"Presets…"' in s
