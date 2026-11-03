@@ -228,7 +228,25 @@ appeared to function correctly. This is the 4B GUI smoke-test acceptance;
 comprehensive precision and backend regression tests remain for final review.
 No merge to `main` without full refactor approval.
 
-### Checkpoint 4C — Graphic EQ detailed editor construction (awaiting clean build and test)
+### Checkpoint 4C — Graphic EQ detailed editor construction (BLOCKED: reported regression)
+
+**Regression reported 2026-11-03 (not accepted):** During the clean-build test,
+manual Graphic EQ fader changes did not update the overview curve in the main
+window. Selecting another preset updated the overview, but the previously
+manually altered fader positions remained displayed in the detailed editor.
+The maintainer reports this as a regression; preserve it as a blocking issue,
+not a successful Checkpoint 4C test.
+
+**Initial source review:** The extraction kept the existing
+`QSlider::valueChanged` connections to `saveEqLayout()`,
+`selectEqPreset("custom")`, `updateEqOverview()`, and `push()`;
+preset application still calls `setValue()` on the same stored fader pointers,
+then refreshes the overview. The observed divergence does not yet have a
+proven source-code cause. Check for simultaneous GUI instances and verify
+whether the clicked editor belongs to the same live main window, then
+reproduce with a single process before attempting a behavioral fix.
+Do not proceed to Checkpoint 5 until diagnosed and retested.
+
 
 Extracted the existing retained, nonmodal 31-fader Graphic EQ editor layout
 and its child controls into `src/widgets/graphic-eq-editor.h`. The factory
