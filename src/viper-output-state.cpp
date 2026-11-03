@@ -455,7 +455,13 @@ static QJsonObject snapshotFromNamedPreset(const QString& path, Controls& contro
     state.insert("mb_crossovers", xovers);
     QJsonArray deq;
     QJsonObject ui;
-    ui.insert("eq_selected_preset", "custom");
+    const QString selectedEq = preset.value("effects/eq_selected_preset", "custom").toString();
+    const bool validEq = selectedEq == "custom" ||
+        ((selectedEq.startsWith("builtin:") || selectedEq.startsWith("user:")) &&
+         selectedEq.size() > (selectedEq.startsWith("builtin:") ? 8 : 5) &&
+         selectedEq.size() <= 80);
+    if (!validEq) { *error = "Invalid EQ preset identity"; return {}; }
+    ui.insert("eq_selected_preset", selectedEq);
     const std::pair<const char*,const char*> deqNames[] = {
         {"frequency_hz","freq"}, {"q_hundredths","q"}, {"gain_hundredths","gain"},
         {"threshold_tenths","threshold"}, {"attack_ms","attack"},
