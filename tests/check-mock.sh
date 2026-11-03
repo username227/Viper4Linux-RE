@@ -104,6 +104,22 @@ g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ddc-reader.cpp -o "$w
 "$work/check-ddc-reader"
 XDG_CONFIG_HOME="$config" "$work/check" "$work/viper_mock.so"
 
+# A separate fresh DSP instance loads [precision] after the legacy GUI values.
+# No live PipeWire server or user's preferences are involved.
+mkdir -p "$config/precision/ViPERforLinux"
+cp -- "$config/ViPERforLinux/ViPERClean.conf" "$config/precision/ViPERforLinux/ViPERClean.conf"
+cat >> "$config/precision/ViPERforLinux/ViPERClean.conf" <<'INI_PRECISION'
+[precision]
+strength_centi=238
+bass_mono_strength_centi=247
+clarity_gain_milli=2675
+spectrum_frequency_hz=8024
+spectrum_exciter_milli=2345
+diff_lp_hz=4267
+field_depth=537
+INI_PRECISION
+XDG_CONFIG_HOME="$config/precision" "$work/check" "$work/viper_mock.so" --precision
+
 # The CLI test uses a PID-scoped mock IPC channel and never connects to live audio.
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
   $(pkg-config --cflags Qt6Core) tests/check-cli-controls.cpp \
