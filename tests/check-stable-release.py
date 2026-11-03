@@ -40,7 +40,10 @@ with tempfile.TemporaryDirectory(prefix='viper-release-e2e-') as temp:
     shutil.copytree(root, app, ignore=shutil.ignore_patterns('.git', '__pycache__', 'build', '*.pyc'))
     dsp.mkdir()
     out.mkdir()
-    (app / "third_party/ViPERDSP").rmdir()
+    # In the exported unified-source CI job the DSP directory contains real
+    # files, whereas a Git checkout may contain only its submodule directory.
+    # The fixture deliberately replaces either with a local test submodule.
+    shutil.rmtree(app / "third_party/ViPERDSP")
     (dsp / 'CMakeLists.txt').write_text('project(ViPERDSP LANGUAGES CXX)\n')
     run('git', 'init', '-q', dsp)
     run('git', 'add', '.', cwd=dsp)
