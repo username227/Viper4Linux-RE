@@ -228,7 +228,7 @@ appeared to function correctly. This is the 4B GUI smoke-test acceptance;
 comprehensive precision and backend regression tests remain for final review.
 No merge to `main` without full refactor approval.
 
-### Checkpoint 4C — Graphic EQ detailed editor construction (GUI smoke test passed; final integration checks pending)
+### Checkpoint 4C — Graphic EQ detailed editor construction (accepted)
 
 **Targeted fix implemented and maintainer-retested:**
 Reapply the 10/15/25/31-column visibility invariant **after** the detailed
@@ -310,12 +310,15 @@ The Graphic EQ faders, overview, and presets appeared synchronized. Dynamic EQ
 was also rechecked and appeared functional. The reported 4C GUI regression
 is resolved as far as the maintainer's visual/interactivity smoke test goes.
 
-**Remaining focused acceptance checks (before marking all of Checkpoint 4
-complete):** save/switch/reload a custom Graphic EQ preset, quit/reopen and
-verify EQ settings persist, and confirm real audio responds to fader
-changes. The full developer regression suite, CLI/backend precision and
-output-reconnect tests remain later integration gates. No need to exercise
-unmodified effects specifically for Checkpoint 4.
+**Final focused acceptance, 2026-11-03:** Maintainer confirmed all
+three remaining tests operational: Graphic EQ custom preset save/switch/reload,
+settings persistence across GUI quit/reopen, and audible response to EQ fader
+changes. Alongside the accepted 4A overview widget tests, 4B Dynamic EQ
+editor tests, and 4C Graphic EQ fixes, **Checkpoint 4 is accepted**.
+
+The full developer regression suite, CLI/backend precision and
+output-reconnect tests remain later integration gates. Unmodified effects
+were not specifically retested for Checkpoint 4.
 
 ## Checkpoint 5 — Effect panels and layout construction
 
