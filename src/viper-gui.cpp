@@ -2206,7 +2206,7 @@ private:
             confirm.setText("Reset all effect settings?");
             confirm.setInformativeText(
                 "This will replace your current effect settings with the application's defaults "
-                "(Natural Bass on; other effects off).\n\n"
+                "(master processing and limiter at defaults; all optional effects off).\n\n"
                 "Your named presets will not be deleted.");
             auto* resetButton = confirm.addButton("Reset Effects", QMessageBox::DestructiveRole);
             auto* cancelButton = confirm.addButton(QMessageBox::Cancel);
@@ -2214,7 +2214,7 @@ private:
             confirm.exec();
             if (confirm.clickedButton() != resetButton) return;
 
-            applySettings(true, true, 0, 100, 65, false, 0, 15, false, 76, 10,
+            applySettings(true, false, 0, 100, 65, false, 0, 15, false, 76, 10,
                           false, 0, false, 8, false, 50, 0,
                           false, 10, 100, 3,
                           false, 50, 50, 50, 20, 50);
