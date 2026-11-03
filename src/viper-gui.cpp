@@ -1153,9 +1153,9 @@ public:
         ddc_status_->setWordWrap(true);
         ddc_form->addRow(ddc_status_);
         auto* ddc_note = new QLabel(
-            "Use a profile designed for your actual headphone model. "
-            "The neutral test profile verifies loading but does not correct the sound. "
-            "Unsupported sample rates bypass DDC. Default: off.", ddc_group);
+            "Select a .vdc correction profile designed for your specific headphone model. "
+            "Correction is available at 44.1 and 48 kHz; at other processing rates, "
+            "ViPER-DDC is bypassed. Default: off.", ddc_group);
         ddc_note->setWordWrap(true);
         ddc_form->addRow(ddc_note);
         addEffectPanel(correctionLayout, ddc_group, "ddc", ddc_enabled_);
@@ -3444,7 +3444,7 @@ private:
         auto* text = new QTextBrowser(&help);
         text->setOpenExternalLinks(true);
         text->setHtml(R"HTML(<h2>Viper4Linux — Effects</h2>
-<p>These descriptions explain the controls; this project is a proof of concept.</p>
+<p>These descriptions explain the available audio controls and their behavior.</p>
 <h3>Output</h3><p><b>Master Limiter:</b> Keeps output peaks under the selected threshold; remains active during bypass.</p>
 <p><b>Playback Gain Control (AGC):</b> Automatically adjusts changing playback levels.</p>
 <p><b>LUFS Targeting:</b> Adjusts perceived loudness toward a target over time; avoid combining with AGC without testing.</p>
