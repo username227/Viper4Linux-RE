@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One useful status report; no repeated manual checks needed.
 set -euo pipefail
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 python3 - <<'PY'
 import os, pathlib
 own = os.getuid()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Foreground-only routing client. Never starts an additional PipeWire daemon.
 set -euo pipefail
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 [[ -s build/viper_dsp_ladspa.so && -x build/viper-ctl && -r routing-config/filter-chain.conf ]] || {
   echo 'Not built yet; run ./install.sh' >&2; exit 1;
 }
@@ -15,7 +15,7 @@ runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 [[ -d $runtime ]] || { echo "Runtime directory $runtime missing" >&2; exit 1; }
 exec 9>"$runtime/viperlinux-unified-v1.lock"
 if ! flock -n 9; then
-  echo 'ViPER for Linux backend already appears to be running. Use ./status.sh; do not launch a duplicate.' >&2
+  echo 'ViPER for Linux backend already appears to be running. Use ./scripts/status.sh; do not launch a duplicate.' >&2
   exit 1
 fi
 printf 'Running ViPER for Linux smart filter (one foreground client, current default physical output).\n'

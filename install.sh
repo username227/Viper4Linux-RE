@@ -101,5 +101,5 @@ if [[ :$PATH: != *:$launcher_dir:* ]]; then
     echo "Note: $launcher_dir is not on PATH; use ./viper4linux or add that directory to PATH." >&2
 fi
 printf 'Launch with viper4linux (or ./viper4linux from the source directory).\n'
-printf 'Use ./verify.sh while Rhythmbox is playing.\n'
+printf 'Use ./scripts/verify.sh while Rhythmbox is playing.\n'
 printf 'Short CLI command: v4l-cli (same controls as viper4linux-ctl).\n'
