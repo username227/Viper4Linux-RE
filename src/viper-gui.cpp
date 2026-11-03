@@ -2043,6 +2043,7 @@ private:
             settings_.setValue("preset/frequency", frequency_.slider->value());
             saveEqLayout();
             settings_.setValue("preset/eq_enabled", eq_enabled_->isChecked());
+            settings_.setValue("preset/eq_selected_preset", eq_selected_preset_);
             settings_.setValue("preset/eq_band_count", eq_active_bands_);
             for (int n : {10, 15, 25, 31})
                 settings_.setValue("preset/eq_levels_" + QString::number(n),
@@ -2143,7 +2144,7 @@ private:
                 eq_active_bands_ = validEqBands(settings_.value("preset/eq_band_count", 10).toInt());
                 eq_mode_->setCurrentIndex(eq_mode_->findData(eq_active_bands_));
                 loadEqLayout();
-                selectEqPreset("custom");  // snapshot represents explicit curve values
+                selectEqPreset(settings_.value("preset/eq_selected_preset", "custom").toString());
             }
             restoreOutputPreset();
             restoreBassPreset();
