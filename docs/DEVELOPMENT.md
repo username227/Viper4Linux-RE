@@ -35,11 +35,22 @@ advanced FET/Multiband compressor controls, Speaker Correction internal filter
 settings, and Bass anti-pop are not independently configurable in the GUI.
 A future Advanced dialog can expose these without expanding the main tabs.
 
-The CLI is more limited than the GUI. It supports many Bass, EQ, Clarity,
-Spectrum, Surround, AGC/LUFS and Limiter controls, but **does not** currently
-manage Stereo Imager, compressors, Dynamic EQ, tube/AnalogX, Cure, correction
-files, named presets, window/tray settings, or themes. Refer to the actual
-installed `viper4linux-ctl(1)` page; do not claim GUI parity.
+The CLI is more limited than the GUI: it can toggle the effect groups and
+configure selected parameters of Bass, EQ, Clarity, Spectrum, surround, limiter,
+AGC/LUFS, Stereo Imager, FET and Multiband compressors, Tube, AnalogX and
+Crossfeed. Individual Dynamic EQ bands, IRS/VDC file selection, complete
+named effect presets, window/tray settings and themes remain GUI-managed.
+`viper4linux-output` separately handles remembered physical outputs and
+assignment of full named effect presets to them.
+
+Some CLI parameters have finer precision than their GUI sliders. The CLI
+persists the exact native units under the `precision/` settings group while
+retaining legacy slider-compatible settings for older installations. Backend
+initialization applies the precision group last. Unrelated GUI edits preserve
+the exact native values; moving the corresponding slider quantizes only that
+setting. Complete preset loads and Reset Effects to Defaults replace the
+previous precision overrides. The per-output snapshot restore also refreshes
+the precision keys to prevent values from leaking between devices.
 
 ## Build and test workflow
 
