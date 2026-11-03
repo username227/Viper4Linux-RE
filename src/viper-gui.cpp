@@ -3426,7 +3426,7 @@ private:
             48, 48, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         about.setText("<b>Viper4Linux</b>");
         about.setInformativeText(
-            QString("Development build: <b>%1</b><br>"
+            QString("Version: <b>%1</b><br>"
                     "Application commit: <code>%2</code><br>"
                     "ViPERDSP upstream: <code>%3</code><br><br>"
                     "Native ViPERDSP processing via PipeWire; Qt6 control interface.")
