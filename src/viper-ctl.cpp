@@ -16,7 +16,7 @@
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
-    out << R"V4LHELP(Usage: viper4linux-ctl COMMAND1 [ARGUMENTS...] COMMAND2 [ARGUMENTS...] ...
+    out << R"V4LHELP(Usage: viper4linux-ctl COMMAND1 [ARGUMENTS...] [COMMAND2 [ARGUMENTS...]] ...
 
 Global commands:
   on                                       Enable master DSP processing
