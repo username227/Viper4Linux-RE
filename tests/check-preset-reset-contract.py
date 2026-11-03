@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 """Source-level regression for confirmed, non-destructive defaults reset."""
 from pathlib import Path
-s = (Path(__file__).resolve().parents[1] / 'src/window/window-presets.inc').read_text()
-assert 'Reset to test defaults' not in s
-assert 'Reset Effects to Defaults…' in s
+root = Path(__file__).resolve().parents[1]
+s = (root / 'src/window/window-presets.inc').read_text()
+dialog = (root / 'src/viper-preset-dialog.h').read_text()
+# The Reset button is created in the dialog; its guarded implementation is
+# owned by ViperWindow. Test both halves and their callback handoff.
+assert 'Reset to test defaults' not in s + dialog
+assert 'Reset Effects to Defaults…' in dialog
+assert 'QObject::connect(reset, &QPushButton::clicked, &dialog, [&] {' in dialog
+assert 'actions.resetEffectsWithConfirmation();' in dialog
+assert '[this]() { resetEffectsWithConfirmation(); }' in s
 start = s.index('    void resetEffectsWithConfirmation() {')
 end = s.index('    void showPresetManager()', start)
 reset = s[start:end]
