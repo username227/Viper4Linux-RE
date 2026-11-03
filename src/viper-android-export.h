@@ -73,7 +73,7 @@ inline bool convert(const QString& path, QJsonObject* output, QString* warning, 
         {"exciter", scaled("spectrum_exciter_tenths", 10, 10.0)}};
     json["headphoneSurround"] = QJsonObject{
         {"enable", flag("headphone_enabled")},
-        {"quality", n("headphone_quality", 0) + 1}};
+        {"quality", n("headphone_quality", 0)}};
     json["diffSurround"] = QJsonObject{
         {"enable", flag("diff_enabled")},
         {"delay", n("diff_delay_ms", 8)},
@@ -107,8 +107,8 @@ inline bool convert(const QString& path, QJsonObject* output, QString* warning, 
         *error = "Unsupported graphic EQ band count.";
         return false;
     }
-    const QStringList raw = get(("eq_levels_" + QString::number(count)).toLatin1().constData(),
-                                QString()).toString().split(',');
+    const QStringList raw = ini.value("effects/eq_levels_" + QString::number(count),
+                                      QString()).toString().split(',');
     if (raw.size() != count) {
         *error = "Incomplete graphic EQ levels in saved preset.";
         return false;
