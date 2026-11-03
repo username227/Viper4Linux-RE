@@ -135,9 +135,10 @@ def status_for(graph: PipeWireGraph, store: OutputStore, backend_pid: int,
             'memory_error': error}
 
 def process_assignments(runtime: Path, store: OutputStore, effects: NativeEffects,
-                        memory: OutputMemory, active, settled: bool) -> None:
+                        memory: OutputMemory, active, settled: bool) -> bool:
     """Handle requests on the same thread as monitor checkpoints."""
     library = Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local/share'))) / 'viper4linux/presets'
+    active_applied = False
     for request in sorted(runtime.glob('viper4linux-assign-*.request.json')):
         identity = request.name[len('viper4linux-assign-'):-len('.request.json')]
         response = runtime / f'viper4linux-assign-{identity}.result.json'
@@ -165,6 +166,7 @@ def process_assignments(runtime: Path, store: OutputStore, effects: NativeEffect
                     raise RuntimeError('Audio Output is transitioning; retry assignment')
                 effects.restore(snapshot)
                 store.save_settings(key, snapshot)
+                active_applied = True
             else:
                 store.save_settings(key, snapshot)
             result = {'ok': True, 'target': key}
@@ -177,6 +179,7 @@ def process_assignments(runtime: Path, store: OutputStore, effects: NativeEffect
             except OSError as exc:
                 print('Preset assignment acknowledgment failed: ' + str(exc), file=sys.stderr)
             request.unlink(missing_ok=True)
+    return active_applied
 
 def stop_handler(_signal, _frame):
     global STOP
@@ -253,8 +256,10 @@ def service(graph: PipeWireGraph, store: OutputStore, effects: NativeEffects,
                 print('Audio Output memory: ' + error, file=sys.stderr, flush=True)
         elif not enabled:
             last_action = 'disabled'
-        process_assignments(path.parent, store, effects, memory, active,
-                            bool(active and now - stable_since >= 1.0))
+        if process_assignments(path.parent, store, effects, memory, active,
+                               bool(active and now - stable_since >= 1.0)):
+            revision += 1
+            last_action, error = 'restored', ''
         try:
             write_status(path, status_for(graph, store, backend_pid,
                         action=last_action, revision=revision, error=error))
