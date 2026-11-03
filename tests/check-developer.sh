@@ -11,6 +11,8 @@ python3 tests/check-theme-contract.py
 python3 tests/check-ui-contract.py
 python3 tests/check-named-presets-contract.py
 python3 tests/check-preset-reset-contract.py
+python3 tests/check-save-preset-choice-contract.py
+python3 tests/test_filter_idle_config.py
 # check-mock.sh already runs tray, Dynamic EQ UI, About, and native dispatch
 # contracts. Avoid invoking the same tests a second time.
 if [[ -f .gitmodules ]]; then
