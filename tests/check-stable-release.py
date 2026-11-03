@@ -55,20 +55,20 @@ with tempfile.TemporaryDirectory(prefix='viper-release-e2e-') as temp:
     run('git', 'add', '.', cwd=app)
     run('git', '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
         'commit', '-qm', 'pin fixture DSP', cwd=app)
-    output = run('bash', 'scripts/prepare-stable-release.sh', '1.0.0', str(out), cwd=app)
+    output = run('bash', 'scripts/prepare-stable-release.sh', '1.1.0', str(out), cwd=app)
     assert 'Release assets prepared' in output, output
     assert (out / 'SOURCE-COMMIT').read_text().strip() == run('git', 'rev-parse', 'HEAD', cwd=app).strip()
-    assert "pkgver=1.0.0\n" in (out / 'PKGBUILD').read_text()
+    assert "pkgver=1.1.0\n" in (out / 'PKGBUILD').read_text()
     assert run('sha256sum', '-c', 'SHA256SUMS', cwd=out).strip().endswith(': OK')
-    with tarfile.open(out / 'viper4linux-re-1.0.0-unified-source.tar.xz') as tar:
-        assert 'viper4linux-re-1.0.0/third_party/ViPERDSP/CMakeLists.txt' in tar.getnames()
+    with tarfile.open(out / 'viper4linux-re-1.1.0-unified-source.tar.xz') as tar:
+        assert 'viper4linux-re-1.1.0/third_party/ViPERDSP/CMakeLists.txt' in tar.getnames()
     # Fail rather than silently publishing the wrong revision under an existing tag.
-    run('git', 'tag', 'v1.0.0', cwd=app)
+    run('git', 'tag', 'v1.1.0', cwd=app)
     (app / 'README.md').write_text((app / 'README.md').read_text() + '\nfixture change\n')
     run('git', 'add', 'README.md', cwd=app)
     run('git', '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
         'commit', '-qm', 'past tag', cwd=app)
-    bad = subprocess.run(['bash', 'scripts/prepare-stable-release.sh', '1.0.0', str(temp / 'wrong')],
+    bad = subprocess.run(['bash', 'scripts/prepare-stable-release.sh', '1.1.0', str(temp / 'wrong')],
                          cwd=app, text=True, capture_output=True)
     assert bad.returncode != 0 and 'different commit' in bad.stderr
     print('PASS: end-to-end offline release assets, SHA256, packaged source and tag/HEAD safety')
