@@ -126,7 +126,7 @@ Do not run that illustrative command against the current tree yet; there are no 
 | Checkpoint | Status |
 | --- | --- |
 | 1. Inventory and baseline | **In progress:** source-level ownership inventory recorded in [CMake baseline](CMAKE-BASELINE.md); native builds and package manifests not yet captured |
-| 2. CMake configuration and DSP preparation | Not started; current plain CMake default selects **unpatched** upstream DSP, so it is not yet the supported installation path |
+| 2. CMake configuration and DSP preparation | **In progress:** CMake now stages the input source privately and invokes the three existing validated Python patch scripts; clean Arch build, incremental rebuild and failure tests remain pending |
 | 3. Optional CTest developer suite | **Initial scaffolding only:** `VIPER_BUILD_DEVELOPER_TESTS=OFF` default; `ON` registers existing full developer script under CTest, pending native checkout tests |
 | 4. CMake installation and packaging parity | Not started |
 | 5. Full acceptance and installer retirement | Not started |
@@ -137,4 +137,6 @@ Do not run that illustrative command against the current tree yet; there are no 
 - Added the optional CTest entry point without changing native production targets or default build requirements. The first CTest registration wraps `tests/check-developer.sh`; converting test executables into native CMake targets is later work, **not** yet complete.
 - Independently checked the new CMake gating and test syntax in an isolated minimal CMake project: tests OFF discovered 0; tests ON discovered 1 and ran a **stub** successfully. This is a syntax/gating check **only**, not a native Viper4Linux regression pass.
 - **Maintainer's Arch CTest verification (2026-11-04):** Branch `refactor/cmake-modernization` at pinned ViPERDSP commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`; `cmake -S . -B build-ctest-inventory -DVIPER_BUILD_DEVELOPER_TESTS=ON` succeeded with GCC 16.2.1 and Python 3.14.9. `ctest --test-dir build-ctest-inventory --output-on-failure`: **1/1 passed** (`viper_developer_regressions`), elapsed 23.28 seconds. The suite runs under the legacy wrapper; finer-grained CTest registration is not yet implemented.
-- No native production ViPERDSP build, staged package comparison, or live PipeWire acceptance has been run in this branch yet. These remain required acceptance evidence.
+- **Native baseline passed (maintainer, 2026-11-04):** the three verified DSP patches were applied manually to a private copy; clean Release CMake build with developer tests OFF compiled all four application targets and the real ViPERDSP static library; `ladspa_descriptor` was confirmed with `nm -D`. **This is the pre-migration baseline, not yet a test of CMake-owned patch preparation.**
+- Added `cmake/PrepareViPERDSP.cmake` and wired normal CMake configuration through a private, fingerprinted and validated source copy. Patch scripts remain standalone Python utilities (not embedded Python source). Existing build/package scripts still pass the source override. Clean on-machine CMake-owned preparation, safe reconfigure/rebuild and intentional failure cases are **not yet verified**.
+- Staged package parity and live PipeWire acceptance have not been run in this branch yet.
