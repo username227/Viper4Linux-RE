@@ -7,6 +7,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'packaging/arch/install-package.sh'
+INSTALL = ROOT / 'cmake/InstallSystem.cmake'
 
 
 def invoke(tree: Path, build: Path, dest: Path, pkgname='viper4linux-re-git'):
@@ -41,9 +42,28 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
     for name in ['viper-gui', 'viper-ctl', 'viper-output-state', 'viper_dsp_ladspa.so']:
         (build / name).write_bytes(b'example binary')
 
+    # The AUR compatibility adapter requires a pre-existing CMake build.
+    # A fixture with imported targets exercises the *real* install rules,
+    # without compiling, starting audio or writing outside temp directories.
+    (tree / 'CMakeLists.txt').write_text(
+        'cmake_minimum_required(VERSION 3.20)\\n'
+        'project(ArchStageFixture LANGUAGES C CXX)\\n'
+        'foreach(name IN ITEMS viper-gui viper-ctl viper-output-state)\\n'
+        '  add_executable(${name} IMPORTED GLOBAL)\\n'
+        '  set_target_properties(${name} PROPERTIES IMPORTED_LOCATION '
+        '"${CMAKE_BINARY_DIR}/${name}")\\n'
+        'endforeach()\\n'
+        'add_library(viper_dsp_ladspa MODULE IMPORTED GLOBAL)\\n'
+        'set_target_properties(viper_dsp_ladspa PROPERTIES IMPORTED_LOCATION '
+        '"${CMAKE_BINARY_DIR}/viper_dsp_ladspa.so")\\n'
+        f'include("{INSTALL}")\\n'
+    )
+    configured = subprocess.run(['cmake', '-S', str(tree), '-B', str(build)],
+                                text=True, capture_output=True)
+    assert configured.returncode == 0, configured.stdout + configured.stderr
     result = invoke(tree, build, dest)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert 'staged 7 Python modules' in result.stdout, result.stdout
+    assert 'Installing:' in result.stdout or 'Up-to-date:' in result.stdout, result.stdout
     for name in ['viper_launcher.py', 'viper_output_graph.py', 'viper_output_store.py',
                  'viper_output_memory.py', 'viper_output_monitor.py',
                  'viper_output_info.py', 'viper_future_feature.py']:
@@ -58,7 +78,7 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
     assert (dest / 'usr/share/doc/viper4linux/docs/guide.md').read_text() == 'example\n'
     assert (dest / 'usr/share/licenses/viper4linux-re-git/LICENSE').is_file()
 
-    # The stable package uses the same staging script, but a different license path.
+    # Stable and VCS package names use identical CMake staging apart from license path.
     stable = root / 'stable stage'
     result = invoke(tree, build, stable, 'viper4linux-re')
     assert result.returncode == 0, result.stderr
@@ -75,4 +95,4 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
     result = invoke(tree, build, Path('/'))
     assert result.returncode != 0 and 'Destination must be' in result.stderr
 
-print('PASS: Arch install script stages runtime Python automatically, checks layout, supports stable and VCS recipes and fails closed')
+print('PASS: AUR compatibility adapter delegates to CMake with dynamic Python, correct package modes and fail-closed staging')

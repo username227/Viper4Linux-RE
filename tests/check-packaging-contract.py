@@ -108,12 +108,21 @@ for required in ('python3 tests/check-launcher.py', 'python3 tests/check-arch-in
 require('bash tests/check-mock.sh' in developer and
         'python3 tests/check-native-state-contract.py' in developer,
         'Developer regression coverage changed')
-for required in ('ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"',
-                 'ln -s -- viper4linux-ctl.1 "$pkgdir/usr/share/man/man1/v4l-cli.1"',
-                 'usr/share/licenses/$pkgname/LICENSE', 'usr/lib/ladspa/viper_dsp_ladspa.so',
-                 'viper4linux-output-state', 'viper4linux-output', 'src/viper_*.py',
-                 'viper_output_monitor.py', 'Missing package source:'):
-    require(required in installer, f'Installation contract missing: {required}')
+# Independently maintained AUR -git recipes can keep calling the original
+# entry point, but it must delegate installation exclusively to CMake.
+for required in ('-DVIPER_ENABLE_SYSTEM_INSTALL=ON',
+                 '-DVIPER_SYSTEM_INSTALL_LAYOUT=arch',
+                 '-DVIPER_SYSTEM_PACKAGE_NAME="$pkgname"',
+                 'DESTDIR="$pkgdir" cmake --install "$build_dir"'):
+    require(required in installer, f'AUR compatibility delegation missing: {required}')
+require('install -Dm' not in installer and 'cp -a' not in installer,
+        'AUR compatibility shim must not stage application files itself')
+system = (root / 'cmake/InstallSystem.cmake').read_text()
+for required in ('src/viper_launcher.py', 'src/viper_output_monitor.py',
+                 'file(GLOB _viper_runtime_python', 'Missing package source:',
+                 'viper4linux-output-state', 'viper4linux-output',
+                 'ViPERDSP-NOTICE.md', 'v4l-cli.1', 'VIPER_SYSTEM_PACKAGE_NAME'):
+    require(required in system, f'CMake install contract missing: {required}')
 require('viper-output-state' in cmake, 'Native output-state binary missing from CMake')
 for path in ('tests/check-package.sh', 'tests/check-developer.sh',
              'cmake/SourceCheckout.cmake', 'tests/check-cmake-source-checkout.py', 'LICENSE',

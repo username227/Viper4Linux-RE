@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Non-destructive Arch staging parity: compare CMake's DESTDIR output against
-# the established installer, including paths, file bytes, modes and symlinks.
+# Compare CMake's direct staging against the compatibility adapter used by
+# separately maintained AUR -git recipes, including bytes, modes and links.
 # Usage: bash tests/check-cmake-install-parity.sh BUILD_DIRECTORY
 set -Eeuo pipefail
 if (( $# != 1 )); then
@@ -66,6 +66,6 @@ if original != cmake:
     sys.exit(1)
 files = sum(kind[0] == 'file' for kind in cmake.values())
 links = sum(kind[0] == 'symlink' for kind in cmake.values())
-print(f'PASS: exact Arch staging parity: {files} files, {links} symlinks, '
+print(f'PASS: AUR adapter vs direct CMake staging parity: {files} files, {links} symlinks, '
       'matching SHA-256 data, permissions and directory tree')
 PY
