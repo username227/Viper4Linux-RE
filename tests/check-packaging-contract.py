@@ -14,7 +14,8 @@ arch = root / 'packaging/arch'
 stable_path = arch / 'PKGBUILD.stable.in'
 stable = stable_path.read_text()
 installer = (arch / 'install-package.sh').read_text()
-source_install = (root / 'install.sh').read_text()
+prepare = (root / 'cmake/PrepareViPERDSP.cmake').read_text()
+source_setup = (root / 'cmake/SourceCheckout.cmake').read_text()
 cmake = (root / 'CMakeLists.txt').read_text()
 readme = (root / 'README.md').read_text()
 launcher = (root / 'src/viper_launcher.py').read_text()
@@ -34,7 +35,7 @@ def bash_array(recipe, name):
 # No second, stale -git PKGBUILD: the separately maintained AUR checkout is
 # authoritative for its VCS source, versioning and package metadata.
 require(not (arch / 'PKGBUILD').exists(), 'Obsolete development PKGBUILD reintroduced')
-for script in (stable_path, arch / 'install-package.sh', root / 'install.sh'):
+for script in (stable_path, arch / 'install-package.sh'):
     subprocess.run(['bash', '-n', str(script)], check=True)
 
 require('pkgname=viper4linux-re\n' in stable, 'Wrong stable package name')
@@ -48,22 +49,27 @@ require(not re.search(r'^\s*replaces=', stable, re.M), 'Unwanted replaces=')
 require('jamesdsp' not in stable.lower().split('conflicts=(', 1)[-1].split(')', 1)[0],
         'JamesDSP must not be marked as a package conflict')
 
-# Contract between declared dependencies, actual compilation, and the direct
-# source installer. A successful makepkg is not a substitute for this check.
+# CMake exclusively owns the build and source-checkout requirements.
+require(not (root / 'install.sh').exists(),
+        'Obsolete source installer was reintroduced')
 require('find_package(Qt6 6.4 COMPONENTS Widgets Network REQUIRED)' in cmake,
-        'Qt6 Widgets/Network CMake dependency changed; review package requirements')
+        'Qt6 Widgets/Network CMake dependency changed')
 require('Qt6::Widgets Qt6::Network' in cmake, 'Qt6 GUI link dependencies changed')
 require('find_package(Threads REQUIRED)' in cmake, 'Thread dependency changed')
 require('#include <ladspa.h>' in (root / 'src/viper-ladspa.cpp').read_text(),
         'LADSPA interface changed; review dependency')
-probe = re.search(r'(?m)^for tool in ([^;\n]+); do$', source_install)
-require(probe, 'Direct installer tool preflight loop missing')
-checked_tools = set(probe.group(1).split())
-for tool in ('cmake', 'g++', 'gcc', 'pkg-config', 'pipewire', 'python3', 'nm'):
-    require(tool in checked_tools, f'Direct installer no longer checks required tool {tool}')
-for item in ('/usr/include/ladspa.h', 'pkg-config --exists Qt6Widgets',
-             'pkg-config --exists Qt6Network', '/usr/share/pipewire/filter-chain.conf'):
-    require(item in source_install, f'Direct installer dependency probe missing: {item}')
+for required in ('find_package(Python3 REQUIRED COMPONENTS Interpreter)',
+                 'rev-parse HEAD:third_party/ViPERDSP',
+                 'ViPERDSP submodule revision mismatch',
+                 'VIPERDSP_PREPARED_SOURCE_DIR',
+                 'file(SHA256'):
+    require(required in prepare, f'CMake pinned DSP preparation missing: {required}')
+for required in ('VIPER_SOURCE_PREPARE_ROUTING',
+                 'VIPER_SOURCE_ROUTING_TEMPLATE',
+                 'VIPER_ENABLE_SOURCE_LINK_TARGET',
+                 'viper_source_check', 'viper_source_links',
+                 'ladspa_descriptor', 'viper_dsp_ladspa.so'):
+    require(required in source_setup, f'CMake developer setup missing: {required}')
 
 pacman = re.search(r'(?m)^sudo pacman -S --needed ([^\n]+)$', readme)
 require(pacman, 'Arch source-install dependency command missing from README')
@@ -71,8 +77,8 @@ source_packages = set(shlex.split(pacman.group(1)))
 require({'base-devel', 'cmake', 'git', 'pkgconf', 'ladspa', 'pipewire', 'qt6-base', 'python'} <= source_packages,
         'README source-install dependency list incomplete')
 
-# The stable recipe uses only the CMake-owned install layout. The separate
-# AUR -git recipe still needs the legacy helper path until its own transition.
+# The stable recipe uses only the CMake-owned install layout. The AUR
+# compatibility entry point delegates to the same CMake install rules.
 for required in ('package() {', 'check() {', 'sha256sums=(',
                  'releases/download/v${pkgver}', 'bash tests/check-package.sh',
                  'DESTDIR="$pkgdir" cmake --install "$srcdir/viper4linux-build"',
@@ -88,9 +94,9 @@ for patch in ('fix_lufs_speed.py', 'preallocate_stereo_imager.py',
               'preallocate_multiband_compressor.py'):
     require(patch in (root / 'cmake/PrepareViPERDSP.cmake').read_text(),
             f'CMake-owned DSP patch missing: {patch}')
-    require(patch in source_install, f'Legacy source installer patch missing: {patch}')
-require('git submodule update --init --checkout' in source_install,
-        'Source installer no longer checks pinned DSP')
+require('git submodule update --init --checkout' in
+        (root / 'docs/DEVELOPMENT.md').read_text(),
+        'Documented pinned submodule initialization missing')
 modules = (root / '.gitmodules')
 if modules.is_file():
     data = modules.read_text()
@@ -137,4 +143,4 @@ for required in ('VIPER_BACKEND_FINGERPRINT', 'VIPER_CLEAN_INSTANCE=viperlinux-u
                  '/usr/share/viper4linux/routing-config/filter-chain.conf.d'):
     require(required in backend, f'System backend contract missing: {required}')
 
-print('PASS: stable Arch dependencies, direct installer probes, DSP source, staging and launcher contracts')
+print('PASS: native packaging depends on CMake-owned DSP preparation, source build, install and launcher contracts')

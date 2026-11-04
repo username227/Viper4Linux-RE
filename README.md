@@ -34,7 +34,7 @@ like to see what the community can make of it.
 > primary tested environment; KDE Plasma tray integration and other Linux
 > environments need further testing. See [Current limitations](#current-limitations).
 
-**For contributors:** Our next infrastructure milestone is [CMake / CTest modernization](docs/CMAKE-MODERNIZATION-PLAN.md): optional developer tests, standard installation rules, and a verified transition away from `install.sh`. This is a **plan**, not yet the current build procedure.
+**For contributors:** The `refactor/cmake-modernization` development branch uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [modernization status](docs/CMAKE-MODERNIZATION-PLAN.md). The separate released `main` branch is unchanged pending live-audio acceptance.
 
 ## What it offers
 
@@ -116,15 +116,26 @@ Clone the application and its pinned ViPERDSP submodule, then build:
 ```bash
 git clone --recurse-submodules https://github.com/username227/viper4linux-re.git
 cd viper4linux-re
-./install.sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+cmake --build build --target viper_source_check
 ```
-Then, `./viper4linux` to run the program.
 
+These commands describe the **CMake modernization branch**. The release
+branch retains its existing documented build process until modernization is
+accepted. In an existing checkout, initialize the recorded submodule with
+`git submodule update --init --checkout third_party/ViPERDSP` before CMake.
+CMake verifies that revision and applies the three real-time compatibility
+patches to a **private build copy** without editing upstream sources.
+It generates source routing files under `build/routing-config/` and supports
+incremental rebuilds. `viper_source_check` verifies binaries, LADSPA export,
+and routing files without starting audio. Run `./viper4linux` only when
+you intend to launch the source version (which may replace an existing backend).
 
-The direct-source installer expects a clean build directory. It applies our
-three downstream compatibility/real-time fixes to a **private copy** of the
-pinned DSP source; the Git submodule itself remains unchanged. For builds managed by pacman, see the
-[Arch packaging guide](docs/ARCH-PACKAGING.md). 
+The optional developer-only `viper_source_links` CMake target can create
+private shortcuts but never runs during a normal build. See the
+[developer guide](docs/DEVELOPMENT.md). For builds managed by pacman, see
+[Arch packaging](docs/ARCH-PACKAGING.md). 
 
 Once installed as a system package, run `viper4linux` from the application
 menu or a terminal. For example:

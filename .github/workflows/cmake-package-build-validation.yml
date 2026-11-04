@@ -42,8 +42,7 @@ jobs:
                         scripts/build-native-deb.sh \
                         scripts/test-stable-arch.sh \
                         packaging/arch/PKGBUILD.stable.in \
-                        tests/check-cmake-install-guard.sh \
-                        install.sh; do
+                        tests/check-cmake-install-guard.sh; do
             bash -n "$script"
           done
           python3 tests/check-packaging-contract.py
