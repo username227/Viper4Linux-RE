@@ -2,10 +2,17 @@
 
 **Branch:** `refactor/cmake-modernization`  
 **Reference revision:** `a84a433fc6b0f39cdf718e7ae127badba10df424` (branch point on `main`).  
-**Status:** Static source review performed; baseline execution and staged-package comparison **not yet performed**.  
+**Status:** Source review complete; maintainer's initial Arch CMake/CTest regression run **passed** (2026-11-04). Native production build, staged-package comparison and live audio acceptance remain untested.  
 **Purpose:** Preserve the existing behavior and safety properties while relocating ownership to CMake/CTest.
 
 This is a source-level inventory. Do not interpret it as evidence that a native build, a package build, or a live audio test has passed.
+
+
+## First maintainer-executed baseline: CMake/CTest
+
+On Arch Linux, from `refactor/cmake-modernization`, the maintainer confirmed that `third_party/ViPERDSP` is checked out at `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`. `cmake -S . -B build-ctest-inventory -DVIPER_BUILD_DEVELOPER_TESTS=ON` completed with GNU C/C++ 16.2.1 and Python 3.14.9. Then `ctest --test-dir build-ctest-inventory --output-on-failure` ran `viper_developer_regressions` and reported **1/1 passed**, total **23.28 seconds**.
+
+This confirms CTest integration of the existing full developer suite on the maintainer's machine. It does **not** prove a clean native production compile with the actual patched ViPERDSP source; CTest ran the existing script which compiles mock fixtures. A separate native baseline and package-manifest capture are still necessary.
 
 ## Existing responsibilities
 
