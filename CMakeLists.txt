@@ -4,15 +4,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Builds apply downstream fixes to a private copy, never the tracked submodule.
+# The upstream input is always copied, patched, and validated privately.
+# Existing packaging can keep passing -DVIPERDSP_SOURCE_DIR while transitioning
+# to a single CMake-owned preparation step.
 set(VIPERDSP_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/ViPERDSP"
-    CACHE PATH "Directory containing the upstream ViPERDSP CMakeLists.txt")
-if (NOT EXISTS "${VIPERDSP_SOURCE_DIR}/CMakeLists.txt")
-  message(FATAL_ERROR "ViPERDSP source missing: initialize the submodule or use a unified source archive")
-endif()
+    CACHE PATH "Input directory containing upstream ViPERDSP source")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PrepareViPERDSP.cmake")
 
 # Upstream static DSP library, built as PIC for the LADSPA plugin.
-add_subdirectory("${VIPERDSP_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/ViPERDSP")
+add_subdirectory("${VIPERDSP_PREPARED_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/ViPERDSP")
 set_target_properties(ViPERDSP PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(ViPERDSP PRIVATE
   "$<$<COMPILE_LANGUAGE:CXX>:-include${CMAKE_CURRENT_SOURCE_DIR}/src/viperdsp_compat.h>")
