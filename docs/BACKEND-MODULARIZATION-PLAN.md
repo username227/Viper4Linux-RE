@@ -117,6 +117,39 @@ move it; keep tightly coupled worker and processor code together when that
 makes synchronization easier to reason about. Revisit the arrangement after
 each checkpoint rather than forcing a preselected file count.
 
+## Checkpoint 1 preparation (source review; native tests pending)
+
+The starting backend source is **1,493 lines / 84,545 characters** as read
+from the working branch. Its LADSPA CMake target currently compiles
+`src/viper-ladspa.cpp` as one translation unit and links `ViPERDSP` and
+`Threads::Threads`. The GUI, CLI and output-state programs are separate
+targets. No DSP source or CMake target has been changed for this checkpoint.
+
+The source review identifies these cohesive areas without prescribing
+boundaries: startup preference parsing; shared control-page acquisition and
+release; `Processor` construction and destruction; the background IR/DDC
+worker and native filter updates; effect configuration; the real-time
+`Processor::run` callback; processor state; and the LADSPA descriptor and
+entry points. Worker/configuration/state dependencies must be examined before
+extracting anything. Do not treat these categories as a file-count target.
+
+**Maintainer's next local baseline on Arch** (from the backend branch with
+the pinned submodule initialized):
+
+```bash
+git switch refactor/backend-modularization
+git submodule update --init --recursive
+cmake -S . -B build-backend-baseline -DCMAKE_BUILD_TYPE=Release
+cmake --build build-backend-baseline --parallel 4
+bash tests/check-developer.sh
+```
+
+Record `git rev-parse HEAD`, compilation warnings/errors, the full test
+result and any existing live-audio issues before the first extraction. The
+developer suite includes package and mock checks but does not replace
+listening tests. **These commands have been prepared, not executed on the
+maintainer's Arch system.** No checkpoint is marked passed yet.
+
 ## History and release notes
 
 The preceding GUI refactor was merged as PR #1 on 2026-11-03; the feature
