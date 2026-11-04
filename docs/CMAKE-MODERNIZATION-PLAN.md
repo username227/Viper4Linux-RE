@@ -1,6 +1,6 @@
 # CMake / CTest modernization plan
 
-**Status:** Proposed; implementation not started.  
+**Status:** In progress on implementation branch; not merged.  
 **Implementation branch:** `refactor/cmake-modernization`  
 **Priority:** Complete before the native LADSPA backend modularization.  
 **Scope:** Build preparation, optional developer tests, installation, and packaging integration. **No intentional DSP, GUI, IPC, or routing behavior changes.**
@@ -136,4 +136,5 @@ Do not run that illustrative command against the current tree yet; there are no 
 - Inventory reviewed `CMakeLists.txt`, `install.sh`, three fail-closed patch scripts, mock/package/developer tests, source and packaged launchers, stable Arch staging, Debian assembly, and release workflows. See [CMAKE-BASELINE.md](CMAKE-BASELINE.md).
 - Added the optional CTest entry point without changing native production targets or default build requirements. The first CTest registration wraps `tests/check-developer.sh`; converting test executables into native CMake targets is later work, **not** yet complete.
 - Independently checked the new CMake gating and test syntax in an isolated minimal CMake project: tests OFF discovered 0; tests ON discovered 1 and ran a **stub** successfully. This is a syntax/gating check **only**, not a native Viper4Linux regression pass.
-- No local Arch source build, real ViPERDSP build, native package, or live PipeWire test has been run in this branch. These remain required acceptance evidence.
+- **Maintainer's Arch CTest verification (2026-11-04):** Branch `refactor/cmake-modernization` at pinned ViPERDSP commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`; `cmake -S . -B build-ctest-inventory -DVIPER_BUILD_DEVELOPER_TESTS=ON` succeeded with GCC 16.2.1 and Python 3.14.9. `ctest --test-dir build-ctest-inventory --output-on-failure`: **1/1 passed** (`viper_developer_regressions`), elapsed 23.28 seconds. The suite runs under the legacy wrapper; finer-grained CTest registration is not yet implemented.
+- No native production ViPERDSP build, staged package comparison, or live PipeWire acceptance has been run in this branch yet. These remain required acceptance evidence.
