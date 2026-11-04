@@ -1,7 +1,7 @@
 # Staging-only system package layout. Installed launchers hardcode /usr paths,
 # so arbitrary prefix installs must not be advertised until they are supported.
-# This module is opt-in and deliberately does not replace the existing packager
-# script until the two staging trees have been compared by the maintainer.
+# This module is opt-in. Neither legacy package workflow switches to its
+# CMake staging layout until matching manifests have been verified.
 include(GNUInstallDirs)
 
 if(NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
@@ -41,7 +41,7 @@ if(_viper_runtime_count LESS 5)
 endif()
 
 # The first install rule rejects host installs and unsafe staging roots before
-# installing even one file. Existing Arch/deb package scripts remain untouched.
+# installing even one file. Legacy package builders remain authoritative.
 install(CODE [[
   set(_viper_destdir "$ENV{DESTDIR}")
   if(NOT IS_ABSOLUTE "${_viper_destdir}")
