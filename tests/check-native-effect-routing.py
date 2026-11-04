@@ -3,7 +3,8 @@
 from pathlib import Path
 import re
 root = Path(__file__).resolve().parents[1]
-s = (root / "src/viper-ladspa.cpp").read_text()
+assert '#include "backend/processor.inc"' in (root / "src/viper-ladspa.cpp").read_text()
+s = (root / "src/backend/processor.inc").read_text()
 expected = {
  "Bass": "ApplyBass", "Mono Bass": "ApplyBassMono",
  "Psychoacoustic Bass": "ApplyPsychoacousticBass",
