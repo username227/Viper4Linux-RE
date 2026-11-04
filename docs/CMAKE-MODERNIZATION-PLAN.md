@@ -125,8 +125,15 @@ Do not run that illustrative command against the current tree yet; there are no 
 
 | Checkpoint | Status |
 | --- | --- |
-| 1. Inventory and baseline | Not started |
-| 2. CMake configuration and DSP preparation | Not started |
-| 3. Optional CTest developer suite | Not started |
+| 1. Inventory and baseline | **In progress:** source-level ownership inventory recorded in [CMake baseline](CMAKE-BASELINE.md); native builds and package manifests not yet captured |
+| 2. CMake configuration and DSP preparation | Not started; current plain CMake default selects **unpatched** upstream DSP, so it is not yet the supported installation path |
+| 3. Optional CTest developer suite | **Initial scaffolding only:** `VIPER_BUILD_DEVELOPER_TESTS=OFF` default; `ON` registers existing full developer script under CTest, pending native checkout tests |
 | 4. CMake installation and packaging parity | Not started |
 | 5. Full acceptance and installer retirement | Not started |
+
+### Branch work log
+
+- Inventory reviewed `CMakeLists.txt`, `install.sh`, three fail-closed patch scripts, mock/package/developer tests, source and packaged launchers, stable Arch staging, Debian assembly, and release workflows. See [CMAKE-BASELINE.md](CMAKE-BASELINE.md).
+- Added the optional CTest entry point without changing native production targets or default build requirements. The first CTest registration wraps `tests/check-developer.sh`; converting test executables into native CMake targets is later work, **not** yet complete.
+- Independently checked the new CMake gating and test syntax in an isolated minimal CMake project: tests OFF discovered 0; tests ON discovered 1 and ran a **stub** successfully. This is a syntax/gating check **only**, not a native Viper4Linux regression pass.
+- No local Arch source build, real ViPERDSP build, native package, or live PipeWire test has been run in this branch. These remain required acceptance evidence.
