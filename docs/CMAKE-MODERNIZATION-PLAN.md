@@ -125,9 +125,9 @@ Do not run that illustrative command against the current tree yet; there are no 
 
 | Checkpoint | Status |
 | --- | --- |
-| 1. Inventory and baseline | **In progress:** source-level ownership inventory recorded in [CMake baseline](CMAKE-BASELINE.md); native builds and package manifests not yet captured |
-| 2. CMake configuration and DSP preparation | **In progress:** clean Git checkout, incremental reuse, and unified-source archive native builds passed; invalid patch-context rejection passed; missing-source validation pending |
-| 3. Optional CTest developer suite | **Initial scaffolding only:** `VIPER_BUILD_DEVELOPER_TESTS=OFF` default; `ON` registers existing full developer script under CTest, pending native checkout tests |
+| 1. Inventory and baseline | **In progress:** source inventory, developer CTest regressions, real native builds and LADSPA export captured; staged package manifests remain open |
+| 2. CMake configuration and DSP preparation | **Core checks passed on Arch:** checkout build, incrementals, unified archive, invalid patch rejection and missing-source rejection; still requires integration/packaging review |
+| 3. Optional CTest developer suite | **In progress:** original monolithic developer suite passed on Arch; four selectable CTest groups implemented on branch and awaiting retest |
 | 4. CMake installation and packaging parity | Not started |
 | 5. Full acceptance and installer retirement | Not started |
 
@@ -142,4 +142,6 @@ Do not run that illustrative command against the current tree yet; there are no 
 - **Maintainer's incremental CMake verification (2026-11-04):** after pulling the branch, reconfigured `build-cmake-prepared` without an explicit DSP path. CMake printed `Reusing verified private ViPERDSP source`, verified all three patches as already present, and `cmake --build ... --parallel 4` reused ViPERDSP and the LADSPA plugin without recompiling them. `viper-gui` recompiled/relinked following changed Git metadata; the About/build revision is derived from Git.
 - **Maintainer's unified-source test (2026-11-04):** generated and extracted a test unified tarball with no `.git` metadata, configured with `-DCMAKE_DISABLE_FIND_PACKAGE_Git=TRUE` and developer tests OFF. CMake prepared the private source and reported that all three fixes applied. The Git-disable variable was reported as unused because no Git lookup was made; compilation completed sufficiently to produce a LADSPA library whose `nm -D` export was `0000000000017580 T ladspa_descriptor`. This demonstrates archive build without Git metadata or discovery, **not** an environment where the Git executable was uninstalled.
 - Intentional patch-context mismatch in a temporary ViPERDSP copy caused CMake configuration to fail with `Unexpected LUFS implementation`; this confirms fail-closed behavior on the tested input.
+- **Maintainer's missing-source test (2026-11-04):** configuring against an intentionally nonexistent ViPERDSP directory failed at `cmake/PrepareViPERDSP.cmake:10` with `ViPERDSP source is incomplete`, before any compilation. This is the expected fail-closed behavior.
+- Split the existing developer regression dispatcher into four opt-in CTest groups (`viper_package`, `viper_mock`, `viper_contracts`, `viper_release`) while retaining the original no-argument full-suite command and check coverage; grouped CTest execution is pending on-machine verification.
 - Staged package parity and live PipeWire acceptance have not been run in this branch yet.
