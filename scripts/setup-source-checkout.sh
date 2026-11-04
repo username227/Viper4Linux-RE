@@ -7,7 +7,7 @@ if (( $# != 1 )); then
     echo 'Usage: scripts/setup-source-checkout.sh --check|--prepare-routing|--link-commands' >&2
     exit 2
 fi
-root=$(cd -- "$(dirname -- "\${BASH_SOURCE[0]}")/.." && pwd -P)
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 routing="$root/routing-config/filter-chain.conf"
 
 check_build() {
@@ -33,7 +33,7 @@ case $1 in
         echo 'PASS: source checkout build and routing files are ready (nothing modified).'
         ;;
     --prepare-routing)
-        template=\${VIPER_PIPEWIRE_FILTER_TEMPLATE:-/usr/share/pipewire/filter-chain.conf}
+        template=${VIPER_PIPEWIRE_FILTER_TEMPLATE:-/usr/share/pipewire/filter-chain.conf}
         [[ -r "$template" && -f "$template" ]] || {
             echo "PipeWire filter-chain template missing: $template" >&2
             exit 1
@@ -59,7 +59,7 @@ case $1 in
         ;;
     --link-commands)
         check_build
-        bindir=\${XDG_BIN_HOME:-$HOME/.local/bin}
+        bindir=${XDG_BIN_HOME:-$HOME/.local/bin}
         [[ $bindir == /* && $bindir != / && $bindir != /usr/bin &&
            $bindir != /usr/local/bin && ! -L "$bindir" ]] || {
             echo 'Refusing non-private, relative or symlinked command directory.' >&2
