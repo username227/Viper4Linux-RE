@@ -66,3 +66,7 @@ option(VIPER_ENABLE_SYSTEM_INSTALL
 if(VIPER_ENABLE_SYSTEM_INSTALL)
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallSystem.cmake")
 endif()
+
+# Developer source-checkout integration: prepare build-local routing files
+# and expose explicit, non-installing verification and optional alias targets.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/SourceCheckout.cmake")
