@@ -351,6 +351,69 @@ worker/native-configuration ownership as potential next responsibilities;
 split only when the resulting source is easier to audit, **not to reach
 a particular file count**.
 
+## Checkpoint 4 — callback extraction and automated regression (2026-11-04)
+
+**Implementation commit:** `5c66fb8308838e0f1f135d52f185c93cad415143`.
+
+The entire `Processor::run(unsigned long frames)` member function was
+mechanically extracted from `src/backend/processor.inc` into
+`src/backend/processor-run.inc`, **included at precisely the old
+location inside the Processor class** and compiled in the same C++
+translation unit. Reinsertion reconstructs the prior processor
+implementation byte-for-byte. No audio-thread synchronization, native
+DSP parameters, processing order, sample-rate policy, dry/wet mix,
+LADSPA descriptor, CMake target or ViPERDSP source was changed.
+Existing native routing and UI source-contract tests now include the
+callback source explicitly, preserving their original assertions and
+adding the callback include/try-lock checks.
+
+The resulting **four source responsibilities** are:
+
+| File | Physical lines (Git text split) | Owner |
+| --- | ---: | --- |
+| `src/viper-ladspa.cpp` | 105 | Shared IPC/control owner, LADSPA ABI and entrypoints |
+| `src/backend/startup-settings.inc` | 289 | Startup settings, saved IR/DDC paths |
+| `src/backend/processor.inc` | 890 | Native DSP state and lifecycle, worker, effect configuration |
+| `src/backend/processor-run.inc` | 218 | Complete real-time audio callback |
+
+These line counts include terminal newline splitting; Git may report
+one fewer counted line for files without a final blank line.
+**Four is the outcome of the inspected natural boundaries**, not a
+quota. No further splitting of the worker/native effect setters is
+currently justified merely to reduce file size.
+
+**Maintainer ran from the fresh Arch checkout:**
+
+~~~bash
+git pull --ff-only
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+bash tests/check-developer.sh
+nm -D build/viper_dsp_ladspa.so | grep ' ladspa_descriptor$'
+git status --short
+~~~
+
+**Results:** fast-forwarded to the callback commit; CMake verified the
+three private ViPERDSP corrections, rebuilt both LADSPA variants and
+the GUI to 100% without compile errors or warnings in the supplied
+log; **CTest 4/4 PASS**; **full developer suite PASS** including
+all **22 Audio Output tests**, native DSP/IPC, effect routing,
+Dynamic EQ, Convolver/IRS, DDC, sample rates, GUI/CLI contracts,
+source and package/release contracts. Export remains
+`0000000000017580 T ladspa_descriptor`; Git working tree clean.
+Test diagnostics for invalid settings and missing IRS fixtures were
+intentional. This source-build test did not launch or replace the
+installed audio backend.
+
+**Acceptance status:** the callback move passed automated regression
+on the maintainer's Arch host. Checkpoint 4 still requires its
+independent clean-build/package acceptance (not merely an incremental
+source build). Checkpoint 5 still requires real PipeWire listening,
+device switching, reboot/restart and GUI/CLI/preset/IRS/VDC checks
+and the maintainer's explicit approval. No merge to `main` yet.
+
 ## History and release notes
 
 The preceding GUI refactor was merged as PR #1 on 2026-11-03; the feature
@@ -360,6 +423,7 @@ until it is merged or accepted for a release. The earlier GUI planning
 document is preserved by its original Git commits, not duplicated as
 another active plan.
 
-**Next action:** inspect the Processor callback and worker dependencies for
-a justified next extraction. Maintain the passing Arch test baseline and
-treat live sound equivalence as a separate acceptance gate.
+**Next action:** confirm a fresh independent Arch source/package build
+and the unchanged native LADSPA ABI; then perform Checkpoint 5 live-audio
+acceptance. Do not introduce extra source files without a genuine
+architectural need and do not merge without maintainer approval.
