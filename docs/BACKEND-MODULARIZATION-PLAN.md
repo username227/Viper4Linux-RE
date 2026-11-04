@@ -407,12 +407,47 @@ Test diagnostics for invalid settings and missing IRS fixtures were
 intentional. This source-build test did not launch or replace the
 installed audio backend.
 
-**Acceptance status:** the callback move passed automated regression
-on the maintainer's Arch host. Checkpoint 4 still requires its
-independent clean-build/package acceptance (not merely an incremental
-source build). Checkpoint 5 still requires real PipeWire listening,
-device switching, reboot/restart and GUI/CLI/preset/IRS/VDC checks
-and the maintainer's explicit approval. No merge to `main` yet.
+**Acceptance status:** the callback move has passed full developer
+regressions and the clean independent Arch source build plus deterministic
+CMake package-staging parity described below. This is not an executed
+`makepkg`/pacman package build, and audio equivalence still requires the
+Checkpoint 5 maintainer gate. No merge to `main` yet.
+
+### Checkpoint 4 independent clean-build and staging acceptance (2026-11-04)
+
+The maintainer fast-forwarded to `cd688e531bc388b68ee7e4314f1cbcd3840d4b02`,
+then configured an **independent, new** `build-backend-final/` directory
+using GCC/G++ 16.2.1, CMake Release,
+`VIPER_BUILD_DEVELOPER_TESTS=ON`,
+`CMAKE_INSTALL_PREFIX=/usr`,
+`VIPER_ENABLE_SYSTEM_INSTALL=ON` and
+`VIPER_SYSTEM_INSTALL_LAYOUT=arch`. CMake copied and patched the pinned
+ViPERDSP dependency in a private build directory (verified LUFS speed,
+Stereo Imager preallocation and Multiband Compressor preallocation), compiled
+all production and mock targets to 100% without reported compiler
+warnings/errors, and passed **CTest 4/4**.
+
+The maintainer then ran the independent read-only-host staging parity
+test, `bash tests/check-cmake-install-parity.sh build-backend-final`. It
+installed the newly compiled artifacts into two isolated `/tmp`
+`DESTDIR` trees and checked file hashes, permissions, symlink targets
+and directory entries. **PASS: identical 35 files and 2 symlinks**;
+all staged files remained under their private test roots.
+No system install, daemon restart or audio output modification occurred.
+
+The independently compiled plugin still exports
+`0000000000017580 T ladspa_descriptor`. The `git status --short`
+output was empty (clean working tree). The latest full standalone
+developer suite had already passed at the preceding callback commit;
+this *separate clean-build run* explicitly ran all four CTest groups.
+
+**Checkpoint 4 gate:** complete for source compilation, automated
+regressions, safe deterministic Arch CMake staging and symbol export.
+An actual Arch `makepkg` artifact, if required for release, is a
+separate package-production test; CMake parity is not that test.
+Remaining: Checkpoint 5 real PipeWire live checks and maintainer
+approval before merging. No additional splitting is indicated by
+the successful four-file architecture.
 
 ## History and release notes
 
@@ -423,7 +458,10 @@ until it is merged or accepted for a release. The earlier GUI planning
 document is preserved by its original Git commits, not duplicated as
 another active plan.
 
-**Next action:** confirm a fresh independent Arch source/package build
-and the unchanged native LADSPA ABI; then perform Checkpoint 5 live-audio
-acceptance. Do not introduce extra source files without a genuine
-architectural need and do not merge without maintainer approval.
+**Next action:** Checkpoint 5 live-audio acceptance on the source
+checkout: confirm backend reuse and intentional restart behavior,
+real playback across output switches/Bluetooth reconnect, GUI/CLI
+settings and presets, IRS/DDC loading and 44.1/48/96-kHz processing
+as supported. Record exceptions before the maintainer's explicit
+merge decision. Do not change the installed system package as part
+of this test, and do not add source files without architectural need.
