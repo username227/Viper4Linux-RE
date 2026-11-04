@@ -49,9 +49,9 @@ target_include_directories(viper-ctl PRIVATE src)
 target_link_libraries(viper-ctl PRIVATE Qt6::Core)
 target_compile_options(viper-ctl PRIVATE -Wall -Wextra -Wpedantic)
 
-# Developer regression tests are optional. Existing isolated scripts still
-# compile their own mock binaries; CTest is the entry point during migration.
-# This adds no test dependencies or work to ordinary production builds.
+# Developer regressions are opt-in. When enabled, tests/ owns the CMake
+# mock test targets and registers CTest groups; the standalone scripts retain
+# a direct-compiler fallback for existing CI and packaging workflows.
 option(VIPER_BUILD_DEVELOPER_TESTS
   "Build and register the Viper4Linux developer regression suite" OFF)
 if(VIPER_BUILD_DEVELOPER_TESTS)
