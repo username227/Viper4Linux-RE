@@ -28,6 +28,14 @@ SYSTEM_ROUTING = Path('/usr/share/viper4linux/routing-config/filter-chain.conf.d
 PROC = Path('/proc')
 
 
+def source_routing_dir(root: Path) -> Path:
+    """Match scripts/start.sh: keep custom source config, otherwise use CMake."""
+    legacy = root / 'routing-config'
+    if (legacy / 'filter-chain.conf').is_file():
+        return legacy
+    return root / 'build/routing-config'
+
+
 def fingerprint(root: Path = ROOT) -> str:
     # Include the native DSP binary, the IPC controller and the filter-chain
     # configuration. A rebuilt backend is detected even if Git HEAD is unchanged.
@@ -37,13 +45,16 @@ def fingerprint(root: Path = ROOT) -> str:
         root = Path('/usr')  # stable path components in the fingerprint
     else:
         paths = [root / 'build/viper_dsp_ladspa.so', root / 'build/viper-ctl']
-        paths += sorted((root / 'routing-config').rglob('*.conf'))
+        routing = source_routing_dir(root)
+        if not (routing / 'filter-chain.conf').is_file():
+            raise RuntimeError('Source PipeWire routing config missing; rerun CMake configure.')
+        paths += sorted(routing.rglob('*.conf'))
     if len(paths) < 3:
-        raise RuntimeError('PipeWire configuration missing. Run ./install.sh first.')
+        raise RuntimeError('PipeWire configuration missing. Run cmake -S . -B build && cmake --build build first.')
     digest = hashlib.sha256(b'viper4linux-backend-fingerprint-v1\0')
     for path in paths:
         if not path.is_file():
-            raise RuntimeError(f'Missing backend build artifact: {path}. Run ./install.sh first.')
+            raise RuntimeError(f'Missing backend build artifact: {path}. Run cmake -S . -B build && cmake --build build first.')
         digest.update(str(path.relative_to(root)).encode() + b'\0')
         with path.open('rb') as f:
             while chunk := f.read(1024 * 1024):
@@ -211,7 +222,7 @@ def main() -> int:
             return 0
         gui = Path('/usr/bin/viper4linux-gui') if SYSTEM_MODE else ROOT / 'build/viper-gui'
         if not gui.is_file() or not os.access(gui, os.X_OK):
-            raise RuntimeError('GUI not built. Run ./install.sh first.')
+            raise RuntimeError('GUI not built. Run cmake -S . -B build && cmake --build build first.')
         backend_pid = ensure_backend()
         try:
             ensure_output_monitor(backend_pid)

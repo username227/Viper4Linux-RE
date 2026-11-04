@@ -15,6 +15,7 @@ with TemporaryDirectory() as tmp:
     (root / 'build/viper_dsp_ladspa.so').write_bytes(b'backend version A')
     (root / 'build/viper-ctl').write_bytes(b'ipc version A')
     (root / 'routing-config/subdir/viper.conf').write_bytes(b'config A')
+    (root / 'routing-config/filter-chain.conf').write_bytes(b'stock config')
     a = v.fingerprint(root)
     assert len(a) == 64 and a == v.fingerprint(root)
     (root / 'build/viper_dsp_ladspa.so').write_bytes(b'backend version B')
@@ -25,6 +26,22 @@ with TemporaryDirectory() as tmp:
     c = v.fingerprint(root)
     (root / 'build/viper-ctl').write_bytes(b'ipc version B')
     assert c != v.fingerprint(root), 'changed controller must trigger upgrade'
+    # New CMake checkouts use build-local routing until a custom source
+    # filter-chain file is explicitly supplied.
+    custom_file = root / 'routing-config/filter-chain.conf'
+    custom_file.unlink()
+    built_routing = root / 'build/routing-config'
+    (built_routing / 'filter-chain.conf.d').mkdir(parents=True)
+    (built_routing / 'filter-chain.conf').write_bytes(b'CMake stock template A')
+    (built_routing / 'filter-chain.conf.d/99-viper-smart.conf').write_bytes(b'smart source config')
+    assert v.source_routing_dir(root) == built_routing
+    routed_a = v.fingerprint(root)
+    (built_routing / 'filter-chain.conf').write_bytes(b'CMake stock template B')
+    assert v.fingerprint(root) != routed_a, 'CMake routing update must change fingerprint'
+    custom_file.write_bytes(b'user custom config')
+    assert v.source_routing_dir(root) == root / 'routing-config'
+    assert v.fingerprint(root) != routed_a, 'User custom source routing must take priority'
+    custom_file.unlink()
     desired = v.fingerprint(root)
 
     proc = root / 'fake-proc'

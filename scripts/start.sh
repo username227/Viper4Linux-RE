@@ -2,8 +2,17 @@
 # Foreground-only routing client. Never starts an additional PipeWire daemon.
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
-[[ -s build/viper_dsp_ladspa.so && -x build/viper-ctl && -r routing-config/filter-chain.conf ]] || {
-  echo 'Not built yet; run ./install.sh' >&2; exit 1;
+# Preserve a developer-edited source routing config, if present. New CMake
+# checkouts generate the stock routing config only inside build/routing-config.
+config_dir="$PWD/build/routing-config"
+if [[ -r routing-config/filter-chain.conf ]]; then
+  config_dir="$PWD/routing-config"
+fi
+[[ -s build/viper_dsp_ladspa.so && -x build/viper-ctl &&
+   -r "$config_dir/filter-chain.conf" &&
+   -r "$config_dir/filter-chain.conf.d/99-viper-smart.conf" ]] || {
+  echo 'Missing source build or routing config; rerun cmake -S . -B build && cmake --build build' >&2
+  exit 1
 }
 command -v pipewire >/dev/null || { echo 'pipewire executable missing' >&2; exit 1; }
 [[ ${PIPEWIRE_DAEMON:-false} != true ]] || {
@@ -32,5 +41,5 @@ exec env -u PIPEWIRE_DAEMON \
   VIPER_CLEAN_INSTANCE=viperlinux-unified-v1 \
   VIPER_BACKEND_FINGERPRINT="$backend_fingerprint" \
   LADSPA_PATH="$PWD/build${LADSPA_PATH:+:$LADSPA_PATH}" \
-  PIPEWIRE_CONFIG_DIR="$PWD/routing-config" \
+  PIPEWIRE_CONFIG_DIR="$config_dir" \
   pipewire -c filter-chain.conf
