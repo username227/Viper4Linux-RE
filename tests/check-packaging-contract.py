@@ -44,6 +44,7 @@ require(not (arch / 'install-package.sh').exists(),
 require('pkgname=viper4linux-re\n' in stable, 'Wrong stable package name')
 require("license=('GPL-3.0-only' 'LicenseRef-ViPERDSP')" in stable,
         'Arch package must declare GPL-3.0-only plus third-party notice')
+require("options=('!debug')" in stable, 'Stable package must not produce debug-symbol package')
 require(license_text.startswith('GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n'),
         'Missing GNU GPL v3 text')
 require('Gerald Frank (username227)' in copyright_notice and
