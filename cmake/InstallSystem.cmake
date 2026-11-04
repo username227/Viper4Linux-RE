@@ -118,11 +118,10 @@ else()
 
   # Match the existing Debian copyright payload, including its UTF-8 heading.
   file(READ "${PROJECT_SOURCE_DIR}/LICENSE" _viper_deb_license)
-  set(_viper_deb_copyright
-    "ViPER for Linux RE original code — MIT license.\\n"
-    "ViPERDSP has separate terms; see THIRD-PARTY-NOTICES.md.\\n\\n"
+  string(CONCAT _viper_deb_copyright
+    "ViPER for Linux RE original code — MIT license.\n"
+    "ViPERDSP has separate terms; see THIRD-PARTY-NOTICES.md.\n\n"
     "${_viper_deb_license}")
-  string(JOIN "" _viper_deb_copyright ${_viper_deb_copyright})
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated/viper-debian-copyright"
     "${_viper_deb_copyright}")
