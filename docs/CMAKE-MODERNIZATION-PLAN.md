@@ -129,7 +129,30 @@ Do not run that illustrative command against the current tree yet; there are no 
 | 2. CMake configuration and DSP preparation | **Core checks passed on Arch:** checkout build, incrementals, unified archive, invalid patch rejection and missing-source rejection; still requires integration/packaging review |
 | 3. Optional CTest developer suite | **Arch core acceptance passed:** 10 native mock test targets built, 4/4 CTest groups passed (6.65 s), tests OFF registered none, original standalone full suite passed; CI distro coverage remains for checkpoint 5 |
 | 4. CMake installation and packaging parity | **Automated package build and container install acceptance passed:** Arch, Ubuntu 24.04 and Debian 13 from one pinned unified source; run `41845893378` green 7/7; live desktop/audio acceptance separate |
-| 5. Full acceptance and installer retirement | Not started |
+| 5. Full acceptance and installer retirement | **In progress:** packaging defaults changed on development branch, source-checkout helper and local audio acceptance still required; no installer retired |
+
+### Remaining installer responsibilities and retirement gate
+
+The CMake and native package migration **does not imply** that the source
+installer can be deleted. Its responsibilities are now split:
+
+| Original `install.sh` responsibility | Replacement or status |
+| --- | --- |
+| Pinned source and downstream three-patch verification | **CMake-owned**, verified by independent checkout and unified-source builds |
+| Compile production GUI, LADSPA and CLI outputs | **CMake-owned**, exercised by Arch and Debian-family CI |
+| Native package staging and command aliases | **CMake-owned**, exact Arch/Debian staging parity and 7-job container build/install smoke accepted |
+| Isolated regression tests | **CTest opt-in**, preserves standalone regression suite |
+| Developer source launcher and `build/`-relative runtime files | **Pending source-checkout acceptance**; system package paths are different |
+| Copy distribution PipeWire filter-chain config for source launch | **Not yet migrated**; must not overwrite an existing user-edited file |
+| Create safe `~/.local/bin/viper4linux` and `v4l-cli` aliases | **Not yet migrated**; collision safeguards and optional behavior needed |
+| Published separate AUR `-git` PKGBUILD | **Not changed here**; maintain in its own AUR Git checkout |
+| Real Bluetooth/speaker routing, audio output memory, GUI/tray controls | **Manual Arch hardware acceptance still pending** |
+
+Do not delete `install.sh`, `packaging/arch/install-package.sh`, or related
+legacy-reference tests before the corresponding replacement and maintainer
+acceptance. The staging helper must remain while separate AUR VCS packaging
+still references it. Do not merge this development branch without explicit
+approval and live-audio regression acceptance.
 
 ### Branch work log
 
@@ -157,5 +180,6 @@ Do not run that illustrative command against the current tree yet; there are no 
 - Static post-commit review confirmed both legacy paths remain in the scripts and that the opt-in CI environment variables, three target images, and build-only Debian switch are connected. This is **not** a substitute for passing GitHub Actions.
 - **GitHub Actions three-distribution build acceptance (2026-11-04):** [build-only run #41841750619](https://github.com/username227/Viper4Linux-RE/actions/runs/41841750619), commit `3d4a1c55a44418ab894bbad0dcc3dbea73a9aa1d`, trigger `push`, completed **success** on first attempt. All four jobs passed: unified pinned source export; Arch `makepkg` package from the generated archive; Ubuntu 24.04/Mint 22.x native `.deb`; Debian 13/LMDE 7 native `.deb`. Verified per-job logs: Arch also passed `tests/check-developer.sh` and produced `viper4linux-re-0.0.0-1-x86_64.pkg.tar.zst`; both `.deb` jobs completed mock and UI contract regressions, `dpkg-shlibdeps`, `dpkg-deb --build`, and SHA256 checks. Artifacts `cmake-test-source`, `cmake-test-arch-package`, `cmake-test-deb-ubuntu24.04-mint22`, and `cmake-test-deb-debian13-lmde7` uploaded successfully. Ubuntu resolved the Noble `libqt6widgets6t64` dependency, whereas Debian 13 resolved `libqt6widgets6`. **No application install, PipeWire playback, live GUI or end-user desktop validation was performed.** The CI version `0.0.0` is a non-published test artifact, not a proposed release.
 - **Isolated package installation smoke acceptance (2026-11-04):** [GitHub Actions run #41845893378](https://github.com/username227/Viper4Linux-RE/actions/runs/41845893378), commit `3eed9258457ce1f82769750ffc3d16e0e3f98dd9`, completed **success; 7/7 jobs passed**. A new guarded `scripts/ci-smoke-installed-package.sh` installs the **already-built** Arch/Ubuntu/Debian package in a disposable Docker container, checks package-manager registration, mandatory installed binaries, runtime Python, smart-routing files, LADSPA descriptor, launcher fingerprint, and read-only CLI `--help`. Archive documentation checks account for Arch `zipman` and Ubuntu/Debian Docker documentation exclusion rules. CI preflights packaging and smoke scripts with `bash -n`. Early failure runs were CI assertions/shell issues, corrected before the accepted result. **No installer was run on the maintainer's Arch desktop; no PipeWire, GUI or audible DSP was exercised in CI.**
+- **Post-CI packaging default transition (2026-11-04, CI run pending):** stable Arch PKGBUILD and native Debian builder now default to CMake-owned private DSP preparation and `DESTDIR` staging. Explicit `VIPER_ARCH_STAGING_BACKEND=legacy` and `VIPER_DEB_STAGING_BACKEND=legacy` retain the former paths for comparison; development CI deliberately removed the CMake override variables to test the *default* paths. The original production release workflow YAML and separate AUR VCS checkout remain untouched. Await a fresh 7-job green run before recording this transition as accepted.
 - **Acceptance sequence agreed:** finish building and validating packages in GitHub Actions first. Treat installing the generated packages and verifying live PipeWire/DSP operation as a *separate later acceptance stage*.
 - Debian staged layout, actual Arch package-manager integration, and live PipeWire acceptance have not yet run in this branch.
