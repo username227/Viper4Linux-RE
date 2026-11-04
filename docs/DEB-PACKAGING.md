@@ -20,6 +20,38 @@ as Ubuntu Noble's `libqt6widgets6t64` and Debian Trixie's
 requirements; the build also requires `pipewire`, `python3` and Qt6's platform
 plugins at runtime.
 
+## CMake installation parity (development branch only)
+
+The `refactor/cmake-modernization` branch adds an **experimental,
+staging-only** Debian layout to CMake. This does **not** yet change the
+production `.deb` workflow, whose packaging, dependency detection,
+distribution-specific images and installed smoke tests remain authoritative.
+
+On an Arch developer workstation, compare the staged filesystem payloads
+without building or installing a Debian package:
+
+```sh
+cmake -S . -B build-deb-parity -DCMAKE_BUILD_TYPE=Release \\
+  -DCMAKE_INSTALL_PREFIX=/usr \\
+  -DVIPER_ENABLE_SYSTEM_INSTALL=ON \\
+  -DVIPER_SYSTEM_INSTALL_LAYOUT=debian \\
+  -DVIPER_BUILD_DEVELOPER_TESTS=OFF
+cmake --build build-deb-parity --parallel 4
+python3 tests/check-cmake-deb-parity.py build-deb-parity
+```
+
+The comparator stages the same built outputs into two disposable directories,
+using the legacy Debian package-copy commands and CMake. It compares file
+bytes, all paths, modes, symlink targets and directories. It does not invoke
+`apt`, `dpkg`, host installs or a running audio backend. The Debian-specific
+control file and runtime dependencies are intentionally **not** included in
+this filesystem parity test; those require actual Ubuntu 24.04 and Debian 13
+container builds.
+
+The packaged application still uses absolute `/usr` paths. CMake refuses
+other installation prefixes and requires a safe absolute `DESTDIR` for
+staging. Do not call `cmake --install` without `DESTDIR`.
+
 ## Prepare release assets
 
 For each new version, manually dispatch **Actions → Prepare stable release**
