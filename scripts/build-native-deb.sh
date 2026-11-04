@@ -14,6 +14,13 @@ case "$stage_backend" in
     legacy|cmake) ;;
     *) echo "Unsupported VIPER_DEB_STAGING_BACKEND: $stage_backend" >&2; exit 2 ;;
 esac
+# Build-only CI must not install the generated application package, even
+# inside its disposable distro container. Default release behavior is retained.
+skip_install=${VIPER_DEB_SKIP_INSTALL_TEST:-0}
+case "$skip_install" in
+    0|1) ;;
+    *) echo "Unsupported VIPER_DEB_SKIP_INSTALL_TEST: $skip_install" >&2; exit 2 ;;
+esac
 case "$target" in
     ubuntu24.04-mint22)
         expected_os=ubuntu expected_version=24.04
@@ -168,10 +175,17 @@ package="$out/viper4linux-re_${package_version}_amd64.deb"
 dpkg-deb --build --root-owner-group "$pkgroot" "$package"
 dpkg-deb --info "$package"
 dpkg-deb --contents "$package" | grep -F 'usr/lib/ladspa/viper_dsp_ladspa.so'
-# Exercise dependency resolution and the installed command-line/launcher paths.
-apt-get install -y --no-install-recommends "$package"
-viper4linux-ctl --help >/dev/null
-v4l-cli --help >/dev/null
-python3 /usr/lib/viper4linux/viper_launcher.py --fingerprint >/dev/null
+if [[ $skip_install == 0 ]]; then
+    # Release-path behavior: verify package dependency resolution and installed
+    # command-line/launcher paths in a disposable distribution container.
+    apt-get install -y --no-install-recommends "$package"
+    viper4linux-ctl --help >/dev/null
+    v4l-cli --help >/dev/null
+    python3 /usr/lib/viper4linux/viper_launcher.py --fingerprint >/dev/null
+fi
 (cd "$out" && sha256sum -- "$(basename "$package")" > SHA256SUMS && sha256sum --check SHA256SUMS)
-echo "PASS: $target native Debian package built, installed, and smoke-tested: $package"
+if [[ $skip_install == 1 ]]; then
+    echo "PASS: $target native Debian package built and inspected; package NOT installed: $package"
+else
+    echo "PASS: $target native Debian package built, installed, and smoke-tested: $package"
+fi
