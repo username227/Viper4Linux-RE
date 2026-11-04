@@ -10,9 +10,7 @@ trap 'rm -rf -- "$work" "$config"' EXIT
 # from existing packaging/CI scripts) this runner retains its proven g++ path.
 binary_dir=${VIPER_MOCK_BIN_DIR:-$work}
 if [[ -n ${VIPER_MOCK_BIN_DIR:-} ]]; then
-    for binary in viper_mock.so check check-eq-presets check-ir-reader \\
-                  check-ddc-reader check-cli-controls check-cli-batch \\
-                  check-cli-settings check-cli-eq-presets check-output-state; do
+    for binary in viper_mock.so check check-eq-presets check-ir-reader check-ddc-reader check-cli-controls check-cli-batch check-cli-settings check-cli-eq-presets check-output-state; do
         if [[ ! -f "$binary_dir/$binary" ]]; then
             echo "Missing CMake-built mock test: $binary_dir/$binary" >&2
             echo 'Run cmake --build <build-dir> --target viper_native_mock_tests first.' >&2
