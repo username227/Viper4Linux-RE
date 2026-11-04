@@ -254,6 +254,48 @@ translation unit remains an option if it preserves ownership and ABI.
 change at a time, with targeted compilation and regression tests. Full
 developer and live-audio acceptance remain later gates.
 
+## Checkpoint 2 — first mechanical extraction verified (2026-11-04)
+
+**Commit:** `f5d5e1b28a1bcce583c4c0b175d686e7f807fc8d`
+(startup settings only; no native DSP implementation or CMake changes).
+
+- Moved `config_directory()`, `saved_ir_path()`, `saved_ddc_path()`,
+  and `load_saved_settings()` verbatim into
+  `src/backend/startup-settings.inc`; included at their original position
+  inside `src/viper-ladspa.cpp`'s existing single C++ translation unit.
+  The source diff is reversible byte-for-byte by reinserting the moved
+  implementation, so startup parser control flow and settings semantics
+  have not been rewritten.
+- Main LADSPA source decreased from 1,493 to 1,207 lines; the extracted
+  include has 288 lines. The small IPC mapping/refcount block and LADSPA
+  descriptor remain in the main file, by design.
+- Updated `tests/check-precision-persistence-contract.py` to read
+  the extracted implementation and assert the include is present, so the
+  existing legacy/precision precedence assertions are retained rather than
+  silently bypassed.
+
+**Maintainer executed after a clean fast-forward pull:**
+
+~~~bash
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+bash tests/check-developer.sh
+git status --short
+~~~
+
+**Results:** native and mock LADSPA targets recompiled and linked at
+100%; CTest **4/4 PASS**; **full developer regression suite PASS**,
+including precision persistence, mock DSP/IPC, IRS/DDC and sample-rate
+checks; all **22 output identity/memory tests PASS**; working tree clean.
+No compile error or warning appeared in the submitted build log.
+No installed backend was replaced or started by these commands.
+The diagnostics from deliberately invalid CLI inputs and missing IRS
+fixtures are expected test behavior.
+
+**Acceptance:** first Checkpoint 2 extraction passes automated tests.
+Further restructuring remains subject to separately reviewed diffs and
+tests. Real-device auditory equivalence remains a later maintainer gate.
+
 ## History and release notes
 
 The preceding GUI refactor was merged as PR #1 on 2026-11-03; the feature
@@ -263,5 +305,6 @@ until it is merged or accepted for a release. The earlier GUI planning
 document is preserved by its original Git commits, not duplicated as
 another active plan.
 
-**Next action:** Checkpoint 2 startup-settings extraction, after reviewing the
-mechanical diff. No native DSP extraction has yet been performed or accepted.
+**Next action:** inventory and plan the next natural Processor extraction
+(Checkpoint 3) without imposing a file quota. First startup-settings
+extraction has passed automated acceptance; live audio remains untested.
