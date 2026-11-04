@@ -41,6 +41,23 @@ runuser -u builder -- bash -c '
     bash tests/check-developer.sh
 ' bash "$source_tree"
 
+# Independently exercise the *normal source-checkout* CMake defaults from the
+# same pinned source archive. No package install or PipeWire audio is started.
+if [[ ${VIPER_ARCH_STAGING_BACKEND:-cmake} == cmake ]]; then
+    runuser -u builder -- bash -c '
+        set -Eeuo pipefail
+        source_tree=$1
+        cmake -S "$source_tree" -B "$source_tree/build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DVIPER_BUILD_DEVELOPER_TESTS=OFF
+        cmake --build "$source_tree/build" --target viper_source_check --parallel 4
+        test -r "$source_tree/build/routing-config/filter-chain.conf"
+        test -r "$source_tree/build/routing-config/filter-chain.conf.d/99-viper-smart.conf"
+        (cd "$source_tree" && python3 src/viper_launcher.py --fingerprint >/dev/null)
+        echo "PASS: real CMake source-checkout build, routing setup and backend fingerprint"
+    ' bash "$source_tree"
+fi
+
 # Only the main application package is a release asset. makepkg may also
 # produce a debug-symbol package, which is deliberately not distributed here.
 shopt -s nullglob
