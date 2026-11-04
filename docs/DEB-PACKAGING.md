@@ -20,6 +20,36 @@ as Ubuntu Noble's `libqt6widgets6t64` and Debian Trixie's
 requirements; the build also requires `pipewire`, `python3` and Qt6's platform
 plugins at runtime.
 
+## CMake-owned installation
+
+The native Debian and Ubuntu builder `scripts/build-native-deb.sh` no longer
+has independent DSP patching or application file-staging rules. It configures
+CMake with `VIPER_ENABLE_SYSTEM_INSTALL=ON` and
+`VIPER_SYSTEM_INSTALL_LAYOUT=debian`, builds the application, and stages
+every runtime file with guarded `DESTDIR=... cmake --install`.
+
+The script remains because native `.deb` creation needs distribution-specific
+Qt/C++ dependency discovery via `dpkg-shlibdeps`, `DEBIAN/control` metadata,
+`dpkg-deb`, and optional installation smoke tests in disposable distro
+containers. These operations are not application installation rules.
+The source archive remains pinned, and the existing stable release workflow
+continues to generate the distro-specific packages.
+
+For historical parity regression, `tests/check-cmake-deb-parity.py`
+can compare the CMake stage to a **frozen test-only baseline** located in
+`tests/fixtures/legacy-deb-stage.txt`. That file is never called by the
+production Debian builder. The comparison runs in temporary directories,
+without `apt`, `dpkg`, or a live audio session.
+
+Debian packages continue to include the GPL text under
+`/usr/share/doc/viper4linux-re/LICENSE` and the package-specific `copyright`
+file credits Gerald Frank while keeping ViPERDSP's separate notices. Arch
+omits only the redundant common GPL license file, not the upstream notice.
+
+The installed application still uses absolute `/usr` paths. CMake refuses
+other prefixes and unsafe `DESTDIR` values. Do not call `cmake --install`
+on a live host without an approved packaging environment.
+
 ## Prepare release assets
 
 For each new version, manually dispatch **Actions → Prepare stable release**

@@ -1,8 +1,11 @@
 # Third-party notices and scope of licensing
 
-The MIT license in `LICENSE` applies **only to the original ViPER for Linux
-application and integration code**. It does not relicense third-party source
-code or assets.
+The GNU General Public License version 3 only (`GPL-3.0-only`) in `LICENSE`
+applies **only to original ViPER4Linux-RE application and integration code
+for which its copyright holder can grant that license**.
+Copyright (C) 2026 Gerald Frank (`username227`); see `COPYRIGHT`.
+It does not relicense third-party source code or assets. Earlier versions
+released under MIT remain subject to their original license grants.
 
 ## ViPERDSP
 
@@ -15,7 +18,7 @@ code or assets.
   unlicensed/all-rights-reserved.
 
 No license or redistribution permission for ViPERDSP is granted by this
-repository's MIT license. Distribution of the combined binary or a unified
+repository's GPL-3.0-only license. Distribution of the combined binary or a unified
 archive containing ViPERDSP must not be assumed permitted. Clarify all
 applicable permissions before publicly releasing those artifacts.
 

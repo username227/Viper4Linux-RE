@@ -8,7 +8,8 @@ pkgrel=1
 pkgdesc='ViPERDSP audio effects for PipeWire with a Qt6 interface'
 arch=('x86_64')
 url='https://github.com/username227/viper4linux-re'
-license=('MIT' 'LicenseRef-ViPERDSP')
+license=('GPL-3.0-only' 'LicenseRef-ViPERDSP')
+options=('!debug')
 depends=('glibc' 'gcc-libs' 'qt6-base' 'pipewire' 'ladspa' 'python')
 makedepends=('cmake' 'pkgconf')
 conflicts=('viper4linux-re-git' 'viper4linux' 'viper4linux-git')
@@ -16,22 +17,17 @@ source=("https://github.com/username227/viper4linux-re/releases/download/v${pkgv
 # Replace with the actual checksum after the workflow creates the release archive.
 sha256sums=('REPLACE_WITH_RELEASE_SHA256')
 
-prepare() {
-    local tree="$srcdir/viper4linux-re-$pkgver"
-    local dsp="$srcdir/ViPERDSP-patched"
-
-    # Keep the bundled upstream source unmodified: patch a private build copy.
-    cp -a -- "$tree/third_party/ViPERDSP" "$dsp"
-    VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/fix_lufs_speed.py"
-    VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/preallocate_stereo_imager.py"
-    VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/preallocate_multiband_compressor.py"
-}
-
 build() {
-    cmake -S "$srcdir/viper4linux-re-$pkgver" -B "$srcdir/viper4linux-build" \
+    local tree="$srcdir/viper4linux-re-$pkgver"
+    local built="$srcdir/viper4linux-build"
+    # The pinned ViPERDSP patches and runtime install layout are CMake-owned.
+    cmake -S "$tree" -B "$built" \
         -DCMAKE_BUILD_TYPE=Release \
-        -DVIPERDSP_SOURCE_DIR="$srcdir/ViPERDSP-patched"
-    cmake --build "$srcdir/viper4linux-build" --parallel "$(nproc)"
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
+        -DVIPER_SYSTEM_INSTALL_LAYOUT=arch \
+        -DVIPER_SYSTEM_PACKAGE_NAME="$pkgname"
+    cmake --build "$built" --parallel "$(nproc)"
 }
 
 check() {
@@ -42,7 +38,6 @@ check() {
 }
 
 package() {
-    local tree="$srcdir/viper4linux-re-$pkgver"
-    local built="$srcdir/viper4linux-build"
-    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
+    # makepkg owns the staging root; CMake owns every installed payload.
+    DESTDIR="$pkgdir" cmake --install "$srcdir/viper4linux-build"
 }

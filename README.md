@@ -12,7 +12,46 @@ equalization, and much more. It works with your existing music players and other
 audio applications, without requiring you to change how you listen.
 
 While building the GUI, I attempted to keep the *essence* of the original
-ViPER4Android alive, so that it still feels like ViPER.
+ViPER4Android alive, so that it still feels like ViPER:
+
+<!-- BEGIN ViPER4Linux screenshot gallery -->
+
+<p align="center">
+  <img src="docs/screenshots/output-classic-blue.png" width="100%" alt="ViPER4Linux-RE Classic Viper blue theme, Output tab with Master Limiter, playback gain and LUFS targeting controls">
+</p>
+
+## Additional Screenshots
+
+<details>
+<summary><strong>EQ &amp; Tone</strong> — 31-band graphic equalizer with Acoustic preset</summary>
+
+<img src="docs/screenshots/equalizer-classic-blue.png" width="100%" alt="Classic Viper EQ and Tone tab with 31-band equalizer, Acoustic preset response graph, Dynamic EQ, and Clarity controls">
+
+</details>
+
+<details>
+<summary><strong>Sound Correction</strong> — native IRS convolution</summary>
+
+<img src="docs/screenshots/convolver-classic-blue.png" width="100%" alt="Classic Viper Sound Correction tab with ViPER-DDC, Speaker Correction and Convolver impulse response controls">
+
+</details>
+
+<details>
+<summary><strong>Effect Presets</strong> — save, load, rename and assign to audio outputs</summary>
+
+<img src="docs/screenshots/effect-presets-modern-teal.png" width="100%" alt="ViPER4Linux-RE Effect Presets dialog in Modern teal theme showing saved effect preset management">
+
+</details>
+
+<details>
+<summary><strong>Modern teal theme</strong> — alternative visual style</summary>
+
+<img src="docs/screenshots/output-modern-teal.png" width="100%" alt="ViPER4Linux-RE Output tab with Master Limiter controls in the Modern teal theme">
+
+</details>
+
+<!-- END ViPER4Linux screenshot gallery -->
+
 
 ## A little about this project
 
@@ -33,6 +72,8 @@ like to see what the community can make of it.
 > **Development status:** This project is under active development. Arch Linux with Cinnamon/X11 is the
 > primary tested environment; KDE Plasma tray integration and other Linux
 > environments need further testing. See [Current limitations](#current-limitations).
+
+**For contributors:** `main` uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [developer guide](docs/DEVELOPMENT.md) and [Arch packaging guide](docs/ARCH-PACKAGING.md). This was a build and packaging modernization, not a user-facing DSP or GUI feature change.
 
 ## What it offers
 
@@ -114,15 +155,25 @@ Clone the application and its pinned ViPERDSP submodule, then build:
 ```bash
 git clone --recurse-submodules https://github.com/username227/viper4linux-re.git
 cd viper4linux-re
-./install.sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+cmake --build build --target viper_source_check
 ```
-Then, `./viper4linux` to run the program.
 
+These commands apply to the current **`main` branch**. In an existing
+checkout, initialize the recorded submodule with
+`git submodule update --init --checkout third_party/ViPERDSP` before CMake.
+CMake verifies that revision and applies the three real-time compatibility
+patches to a **private build copy** without editing upstream sources.
+It generates source routing files under `build/routing-config/` and supports
+incremental rebuilds. `viper_source_check` verifies binaries, LADSPA export,
+and routing files without starting audio. Run `./viper4linux` only when
+you intend to launch the source version (which may replace an existing backend).
 
-The direct-source installer expects a clean build directory. It applies our
-three downstream compatibility/real-time fixes to a **private copy** of the
-pinned DSP source; the Git submodule itself remains unchanged. For builds managed by pacman, see the
-[Arch packaging guide](docs/ARCH-PACKAGING.md). 
+The optional developer-only `viper_source_links` CMake target can create
+private shortcuts but never runs during a normal build. See the
+[developer guide](docs/DEVELOPMENT.md). For builds managed by pacman, see
+[Arch packaging](docs/ARCH-PACKAGING.md). 
 
 Once installed as a system package, run `viper4linux` from the application
 menu or a terminal. For example:
@@ -192,15 +243,20 @@ and I'm grateful for their contributions.
 
 ## Source, contributions, and licensing
 
-The application, Qt interface, PipeWire integration, launcher, CLI and our
-original supporting code are released under the [MIT License](LICENSE),
-intended to make forks, experiments and improvements straightforward.
-**This MIT license does not cover ViPERDSP.**
+The original application, Qt interface, PipeWire integration, launcher, CLI
+and original supporting code are Copyright (C) 2026 Gerald Frank
+(`username227`) and are licensed under the
+[GNU General Public License version 3 only](LICENSE) (`GPL-3.0-only`).
+The project copyright statement is in [COPYRIGHT](COPYRIGHT).
+Earlier MIT-licensed versions retain the permissions originally granted;
+the new GPL license does not retroactively revoke them.
+**The GPL license applies only to original code licensed by its copyright
+holder; it does not relicense ViPERDSP or other third-party material.**
 
 ViPERDSP is a [separate upstream project](https://github.com/likelikeslike/ViPERDSP),
 tracked here as a pinned Git submodule in `third_party/ViPERDSP`. Its upstream
 README describes restrictions on use and does not grant a conventional
-open-source redistribution license. **Do not assume that our MIT license
+open-source redistribution license. **Do not assume that our GPL license
 permits redistribution of the combined DSP library, binary packages or
 unified-source archives.** See [third-party notices](THIRD-PARTY-NOTICES.md)
 and the [development guide](docs/DEVELOPMENT.md) for the exact dependency

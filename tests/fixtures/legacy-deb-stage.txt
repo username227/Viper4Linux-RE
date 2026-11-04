@@ -1,0 +1,41 @@
+# Keep installation paths identical to the working Arch package and launcher.
+install -Dm755 "$built/viper-gui" "$pkgroot/usr/bin/viper4linux-gui"
+install -Dm755 "$built/viper-ctl" "$pkgroot/usr/bin/viper4linux-ctl"
+install -Dm755 "$built/viper-output-state" "$pkgroot/usr/bin/viper4linux-output-state"
+install -Dm755 "$tree/packaging/arch/viper4linux-output" "$pkgroot/usr/bin/viper4linux-output"
+ln -s -- viper4linux-ctl "$pkgroot/usr/bin/v4l-cli"
+install -Dm755 "$built/viper_dsp_ladspa.so" "$pkgroot/usr/lib/ladspa/viper_dsp_ladspa.so"
+install -Dm644 "$tree/src/viper_launcher.py" "$pkgroot/usr/lib/viper4linux/viper_launcher.py"
+for module in "$tree"/src/viper_*.py; do
+    install -Dm644 "$module" "$pkgroot/usr/lib/viper4linux/${module##*/}"
+done
+install -Dm755 "$tree/packaging/arch/start-backend" "$pkgroot/usr/lib/viper4linux/start-backend"
+install -Dm755 "$tree/packaging/arch/viper4linux" "$pkgroot/usr/bin/viper4linux"
+install -Dm644 "$tree/routing-config/filter-chain.conf.d/99-viper-smart.conf" \
+    "$pkgroot/usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf"
+install -Dm644 "$tree/packaging/arch/viper4linux.desktop" \
+    "$pkgroot/usr/share/applications/viper4linux.desktop"
+install -Dm644 "$tree/resources/viper4linux-blue.png" \
+    "$pkgroot/usr/share/icons/hicolor/256x256/apps/viper4linux.png"
+install -Dm644 "$tree/resources/viper4linux-blue.svg" \
+    "$pkgroot/usr/share/icons/hicolor/scalable/apps/viper4linux.svg"
+install -Dm644 "$tree/man/viper4linux.1" "$pkgroot/usr/share/man/man1/viper4linux.1"
+install -Dm644 "$tree/man/viper4linux-ctl.1" "$pkgroot/usr/share/man/man1/viper4linux-ctl.1"
+gzip -n -9 "$pkgroot/usr/share/man/man1/"*.1
+ln -s -- viper4linux-ctl.1.gz "$pkgroot/usr/share/man/man1/v4l-cli.1.gz"
+install -Dm644 "$tree/README.md" "$pkgroot/usr/share/doc/viper4linux-re/README.md"
+install -Dm644 "$tree/LICENSE" "$pkgroot/usr/share/doc/viper4linux-re/LICENSE"
+install -Dm644 "$tree/THIRD-PARTY-NOTICES.md" \
+    "$pkgroot/usr/share/doc/viper4linux-re/THIRD-PARTY-NOTICES.md"
+cp -a "$tree/docs" "$pkgroot/usr/share/doc/viper4linux-re/docs"
+# Standardize staged documentation permissions; cp -a otherwise propagates
+# setgid from a checkout and makes package modes host-dependent.
+chmod 00755 -- "$pkgroot/usr/share/doc/viper4linux-re/docs"
+# Preserve original Debian file layout; update metadata for current code license.
+{
+    printf 'ViPER4Linux-RE original code — GNU GPL version 3 only (GPL-3.0-only).\n'
+    printf 'Copyright (C) 2026 Gerald Frank (username227).\n'
+    printf 'ViPERDSP has separate terms; see THIRD-PARTY-NOTICES.md.\n\n'
+    cat "$tree/LICENSE"
+} > "$pkgroot/usr/share/doc/viper4linux-re/copyright"
+chmod 644 "$pkgroot/usr/share/doc/viper4linux-re/copyright"

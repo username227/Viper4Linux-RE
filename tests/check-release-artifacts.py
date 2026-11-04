@@ -24,8 +24,10 @@ def verify(version: str, dest: Path):
     prefix = f'viper4linux-re-{version}/'
     with tarfile.open(tarpath, 'r:xz') as archive:
         members = set(archive.getnames())
-        required = {'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md',
-                    'CMakeLists.txt', 'SOURCE-MANIFEST.txt', 'RELEASE-REVISION',
+        required = {'README.md', 'LICENSE', 'COPYRIGHT', 'THIRD-PARTY-NOTICES.md',
+                    'CMakeLists.txt', 'cmake/PrepareViPERDSP.cmake',
+                    'cmake/InstallSystem.cmake', 'cmake/SourceCheckout.cmake',
+                    'SOURCE-MANIFEST.txt', 'RELEASE-REVISION',
                     'RELEASE-VERSION', 'cmake/Version.cmake',
                     'third_party/ViPERDSP/CMakeLists.txt', 'src/viper-gui.cpp',
                     'src/gui-single-instance.h',
@@ -37,7 +39,7 @@ def verify(version: str, dest: Path):
                     'src/window/window-dynamics.inc',
                     'src/window/window-effect-actions.inc',
                     'src/viper_output_monitor.py', 'src/viper-output-state.cpp',
-                    'packaging/arch/viper4linux-output', 'packaging/arch/install-package.sh',
+                    'packaging/arch/viper4linux-output',
                     'man/viper4linux.1', 'man/viper4linux-ctl.1'}
         missing = sorted(prefix + path for path in required if prefix + path not in members)
         assert not missing, f'Missing source files: {missing}'
