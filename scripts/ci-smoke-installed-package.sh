@@ -3,6 +3,8 @@
 # and check runtime entrypoints. This script never starts PipeWire or the GUI.
 # It must never be invoked on a workstation or a running audio session.
 set -Eeuo pipefail
+# Give CI a useful failing check instead of an anonymous exit 1 after apt/pacman.
+trap 'printf "FAIL: container smoke at line %s: %s\\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
 if [[ $# -ne 2 ]]; then
     echo 'Usage: ci-smoke-installed-package.sh arch|debian ABSOLUTE_PACKAGE_PATH' >&2
@@ -30,6 +32,7 @@ case "$mode" in
         pacman -Syu --noconfirm --needed glibc gcc-libs qt6-base pipewire ladspa python binutils
         pacman -U --noconfirm "$package"
         pacman -Q viper4linux-re
+        echo 'Checking Arch-specific installed documentation and man-page links...'
         test -r /usr/share/licenses/viper4linux-re/LICENSE
         test -f /usr/share/man/man1/viper4linux.1
         test "$(readlink /usr/share/man/man1/v4l-cli.1)" = viper4linux-ctl.1
@@ -43,6 +46,7 @@ case "$mode" in
         apt-get update
         # Install the already-built artifact, not a fresh locally rebuilt .deb.
         apt-get install -y --no-install-recommends "$package" binutils
+        echo 'Checking Debian package registration and documentation...'
         dpkg -s viper4linux-re | grep -Fxq 'Status: install ok installed'
         test -r /usr/share/doc/viper4linux-re/copyright
         test -r /usr/share/doc/viper4linux-re/THIRD-PARTY-NOTICES.md
@@ -56,6 +60,7 @@ case "$mode" in
 esac
 
 # Verify installed binary and data layout, but NEVER start the backend/GUI.
+echo 'Checking common installed commands, routing file, and LADSPA module...'
 for app in viper4linux viper4linux-gui viper4linux-ctl \
            viper4linux-output viper4linux-output-state; do
     test -x "/usr/bin/$app"
@@ -68,6 +73,7 @@ test "$(readlink /usr/bin/v4l-cli)" = viper4linux-ctl
 test -s /usr/lib/ladspa/viper_dsp_ladspa.so
 nm -D /usr/lib/ladspa/viper_dsp_ladspa.so | grep -Eq ' [TW] ladspa_descriptor$'
 
+echo 'Checking read-only CLI help and backend fingerprint entrypoints...'
 # Read-only command paths from the original release workflow smoke contract.
 # Do not run viper4linux, start-backend, or a live PipeWire session.
 viper4linux-ctl --help >/dev/null
