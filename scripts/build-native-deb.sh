@@ -95,6 +95,9 @@ install -Dm644 "$tree/LICENSE" "$pkgroot/usr/share/doc/viper4linux-re/LICENSE"
 install -Dm644 "$tree/THIRD-PARTY-NOTICES.md" \
     "$pkgroot/usr/share/doc/viper4linux-re/THIRD-PARTY-NOTICES.md"
 cp -a "$tree/docs" "$pkgroot/usr/share/doc/viper4linux-re/docs"
+# Standardize staged documentation permissions; cp -a otherwise propagates
+# setgid from a checkout and makes package modes host-dependent.
+chmod 00755 -- "$pkgroot/usr/share/doc/viper4linux-re/docs"
 # Debian copyright file is package-specific; our MIT license doesn't relicense DSP.
 {
     printf 'ViPER for Linux RE original code — MIT license.\n'
