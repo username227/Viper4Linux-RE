@@ -34,6 +34,17 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Syntax-check package smoke and packaging scripts before building
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for script in scripts/ci-smoke-installed-package.sh \
+                        scripts/build-native-deb.sh \
+                        scripts/test-stable-arch.sh; do
+            bash -n "$script"
+          done
+          echo 'PASS: packaging and installation-smoke script syntax'
+
       - name: Prepare a non-published unified source candidate
         shell: bash
         run: |
