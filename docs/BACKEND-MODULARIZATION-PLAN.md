@@ -57,58 +57,65 @@ architectural changes until tests justify them.
 
 ## Working checkpoints
 
-1. **Baseline and responsibility map.** Record the starting `main` SHA,
-   relevant byte/line sizes, the native Arch compilation result and full
-   `bash tests/check-developer.sh` result. Identify control mapping,
-   startup settings, background workers, effect configuration,
-   audio callback, and LADSPA exports by exact source ranges. No code
-   change at this checkpoint.
-2. **Startup preferences and control-channel lifecycle.** Consider extracting
-   parsing and shared-memory page ownership only if the existing lifetime,
-   synchronization and initialization order can remain identical. Run
-   launcher, settings, IPC and sample-rate tests.
-3. **Background file and coefficient work.** Consider separating the
-   Convolver IRS, sample-rate conversion and ViPER-DDC update machinery.
-   Preserve worker-thread handoffs and real-time safety. Test enabled /
-   disabled and invalid or unsupported file/rate cases.
-4. **Non-real-time native effect configuration.** Group native apply/update
-   routines by responsibility without changing call order or state. Test all
-   24 effect groups, including dynamic EQ, Graphic EQ, FET, multiband,
-   stereo imager, Crossfeed and Tube/AnalogX.
-5. **Processor organization and audio callback.** Review the remaining
-   `Processor` and exported LADSPA glue. Split further *only* if the change
-   is genuinely clearer and no additional synchronization or runtime
-   behavior is introduced. Keep the hot-path implementation cohesive.
-6. **Full regression and packaging.** Run the complete developer suite,
-   clean Arch source/package build and artifact checks on this exact head.
-   Examine binaries, symbol exports, shared-memory ABI and sample-rate
-   behavior. Record measured file sizes and any intentional deviations.
-7. **Maintainer live acceptance.** On Arch/Cinnamon with real PipeWire audio:
-   listen across physical outputs, switch/reconnect Bluetooth, verify
-   GUI↔CLI↔DSP synchronization, persistent settings, remembered outputs,
-   IRS/VDC changes, EQ/DEQ, bypass, tray/launcher and restart behavior.
-   Only after explicit maintainer approval consider a PR into `main`.
+The backend is substantially smaller than the former monolithic GUI. Favor a
+small number of cohesive files rather than dividing every effect or helper
+into a separate module. The **working expectation is approximately four source
+files**, but this is not a quota or a fixed design. Keep code together when
+its state, lifetime or execution order makes separation counterproductive.
+The inventory and each extraction determine the final boundaries.
 
-After every extracted component, inspect the diff for mechanical movement,
-compile, run the targeted automated tests, and ask for focused live checks
-where the change touches actual audio. A successful build alone is not proof
-of sound equivalence. Do not proceed past a failing checkpoint.
+1. **Baseline and responsibility inventory.** Record the starting source
+   revision, file sizes, native Arch compilation result and full
+   `bash tests/check-developer.sh` result. Map the startup settings,
+   shared-control lifecycle, processor state, worker activity, native effect
+   configuration, audio callback and LADSPA exports. Do not predetermine
+   extraction boundaries or modify native DSP code at this checkpoint.
+2. **Startup settings and controls.** Extract the cohesive startup-settings
+   parsing where it improves readability. Keep the short shared-control
+   ownership code in the main file unless inspection reveals a compelling
+   reason to move it. Preserve initialization order, reference counting,
+   settings compatibility and shared-memory ABI; test launcher, settings,
+   IPC and sample-rate behavior.
+3. **Processor organization.** Extract or regroup processor implementation
+   only along natural boundaries. Worker-driven IRS/DDC loading and native
+   effect configuration share state and synchronization; do not split them
+   merely to create more files. Preserve all 24 effect groups, worker
+   handoffs, non-real-time coefficient preparation and effect ordering.
+   Compile, review the mechanical diff and run targeted regressions after
+   each meaningful extraction.
+4. **Audio callback and full regression.** If it is clearer as a cohesive
+   implementation section, extract the complete real-time callback without
+   changing its processing order or safety guarantees. Keep processor state
+   and lifecycle where they are easiest to audit. Run the full developer
+   suite, clean Arch source/package build, artifact checks and LADSPA
+   symbol/ABI verification; inspect sample-rate, IRS/DDC and shared-memory
+   behavior. Record final file sizes and explain any departures from the
+   initial structure.
+5. **Maintainer live acceptance.** On Arch/Cinnamon with real PipeWire
+   audio, verify physical outputs, Bluetooth reconnects, GUI↔CLI↔DSP
+   synchronization, persistent settings, remembered outputs, IRS/VDC
+   changes, EQ/DEQ, bypass, tray/launcher and restart behavior. Only after
+   explicit maintainer approval consider merging into `main`.
+
+A checkpoint can contain several small, individually verified mechanical
+changes. A successful build alone does not prove sound equivalence. Stop
+at any failing test and resolve it before proceeding. The five checkpoints
+are acceptance stages, **not a requirement to create five modules**.
 
 ## Current implementation landmarks
 
-These refer to the **pre-refactor starting file**, not promised file
-boundaries:
+The current source contains natural responsibilities: startup preferences,
+shared control mapping, the `Processor` lifecycle and state, asynchronous
+IRS/DDC and native filter updates, effect configuration, the
+`Processor::run(unsigned long frames)` real-time callback, and LADSPA
+entry points/descriptors.
 
-- Startup preferences and saved IR/DDC paths near the beginning.
-- Shared control mapping and `Processor` construction further down.
-- Native apply/configure routines in the middle of `Processor`.
-- Asynchronous Convolver/DDC state and workers around those routines.
-- `Processor::run(unsigned long frames)` is the native audio callback;
-  it must remain real-time safe.
-- LADSPA create/connect/run/cleanup and `ladspa_descriptor()` at the end.
-
-Inspect the current source and tests before choosing exact extraction
-boundaries. Avoid hardcoding line numbers, which change during the split.
+These are **inspection landmarks, not promised file boundaries**. No line
+ranges or exact extraction points are prescribed. In particular, keep the
+short LADSPA glue in the main file unless there is a substantive reason to
+move it; keep tightly coupled worker and processor code together when that
+makes synchronization easier to reason about. Revisit the arrangement after
+each checkpoint rather than forcing a preselected file count.
 
 ## History and release notes
 
