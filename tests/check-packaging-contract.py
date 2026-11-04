@@ -77,6 +77,14 @@ for required in ('package() {', 'check() {', 'sha256sums=(',
                  'releases/download/v${pkgver}', 'packaging/arch/install-package.sh',
                  'ViPERDSP-patched', '-DVIPERDSP_SOURCE_DIR=', 'bash tests/check-package.sh'):
     require(required in stable, f'Stable PKGBUILD contract missing: {required}')
+# Stable package defaults to CMake; legacy staging remains an explicit option
+# for parity comparisons and the separately maintained VCS AUR recipe.
+require(stable.count('${VIPER_ARCH_STAGING_BACKEND:-cmake}') == 4,
+        'Stable Arch recipe must select CMake DSP preparation/staging by default')
+require('DESTDIR="$pkgdir" cmake --install "$built"' in stable,
+        'Stable Arch CMake staging is missing')
+require('${VIPER_ARCH_STAGING_BACKEND:-legacy}' not in stable,
+        'Stable Arch recipe accidentally reverts to legacy by default')
 require('install -Dm' not in stable, 'Stable recipe must delegate staging to installer')
 require(stable.count('bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"') == 1,
         'Stable recipe must invoke shared staging exactly once')

@@ -34,6 +34,12 @@ assert 'rm -- "$out/SHA256SUMS" "$out/ARCH-SHA256SUMS"' in assemble_script
 assert 'DEB-SHA256SUMS-' not in assemble_script
 assert 'test "$(wc -l < SHA256SUMS)" -eq 4' in assemble_script
 assert 'gh release create' not in main_workflow and 'git push' not in main_workflow
+# Native .deb builder uses CMake as the default install backend; metadata and
+# fallback legacy payload staging remain available for acceptance comparisons.
+assert 'stage_backend=${VIPER_DEB_STAGING_BACKEND:-cmake}' in build_script
+assert 'DESTDIR="$pkgroot" cmake --install "$built"' in build_script
+assert 'if [[ $stage_backend == legacy ]]; then' in build_script
+assert 'if [[ $stage_backend == cmake ]]; then' in build_script
 assert 'dpkg-shlibdeps -O' in build_script
 assert 'dpkg-deb --build --root-owner-group' in build_script
 assert 'apt-get install -y --no-install-recommends "$package"' in build_script
