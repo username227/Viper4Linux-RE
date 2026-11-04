@@ -1,8 +1,10 @@
-name: CMake packaging validation (build only)
+name: CMake packaging validation (build + container installation smoke)
 
 # Development branch only. Never touches the existing release workflow,
-# creates a release, pushes a tag, publishes an AUR package, or installs the
-# application on a machine.
+# creates a release, pushes a tag, or publishes an AUR package.
+# Built packages are installed ONLY inside disposable Docker containers in
+# dedicated smoke jobs; never on the runner, maintainer host, or user's desktop.
+# No PipeWire daemon, DSP backend, or GUI is launched.
 on:
   push:
     branches:
@@ -147,3 +149,80 @@ jobs:
           path: |
             dist/${{ matrix.target }}/*.deb
             dist/${{ matrix.target }}/SHA256SUMS
+
+  arch-install-smoke:
+    name: Arch — install already-built package in container
+    needs: arch
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout guarded smoke-test script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the package produced by the Arch build job
+        uses: actions/download-artifact@v4
+        with:
+          name: cmake-test-arch-package
+          path: dist
+
+      - name: Install archive in fresh Arch container and check runtime
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          (cd dist && sha256sum --check ARCH-SHA256SUMS)
+          test -s dist/viper4linux-re-0.0.0-1-x86_64.pkg.tar.zst
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" -w /workspace \
+            -e VIPER_CI_CONTAINER_SMOKE=1 \
+            archlinux/archlinux:latest \
+            bash scripts/ci-smoke-installed-package.sh arch \
+              /workspace/dist/viper4linux-re-0.0.0-1-x86_64.pkg.tar.zst
+
+  debian-install-smoke:
+    name: Native .deb — install already-built package (${{ matrix.target }})
+    needs: debian
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: ubuntu24.04-mint22
+            image: ubuntu:24.04
+          - target: debian13-lmde7
+            image: debian:trixie
+    steps:
+      - name: Checkout guarded smoke-test script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the corresponding native Debian package
+        uses: actions/download-artifact@v4
+        with:
+          name: cmake-test-deb-${{ matrix.target }}
+          path: dist/${{ matrix.target }}
+
+      - name: Install archive in fresh distro container and check runtime
+        env:
+          TARGET: ${{ matrix.target }}
+          IMAGE: ${{ matrix.image }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          (cd "dist/$TARGET" && sha256sum --check SHA256SUMS)
+          shopt -s nullglob
+          debs=( "dist/$TARGET"/*.deb )
+          (( ${#debs[@]} == 1 )) || {
+            echo "Expected exactly one .deb for $TARGET; found ${#debs[@]}" >&2
+            exit 1
+          }
+          name=$(basename -- "${debs[0]}")
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" -w /workspace \
+            -e VIPER_CI_CONTAINER_SMOKE=1 \
+            "$IMAGE" \
+            bash scripts/ci-smoke-installed-package.sh debian \
+              "/workspace/dist/$TARGET/$name"
