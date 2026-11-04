@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Compare staged Debian filesystem payloads without running apt or dpkg.
 
-The legacy side executes only the staging block from build-native-deb.sh,
-not its distro checks, package-manager commands or post-install smoke tests.
-No package is installed on the host.
+The legacy side runs a frozen historical filesystem staging fixture in
+tests/fixtures, not any production Debian packaging code. It never invokes
+apt, dpkg or host installation. No package is installed on the host.
 """
 import hashlib
 import os
@@ -14,9 +14,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-LEGACY = ROOT / "scripts/build-native-deb.sh"
-START = "# Keep installation paths identical to the working Arch package and launcher."
-END = "# End of legacy-only filesystem staging."
+LEGACY = ROOT / "tests/fixtures/legacy-deb-stage.txt"
 
 
 def fail(message):
@@ -61,12 +59,9 @@ def main():
         fail("Usage: python3 tests/check-cmake-deb-parity.py BUILD_DIRECTORY")
     build = Path(sys.argv[1]).resolve(strict=True)
     require_build(build)
-    source = LEGACY.read_text()
-    if source.count(START) != 1 or source.count(END) != 1:
-        fail("Legacy Debian staging markers have changed; review manually")
-    old_install = source.split(START, 1)[1].split(END, 1)[0]
-    if not old_install.strip().startswith("install -Dm755"):
-        fail("Unexpected legacy Debian staging structure")
+    old_install = LEGACY.read_text()
+    if not old_install.startswith("# Keep installation paths") or "install -Dm755" not in old_install:
+        fail("Unexpected frozen Debian staging fixture")
 
     with tempfile.TemporaryDirectory(prefix="viper-debian-stage-parity-") as workdir:
         work = Path(workdir)
@@ -75,7 +70,7 @@ def main():
         new.mkdir()
 
         # Run the existing Debian staging logic, but only its filesystem-copy
-        # section. The real build-native-deb.sh remains authoritative.
+        # section. The frozen reference is test-only; CMake owns live staging.
         environment = {
             **os.environ,
             "tree": str(ROOT),

@@ -34,23 +34,20 @@ assert 'rm -- "$out/SHA256SUMS" "$out/ARCH-SHA256SUMS"' in assemble_script
 assert 'DEB-SHA256SUMS-' not in assemble_script
 assert 'test "$(wc -l < SHA256SUMS)" -eq 4' in assemble_script
 assert 'gh release create' not in main_workflow and 'git push' not in main_workflow
-# Native .deb builder uses CMake as the default install backend; metadata and
-# fallback legacy payload staging remain available for acceptance comparisons.
-assert 'stage_backend=${VIPER_DEB_STAGING_BACKEND:-cmake}' in build_script
+# CMake is the only production application staging and DSP preparation path.
 assert 'DESTDIR="$pkgroot" cmake --install "$built"' in build_script
-assert 'if [[ $stage_backend == legacy ]]; then' in build_script
-assert 'if [[ $stage_backend == cmake ]]; then' in build_script
+assert '-DVIPER_ENABLE_SYSTEM_INSTALL=ON' in build_script
+assert '-DVIPER_SYSTEM_INSTALL_LAYOUT=debian' in build_script
+assert 'VIPER_DEB_STAGING_BACKEND' not in build_script
+assert 'ViPERDSP-patched' not in build_script
+assert 'install -Dm755' not in build_script
+assert (root / 'tests/fixtures/legacy-deb-stage.txt').is_file()
 assert 'dpkg-shlibdeps -O' in build_script
 assert 'dpkg-deb --build --root-owner-group' in build_script
 assert 'apt-get install -y --no-install-recommends "$package"' in build_script
 assert 'python3 /usr/lib/viper4linux/viper_launcher.py --fingerprint' in build_script
-assert 'VIPERDSP_SOURCE_DIR=' in build_script
 assert 'usr/lib/ladspa/viper_dsp_ladspa.so' in build_script
-assert 'viper-output-state' in build_script
-assert 'src/viper_*.py' in build_script
 assert 'qt6-qpa-plugins' in build_script
-assert 'ln -s -- viper4linux-ctl "$pkgroot/usr/bin/v4l-cli"' in build_script
-assert 'ln -s -- viper4linux-ctl.1.gz "$pkgroot/usr/share/man/man1/v4l-cli.1.gz"' in build_script
 assert 'v4l-cli --help >/dev/null' in build_script
 
 with tempfile.TemporaryDirectory(prefix='viper-deb-verifier-') as d:
