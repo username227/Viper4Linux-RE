@@ -26,48 +26,64 @@ The full upstream processor source is **not embedded** in the main application
 repository. `install.sh` and the local Arch PKGBUILD retrieve pinned ViPERDSP
 commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`.
 
-## CMake-first source checkout (modernization branch preview)
+## CMake-first source checkout (modernization branch)
 
-Normal source compilation now uses CMake without a patching wrapper:
+A normal source build no longer requires an installer script to prepare DSP
+patches or routing configuration:
 
 ```sh
 git submodule update --init --checkout third_party/ViPERDSP
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 4
+cmake --build build --target viper_source_check
 ```
 
-CMake verifies the recorded upstream DSP revision and applies the three
-approved downstream changes in a private copy inside the build directory.
-No tracked submodule files are modified. The source launcher currently
-expects the default directory to be named **`build`**.
+CMake verifies the recorded upstream ViPERDSP revision and applies all three
+downstream fixes to a **private build-tree copy**, without modifying the Git
+submodule. Unless `VIPER_ENABLE_SYSTEM_INSTALL=ON`, the source-build option
+`VIPER_SOURCE_PREPARE_ROUTING=ON` automatically copies the stock PipeWire
+filter-chain template and project fragment into
+`build/routing-config/` at configure time. The default template is
+`/usr/share/pipewire/filter-chain.conf`, overridable by
+`-DVIPER_SOURCE_ROUTING_TEMPLATE=/absolute/template`. A package build
+does not need the developer's stock filter-chain file, because it sets
+`VIPER_ENABLE_SYSTEM_INSTALL=ON` and defaults routing preparation to OFF.
 
-An optional, separately tested helper handles the source-checkout tasks that
-are *not* CMake build tasks:
+The source launcher expects the build directory named **`build`**.
+When a developer already has a custom
+`routing-config/filter-chain.conf` in the checkout, the launcher and
+backend keep using that file; otherwise they use CMake's generated files
+under `build/routing-config/`. The `viper_source_check` build target
+verifies the compiled binaries, module and effective routing configuration.
+It does **not** start PipeWire, the backend or the GUI.
+
+### Optional private command shortcuts
+
+If you explicitly want `~/.local/bin/viper4linux` and `v4l-cli`
+to point into the source checkout, enable an **additional developer option**:
 
 ```sh
-bash scripts/setup-source-checkout.sh --prepare-routing
-bash scripts/setup-source-checkout.sh --check
+cmake -S . -B build -DVIPER_ENABLE_SOURCE_LINK_TARGET=ON
+cmake --build build --target viper_source_links
 ```
 
-`--prepare-routing` copies the distribution's stock PipeWire filter-chain
-template to the source checkout only if it is absent. It preserves an existing
-file, rejects symlink destinations, and does not write to `/etc`,
-`~/.config`, the installed `/usr` package, or a running audio session.
-`--check` only verifies the built files and checkout routing config.
+The shortcuts are never created by configure or the normal build.
+`viper_source_links` runs only when explicitly requested. It verifies the
+source build, requires a private home subdirectory, checks both names for
+unrelated files/symlinks before creating either shortcut, and preserves
+existing matching shortcuts. An alternative user-private directory can be
+set using `-DVIPER_SOURCE_LINK_DIRECTORY=/absolute/path/under/your/home`.
 
-For developers who **explicitly want** private shell command shortcuts,
-`bash scripts/setup-source-checkout.sh --link-commands` can create
-`viper4linux` and `v4l-cli` links under `XDG_BIN_HOME` (default
-`~/.local/bin`). It refuses unrelated files/symlinks and doesn't silently
-retarget a shortcut from an older checkout. It never starts the application.
-If you're maintaining a working installed Viper4Linux on the same machine,
-**do not run the optional linking or source launcher commands** unless you
-intend to switch your shell commands or perform the later live-audio test.
+**Do not invoke `viper_source_links` or the source launcher on a workstation
+with a working installed ViPER session unless you intend to switch command
+resolution or perform the separately planned live-audio test.**
+Neither operation is part of native package building.
 
-The helper's isolated regression test is
-`python3 tests/check-source-setup.py`. The old `install.sh` remains
-available during migration. Its retirement still requires the maintainer's
-separate source-checkout and real Arch audio acceptance.
+These behaviors are covered by
+`python3 tests/check-cmake-source-checkout.py` and the launcher regression
+suite. The old `install.sh` remains a compatibility reference until the
+maintainer accepts live source-checkout behavior. Its retirement is separate
+from replacing the former `scripts/setup-source-checkout.sh` helper.
 
 ## Unreleased change log — refactor branch versus `main`
 

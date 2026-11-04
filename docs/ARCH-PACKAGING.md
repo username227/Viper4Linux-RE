@@ -6,6 +6,12 @@ There are three supported paths; they do **not** share a PKGBUILD:
   headers and Qt6 components, initializes the pinned ViPERDSP submodule,
   patches a private copy and builds with CMake. It does not invoke `makepkg`
   or read any PKGBUILD. Install the prerequisites listed in the README.
+  On the `refactor/cmake-modernization` development branch, the modern path
+  is `cmake -S . -B build && cmake --build build`: CMake prepares the private
+  DSP copy and the build-local routing configuration automatically. Run
+  `cmake --build build --target viper_source_check` to verify the files
+  without starting audio. Local command shortcuts are a **separate, opt-in**
+  `viper_source_links` target, described in `docs/DEVELOPMENT.md`.
 - **Development VCS package:** `viper4linux-re-git` is published and its
   authoritative PKGBUILD is maintained separately in the AUR. Build/update
   it using the AUR Git checkout or an AUR helper. The obsolete duplicate
