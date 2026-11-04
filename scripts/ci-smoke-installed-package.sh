@@ -34,8 +34,14 @@ case "$mode" in
         pacman -Q viper4linux-re
         echo 'Checking Arch-specific installed documentation and man-page links...'
         test -r /usr/share/licenses/viper4linux-re/LICENSE
-        test -f /usr/share/man/man1/viper4linux.1
-        test "$(readlink /usr/share/man/man1/v4l-cli.1)" = viper4linux-ctl.1
+        # makepkg's zipman tidying step normally compresses the staged .1
+        # files and their symlink targets after CMake installation.
+        if [[ -f /usr/share/man/man1/viper4linux.1.gz ]]; then
+            test "$(readlink /usr/share/man/man1/v4l-cli.1.gz)" = viper4linux-ctl.1.gz
+        else
+            test -f /usr/share/man/man1/viper4linux.1
+            test "$(readlink /usr/share/man/man1/v4l-cli.1)" = viper4linux-ctl.1
+        fi
         ;;
     debian)
         [[ ( $ID == ubuntu || $ID == debian ) && $package == *.deb ]] || {
@@ -49,9 +55,39 @@ case "$mode" in
         echo 'Checking Debian package registration and documentation...'
         dpkg -s viper4linux-re | grep -Fxq 'Status: install ok installed'
         test -r /usr/share/doc/viper4linux-re/copyright
-        test -r /usr/share/doc/viper4linux-re/THIRD-PARTY-NOTICES.md
-        test -f /usr/share/man/man1/viper4linux.1.gz
-        test "$(readlink /usr/share/man/man1/v4l-cli.1.gz)" = viper4linux-ctl.1.gz
+
+        # Official slim Ubuntu/Debian Docker images can have dpkg path-exclude
+        # rules for /usr/share/doc and /usr/share/man. Verify the actual .deb
+        # contains the documentation and symlink even when the container
+        # intentionally excludes them during dpkg unpacking.
+        deb_listing=$(dpkg-deb --contents "$package")
+        for path in \
+            usr/share/doc/viper4linux-re/THIRD-PARTY-NOTICES.md \
+            usr/share/doc/viper4linux-re/LICENSE \
+            usr/share/doc/viper4linux-re/copyright \
+            usr/share/man/man1/viper4linux.1.gz \
+            usr/share/man/man1/viper4linux-ctl.1.gz; do
+            [[ $deb_listing == *"$path"* ]] || {
+                echo "Native .deb archive missing required file: $path" >&2
+                exit 1
+            }
+        done
+        [[ $deb_listing == *"usr/share/man/man1/v4l-cli.1.gz -> viper4linux-ctl.1.gz"* ]] || {
+            echo 'Native .deb archive missing manual-page alias.' >&2
+            exit 1
+        }
+
+        if grep -Rqs '^path-exclude=/usr/share/doc/' /etc/dpkg/dpkg.cfg.d; then
+            echo 'Container dpkg policy excludes optional documentation; archive contents verified.'
+        else
+            test -r /usr/share/doc/viper4linux-re/THIRD-PARTY-NOTICES.md
+        fi
+        if grep -Rqs '^path-exclude=/usr/share/man/' /etc/dpkg/dpkg.cfg.d; then
+            echo 'Container dpkg policy excludes optional manual pages; archive contents verified.'
+        else
+            test -f /usr/share/man/man1/viper4linux.1.gz
+            test "$(readlink /usr/share/man/man1/v4l-cli.1.gz)" = viper4linux-ctl.1.gz
+        fi
         ;;
     *)
         echo "Unknown package format: $mode" >&2
