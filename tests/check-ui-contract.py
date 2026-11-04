@@ -42,7 +42,9 @@ assert 'addEffectPanel(outputLayout, gain_group' not in source
 assert 'input_percent_' not in source
 assert 'input_permille' not in source
 assert '#include "backend/processor.inc"' in (root / "src/viper-ladspa.cpp").read_text()
-backend = (Path(__file__).resolve().parents[1] / 'src/backend/processor.inc').read_text()
+processor = (root / 'src/backend/processor.inc').read_text()
+assert '#include "processor-run.inc"' in processor, 'Real-time callback include missing'
+backend = processor + "\n" + (root / 'src/backend/processor-run.inc').read_text()
 assert '* safe_attenuation' not in backend
 assert 'InputScale' not in backend
 assert 'input_permille' not in backend
@@ -297,7 +299,7 @@ assert 'if (selectBand) selectBand(nearest);' in dynamic
 assert 'if (!editor_mode_ && openEditor) openEditor();' in dynamic
 assert 'selectBand(nearest)' in dynamic
 assert 'deq_table_->setFixedHeight(36 + deq_active_count_ * 25)' in brand_gui
-backend = (brand_root / 'src/backend/processor.inc').read_text()
+backend = processor + "\n" + (brand_root / 'src/backend/processor-run.inc').read_text()
 assert 'if (!enabled && !last_deq_enabled) return;' in backend
 print('PASS: transparent Qt-branded logos, stable blue X11 icon, selected-theme header, compact Dynamic EQ editor, disabled-edit bypass fix')
 

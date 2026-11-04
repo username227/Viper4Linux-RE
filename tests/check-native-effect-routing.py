@@ -4,7 +4,12 @@ from pathlib import Path
 import re
 root = Path(__file__).resolve().parents[1]
 assert '#include "backend/processor.inc"' in (root / "src/viper-ladspa.cpp").read_text()
-s = (root / "src/backend/processor.inc").read_text()
+processor = (root / "src/backend/processor.inc").read_text()
+assert '#include "processor-run.inc"' in processor, "Real-time callback include missing"
+callback = (root / "src/backend/processor-run.inc").read_text()
+assert "std::try_to_lock" in callback and "run_dry_while_loading(frames);" in callback
+assert "wet.Process(wet_audio, n);" in callback and "dry.Process(dry_audio, n);" in callback
+s = processor + "\n" + callback
 expected = {
  "Bass": "ApplyBass", "Mono Bass": "ApplyBassMono",
  "Psychoacoustic Bass": "ApplyPsychoacousticBass",
