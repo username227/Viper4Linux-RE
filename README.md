@@ -34,7 +34,7 @@ like to see what the community can make of it.
 > primary tested environment; KDE Plasma tray integration and other Linux
 > environments need further testing. See [Current limitations](#current-limitations).
 
-**For contributors:** The `refactor/cmake-modernization` development branch uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [modernization status](docs/CMAKE-MODERNIZATION-PLAN.md). Local Arch source-build audio and clean AUR VCS package staging have passed; the separate released `main` branch remains unchanged pending final review and merge.
+**For contributors:** `main` uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [modernization history](docs/CMAKE-MODERNIZATION-PLAN.md). The Arch source-build audio and clean AUR VCS package builds were tested before merge.
 
 ## What it offers
 
@@ -121,9 +121,8 @@ cmake --build build --parallel 4
 cmake --build build --target viper_source_check
 ```
 
-These commands describe the **CMake modernization branch**. The release
-branch retains its existing documented build process until modernization is
-accepted. In an existing checkout, initialize the recorded submodule with
+These commands apply to the current **`main` branch**. In an existing
+checkout, initialize the recorded submodule with
 `git submodule update --init --checkout third_party/ViPERDSP` before CMake.
 CMake verifies that revision and applies the three real-time compatibility
 patches to a **private build copy** without editing upstream sources.

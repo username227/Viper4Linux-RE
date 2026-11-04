@@ -19,8 +19,7 @@ There are three supported paths; they do **not** share a PKGBUILD:
   `packaging/arch/PKGBUILD.stable.in` and a pinned, unified source archive.
   It runs an actual Arch package build; generation does not publish to AUR.
 
-On `refactor/cmake-modernization`, **CMake is the only application
-installation engine.** The stable Arch PKGBUILD uses `cmake --install`
+On `main`, **CMake is the only application installation engine.** The stable Arch PKGBUILD uses `cmake --install`
 with a guarded `DESTDIR`; it does not maintain a second file-copy list or
 manually patch ViPERDSP. The AUR compatibility installer has been retired.
 
@@ -30,10 +29,10 @@ and patch a private copy, compile and stage all package files directly.
 A complete `makepkg -Cf` test on Arch (November 4, 2026) passed:
 the private source was prepared afresh, all three patches applied, the package
 smoke suite and 22 output-memory/identity tests passed, and the main and
-debug pacman package archives were generated. Its test-only Git branch
-selector must be removed before publication. **Do not push the revised AUR
-recipe until this branch has been merged into `main`.** No AUR release
-or system installation was performed by this test.
+debug pacman package archives were generated. The modernization branch
+has since merged into `main`; the AUR checkout should track `main` and
+regenerate `.SRCINFO` before publication. No AUR release or system
+installation was performed by that test.
 
 ## Dependency and package regression checks
 

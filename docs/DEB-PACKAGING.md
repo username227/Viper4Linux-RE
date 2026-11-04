@@ -20,7 +20,7 @@ as Ubuntu Noble's `libqt6widgets6t64` and Debian Trixie's
 requirements; the build also requires `pipewire`, `python3` and Qt6's platform
 plugins at runtime.
 
-## CMake-owned installation (modernization branch)
+## CMake-owned installation
 
 The native Debian and Ubuntu builder `scripts/build-native-deb.sh` no longer
 has independent DSP patching or application file-staging rules. It configures
@@ -32,8 +32,8 @@ The script remains because native `.deb` creation needs distribution-specific
 Qt/C++ dependency discovery via `dpkg-shlibdeps`, `DEBIAN/control` metadata,
 `dpkg-deb`, and optional installation smoke tests in disposable distro
 containers. These operations are not application installation rules.
-The source archive stays pinned, and the published `main` release workflow
-has not been changed.
+The source archive remains pinned, and the existing stable release workflow
+continues to generate the distro-specific packages.
 
 For historical parity regression, `tests/check-cmake-deb-parity.py`
 can compare the CMake stage to a **frozen test-only baseline** located in
