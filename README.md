@@ -34,6 +34,8 @@ like to see what the community can make of it.
 > primary tested environment; KDE Plasma tray integration and other Linux
 > environments need further testing. See [Current limitations](#current-limitations).
 
+**For contributors:** Our next infrastructure milestone is [CMake / CTest modernization](docs/CMAKE-MODERNIZATION-PLAN.md): optional developer tests, standard installation rules, and a verified transition away from `install.sh`. This is a **plan**, not yet the current build procedure.
+
 ## What it offers
 
 - **24 native ViPERDSP effect groups**, organized into six tabs rather than one
