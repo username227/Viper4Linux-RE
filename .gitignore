@@ -1,5 +1,6 @@
 # Local build output (the upstream DSP is a tracked Git submodule)
 /build/
+/build-*/
 __pycache__/
 *.pyc
 *.o
