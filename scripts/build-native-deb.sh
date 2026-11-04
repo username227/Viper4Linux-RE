@@ -7,6 +7,13 @@ if [[ $# != 4 || ! $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 2
 fi
 version=$1 target=$2 archive=$3 out=$4
+# Development-only switch: preserve existing release builds by default.
+# The CMake path is enabled explicitly for distro acceptance runs.
+stage_backend=${VIPER_DEB_STAGING_BACKEND:-legacy}
+case "$stage_backend" in
+    legacy|cmake) ;;
+    *) echo "Unsupported VIPER_DEB_STAGING_BACKEND: $stage_backend" >&2; exit 2 ;;
+esac
 case "$target" in
     ubuntu24.04-mint22)
         expected_os=ubuntu expected_version=24.04
@@ -40,14 +47,23 @@ tree="$work/viper4linux-re-$version"
 [[ -f "$tree/CMakeLists.txt" && -f "$tree/third_party/ViPERDSP/CMakeLists.txt" ]] || {
     echo 'Unified source archive does not include the pinned ViPERDSP source.' >&2; exit 1;
 }
-# Apply downstream fixes to a private copy, matching the stable Arch build.
-dsp="$work/ViPERDSP-patched"
-cp -a -- "$tree/third_party/ViPERDSP" "$dsp"
-VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/fix_lufs_speed.py"
-VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/preallocate_stereo_imager.py"
-VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/preallocate_multiband_compressor.py"
 built="$work/build"
-cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release -DVIPERDSP_SOURCE_DIR="$dsp"
+if [[ $stage_backend == legacy ]]; then
+    # Preserve the original packager's private-patch path for comparison.
+    dsp="$work/ViPERDSP-patched"
+    cp -a -- "$tree/third_party/ViPERDSP" "$dsp"
+    VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/fix_lufs_speed.py"
+    VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/preallocate_stereo_imager.py"
+    VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/preallocate_multiband_compressor.py"
+    cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release -DVIPERDSP_SOURCE_DIR="$dsp"
+else
+    # CMake alone verifies the pinned bundled DSP and prepares the patches.
+    # This path is not the release workflow default until distro validation.
+    cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
+        -DVIPER_SYSTEM_INSTALL_LAYOUT=debian
+fi
 cmake --build "$built" --parallel 3
 for program in viper-gui viper-ctl viper_dsp_ladspa.so; do
     [[ -s "$built/$program" ]] || { echo "Missing compiled file: $program" >&2; exit 1; }
@@ -65,6 +81,9 @@ nm -D "$built/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
 )
 pkgroot="$work/package"
 mkdir -p "$pkgroot/DEBIAN"
+if [[ $stage_backend == cmake ]]; then
+    DESTDIR="$pkgroot" cmake --install "$built"
+else
 # Keep installation paths identical to the working Arch package and launcher.
 install -Dm755 "$built/viper-gui" "$pkgroot/usr/bin/viper4linux-gui"
 install -Dm755 "$built/viper-ctl" "$pkgroot/usr/bin/viper4linux-ctl"
@@ -105,6 +124,8 @@ chmod 00755 -- "$pkgroot/usr/share/doc/viper4linux-re/docs"
     cat "$tree/LICENSE"
 } > "$pkgroot/usr/share/doc/viper4linux-re/copyright"
 chmod 644 "$pkgroot/usr/share/doc/viper4linux-re/copyright"
+# End of legacy-only filesystem staging.
+fi
 # Let Debian's actual shlibs database determine Qt/C++ ABI dependencies.
 # In particular Noble has libqt6widgets6t64; Debian 13 has libqt6widgets6.
 mkdir -p "$work/dpkg-shlibdeps/debian"
