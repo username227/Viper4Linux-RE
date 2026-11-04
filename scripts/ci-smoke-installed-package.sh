@@ -34,13 +34,23 @@ case "$mode" in
         pacman -Q viper4linux-re
         echo 'Checking Arch-specific installed documentation and man-page links...'
         test -r /usr/share/licenses/viper4linux-re/LICENSE
-        # makepkg's zipman tidying step normally compresses the staged .1
-        # files and their symlink targets after CMake installation.
+        # Arch makepkg's zipman step may compress .1 files to .1.gz.
+        # Official minimal Arch Docker images can also omit all man pages
+        # during pacman installation. Verify the built archive contains them
+        # regardless, and verify the installed alias whenever it is present.
+        arch_listing=$(pacman -Qlp "$package")
+        for name in viper4linux.1 viper4linux-ctl.1 v4l-cli.1; do
+            [[ $arch_listing == *"usr/share/man/man1/$name"* ]] || {
+                echo "Native Arch archive missing manual page: $name" >&2
+                exit 1
+            }
+        done
         if [[ -f /usr/share/man/man1/viper4linux.1.gz ]]; then
             test "$(readlink /usr/share/man/man1/v4l-cli.1.gz)" = viper4linux-ctl.1.gz
-        else
-            test -f /usr/share/man/man1/viper4linux.1
+        elif [[ -f /usr/share/man/man1/viper4linux.1 ]]; then
             test "$(readlink /usr/share/man/man1/v4l-cli.1)" = viper4linux-ctl.1
+        else
+            echo 'Arch container omitted optional manual pages; package archive entries verified.'
         fi
         ;;
     debian)
