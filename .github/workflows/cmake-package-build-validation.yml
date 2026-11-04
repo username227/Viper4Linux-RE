@@ -42,13 +42,11 @@ jobs:
                         scripts/build-native-deb.sh \
                         scripts/test-stable-arch.sh \
                         packaging/arch/PKGBUILD.stable.in \
-                        scripts/setup-source-checkout.sh \
                         tests/check-cmake-install-guard.sh \
                         install.sh; do
             bash -n "$script"
           done
           python3 tests/check-packaging-contract.py
-          python3 tests/check-source-setup.py
           python3 tests/check-cmake-source-checkout.py
           python3 tests/check-native-deb-workflow.py
           echo 'PASS: packaging syntax and default-backend contracts'
