@@ -26,6 +26,49 @@ The full upstream processor source is **not embedded** in the main application
 repository. `install.sh` and the local Arch PKGBUILD retrieve pinned ViPERDSP
 commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`.
 
+## CMake-first source checkout (modernization branch preview)
+
+Normal source compilation now uses CMake without a patching wrapper:
+
+```sh
+git submodule update --init --checkout third_party/ViPERDSP
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+```
+
+CMake verifies the recorded upstream DSP revision and applies the three
+approved downstream changes in a private copy inside the build directory.
+No tracked submodule files are modified. The source launcher currently
+expects the default directory to be named **`build`**.
+
+An optional, separately tested helper handles the source-checkout tasks that
+are *not* CMake build tasks:
+
+```sh
+bash scripts/setup-source-checkout.sh --prepare-routing
+bash scripts/setup-source-checkout.sh --check
+```
+
+`--prepare-routing` copies the distribution's stock PipeWire filter-chain
+template to the source checkout only if it is absent. It preserves an existing
+file, rejects symlink destinations, and does not write to `/etc`,
+`~/.config`, the installed `/usr` package, or a running audio session.
+`--check` only verifies the built files and checkout routing config.
+
+For developers who **explicitly want** private shell command shortcuts,
+`bash scripts/setup-source-checkout.sh --link-commands` can create
+`viper4linux` and `v4l-cli` links under `XDG_BIN_HOME` (default
+`~/.local/bin`). It refuses unrelated files/symlinks and doesn't silently
+retarget a shortcut from an older checkout. It never starts the application.
+If you're maintaining a working installed Viper4Linux on the same machine,
+**do not run the optional linking or source launcher commands** unless you
+intend to switch your shell commands or perform the later live-audio test.
+
+The helper's isolated regression test is
+`python3 tests/check-source-setup.py`. The old `install.sh` remains
+available during migration. Its retirement still requires the maintainer's
+separate source-checkout and real Arch audio acceptance.
+
 ## Unreleased change log — refactor branch versus `main`
 
 **Tracking only; not a release announcement.** This list records the small
