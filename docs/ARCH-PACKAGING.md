@@ -20,17 +20,20 @@ There are three supported paths; they do **not** share a PKGBUILD:
   It runs an actual Arch package build; generation does not publish to AUR.
 
 On `refactor/cmake-modernization`, **CMake is the only application
-installation engine.** The stable Arch PKGBUILD calls `cmake --install`
-with a guarded `DESTDIR`; it does not maintain a second file-copy list
-or manually patch ViPERDSP.
+installation engine.** The stable Arch PKGBUILD uses `cmake --install`
+with a guarded `DESTDIR`; it does not maintain a second file-copy list or
+manually patch ViPERDSP. The AUR compatibility installer has been retired.
 
-The separately maintained `viper4linux-re-git` AUR recipe has not been
-edited. Its existing call to `packaging/arch/install-package.sh` is retained
-as a **small compatibility adapter**: the adapter reconfigures its existing
-build with CMake install rules and delegates the entire package stage to
-`cmake --install`. It copies no application files itself. We must still
-test the actual AUR checkout before publication. Neither this branch nor CI
-publishes or upgrades the AUR package.
+The maintainer updated the independently maintained `viper4linux-re-git`
+PKGBUILD locally to let CMake validate the pinned ViPERDSP checkout, prepare
+and patch a private copy, compile and stage all package files directly.
+A complete `makepkg -Cf` test on Arch (November 4, 2026) passed:
+the private source was prepared afresh, all three patches applied, the package
+smoke suite and 22 output-memory/identity tests passed, and the main and
+debug pacman package archives were generated. Its test-only Git branch
+selector must be removed before publication. **Do not push the revised AUR
+recipe until this branch has been merged into `main`.** No AUR release
+or system installation was performed by this test.
 
 ## Dependency and package regression checks
 
@@ -42,8 +45,10 @@ launcher contracts. It is invoked by `tests/check-package.sh` from both
 normal package `check()` and the full developer suite. It is intentionally
 compatible with a unified release archive, which has no `.gitmodules`.
 `tests/check-arch-install.py` independently stages a mock stable and VCS
-package via the CMake-backed AUR adapter, validating paths, permissions,
-dynamic Python files, failure behavior and stable/VCS license directories.
+package directly through CMake, validating paths, permissions, dynamic
+Python files, failure behavior and stable/VCS license directories. A separate
+real-build staging test compares the complete manifests of two independently
+staged CMake installations.
 
 The packaged `check()` suite is intentionally short and offline. For
 native DSP and GUI regression coverage, run

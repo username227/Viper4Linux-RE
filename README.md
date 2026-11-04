@@ -34,7 +34,7 @@ like to see what the community can make of it.
 > primary tested environment; KDE Plasma tray integration and other Linux
 > environments need further testing. See [Current limitations](#current-limitations).
 
-**For contributors:** The `refactor/cmake-modernization` development branch uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [modernization status](docs/CMAKE-MODERNIZATION-PLAN.md). The separate released `main` branch is unchanged pending live-audio acceptance.
+**For contributors:** The `refactor/cmake-modernization` development branch uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [modernization status](docs/CMAKE-MODERNIZATION-PLAN.md). Local Arch source-build audio and clean AUR VCS package staging have passed; the separate released `main` branch remains unchanged pending final review and merge.
 
 ## What it offers
 

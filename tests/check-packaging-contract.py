@@ -13,7 +13,6 @@ root = Path(__file__).resolve().parents[1]
 arch = root / 'packaging/arch'
 stable_path = arch / 'PKGBUILD.stable.in'
 stable = stable_path.read_text()
-installer = (arch / 'install-package.sh').read_text()
 prepare = (root / 'cmake/PrepareViPERDSP.cmake').read_text()
 source_setup = (root / 'cmake/SourceCheckout.cmake').read_text()
 cmake = (root / 'CMakeLists.txt').read_text()
@@ -35,8 +34,9 @@ def bash_array(recipe, name):
 # No second, stale -git PKGBUILD: the separately maintained AUR checkout is
 # authoritative for its VCS source, versioning and package metadata.
 require(not (arch / 'PKGBUILD').exists(), 'Obsolete development PKGBUILD reintroduced')
-for script in (stable_path, arch / 'install-package.sh'):
-    subprocess.run(['bash', '-n', str(script)], check=True)
+subprocess.run(['bash', '-n', str(stable_path)], check=True)
+require(not (arch / 'install-package.sh').exists(),
+        'Obsolete AUR CMake compatibility installer was reintroduced')
 
 require('pkgname=viper4linux-re\n' in stable, 'Wrong stable package name')
 runtime = {'glibc', 'gcc-libs', 'qt6-base', 'pipewire', 'ladspa', 'python'}
@@ -77,8 +77,8 @@ source_packages = set(shlex.split(pacman.group(1)))
 require({'base-devel', 'cmake', 'git', 'pkgconf', 'ladspa', 'pipewire', 'qt6-base', 'python'} <= source_packages,
         'README source-install dependency list incomplete')
 
-# The stable recipe uses only the CMake-owned install layout. The AUR
-# compatibility entry point delegates to the same CMake install rules.
+# Both stable and VCS recipes install through CMake-owned rules; the VCS
+# recipe itself lives in the separately maintained AUR Git checkout.
 for required in ('package() {', 'check() {', 'sha256sums=(',
                  'releases/download/v${pkgver}', 'bash tests/check-package.sh',
                  'DESTDIR="$pkgdir" cmake --install "$srcdir/viper4linux-build"',
@@ -114,15 +114,9 @@ for required in ('python3 tests/check-launcher.py', 'python3 tests/check-arch-in
 require('bash tests/check-mock.sh' in developer and
         'python3 tests/check-native-state-contract.py' in developer,
         'Developer regression coverage changed')
-# Independently maintained AUR -git recipes can keep calling the original
-# entry point, but it must delegate installation exclusively to CMake.
-for required in ('-DVIPER_ENABLE_SYSTEM_INSTALL=ON',
-                 '-DVIPER_SYSTEM_INSTALL_LAYOUT=arch',
-                 '-DVIPER_SYSTEM_PACKAGE_NAME="$pkgname"',
-                 'DESTDIR="$pkgdir" cmake --install "$build_dir"'):
-    require(required in installer, f'AUR compatibility delegation missing: {required}')
-require('install -Dm' not in installer and 'cp -a' not in installer,
-        'AUR compatibility shim must not stage application files itself')
+# The repository deliberately does not duplicate the independently maintained
+# AUR -git PKGBUILD. The maintainer confirmed a clean -git makepkg -Cf build
+# using the same options and direct DESTDIR staging before adapter retirement.
 system = (root / 'cmake/InstallSystem.cmake').read_text()
 for required in ('src/viper_launcher.py', 'src/viper_output_monitor.py',
                  'file(GLOB _viper_runtime_python', 'Missing package source:',

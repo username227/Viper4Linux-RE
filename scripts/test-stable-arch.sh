@@ -53,6 +53,11 @@ runuser -u builder -- bash -c '
         echo "PASS: real CMake source-checkout build, routing setup and backend fingerprint"
     ' bash "$source_tree"
 
+# Verify repeatable CMake staging from the native compiled package build.
+# Only private temporary DESTDIR trees are used; never install on this host.
+bash "$source_tree/tests/check-cmake-install-parity.sh" \
+    "$release_dir/arch-build/src/viper4linux-build"
+
 # Only the main application package is a release asset. makepkg may also
 # produce a debug-symbol package, which is deliberately not distributed here.
 shopt -s nullglob

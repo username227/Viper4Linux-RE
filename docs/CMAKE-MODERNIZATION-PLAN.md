@@ -129,7 +129,7 @@ Do not run that illustrative command against the current tree yet; there are no 
 | 2. CMake configuration and DSP preparation | **Core checks passed on Arch:** checkout build, incrementals, unified archive, invalid patch rejection and missing-source rejection; still requires integration/packaging review |
 | 3. Optional CTest developer suite | **Arch core acceptance passed:** 10 native mock test targets built, 4/4 CTest groups passed (6.65 s), tests OFF registered none, original standalone full suite passed; CI distro coverage remains for checkpoint 5 |
 | 4. CMake installation and packaging parity | **Automated package build and container install acceptance passed:** Arch, Ubuntu 24.04 and Debian 13 from one pinned unified source; run `41845893378` green 7/7; live desktop/audio acceptance separate |
-| 5. Full acceptance and installer retirement | **In progress:** production source/Arch/Debian installation logic consolidated under CMake on development branch; GitHub CI and live Arch/AUR acceptance remain the release gates |
+| 5. Full acceptance and installer retirement | **Arch source and VCS package acceptance passed:** live GUI/backend/Edifier DSP and clean `makepkg -Cf` staging checked by maintainer; direct CMake staging replaces the AUR adapter. Final CI and maintainer-authorized `main` merge remain. |
 
 ### CMake installation ownership and remaining gates
 
@@ -139,17 +139,18 @@ Do not run that illustrative command against the current tree yet; there are no 
 | Direct source routing and read-only verification | `cmake/SourceCheckout.cmake` with opt-in developer targets |
 | All Arch and Debian installed application files | `cmake/InstallSystem.cmake` with guarded `DESTDIR` |
 | Stable Arch package archive, checksum and metadata | Generated PKGBUILD, `makepkg` and GitHub Actions |
-| Existing `-git` AUR entry point | `packaging/arch/install-package.sh` compatibility adapter calling CMake |
+| Development `-git` AUR package | Independently maintained PKGBUILD; tested direct CMake `DESTDIR` staging (not published pending `main` merge) |
 | Debian dependency metadata and native `.deb` archive | `scripts/build-native-deb.sh` (`dpkg-shlibdeps`, `dpkg-deb`) |
 | Unified source exports and stable release candidate | GitHub Actions release-preparation utilities |
 | Package regression and installation smoke tests | Existing `tests/` and CI scripts; retained |
-| Real GUI, PipeWire, Bluetooth/EDIFIER audio and output memory | **Maintainer's Arch hardware acceptance still pending** |
+| Real GUI, PipeWire, Bluetooth/EDIFIER audio and output memory | **Arch source-build live spot checks passed** (GUI version, backend replacement, Limiter/Surround/IRS, bypass, Edifier toggles; memory persistence provisionally confirmed) |
 
 The original `install.sh` has been removed from this development branch;
-`scripts/setup-source-checkout.sh` was retired earlier. The retained AUR
-entry point does not maintain a second file list. Historical baseline tests
-remain in `tests/`. Avoid merging this branch or changing the released AUR
-recipe before final local audio and AUR compatibility acceptance.
+`scripts/setup-source-checkout.sh` was retired earlier. The AUR compatibility
+adapter is also retired following successful independent `makepkg -Cf` staging
+using direct CMake commands. Historical baseline tests remain in `tests/`.
+Avoid pushing the released AUR recipe until the maintainer merges the
+modernization branch into `main`.
 
 ### Branch work log
 
@@ -191,3 +192,4 @@ maintainer local audio acceptance.
 - **Acceptance sequence agreed:** finish building and validating packages in GitHub Actions first. Treat installing the generated packages and verifying live PipeWire/DSP operation as a *separate later acceptance stage*.
 - **CMake-only production consolidation (2026-11-04, 7/7 CI accepted):** Stable Arch PKGBUILD now has exactly one CMake build/staging path; Debian/Ubuntu packaging has no duplicate patching or file-install list; the original AUR helper is a compatibility adapter to CMake with the same four-argument interface. The old `install.sh` was retired after its source-build, routing, optional aliases, LADSPA export and build safety functions were integrated with CMake developer targets. The historical Debian parity payload was frozen as a test-only fixture, and the existing CI/release packaging scripts remain intact. [GitHub Actions run #41858443861](https://github.com/username227/Viper4Linux-RE/actions/runs/41858443861) finished **success (7/7 jobs)** against commit `fd703256`. Arch logs explicitly confirm that the CMake-based AUR adapter, dynamic Python module staging, modes, symlink and license layouts, missing-source failure safety, private `DESTDIR` safety tests, full developer regressions, real source-checkout build, source routing and fingerprint checks passed. Both native Debian-family `.deb` builds and all three isolated package-installation smoke tests passed. All changes remain on `refactor/cmake-modernization`; no user installation, main merge or AUR push occurred.
 - **Still pending:** maintainer's actual Arch desktop source-launch/relaunch, GUI, physical audio and routing acceptance, verification of the separate AUR VCS checkout against the compatibility adapter, and explicit approval before merging.
+- **Maintainer clean AUR VCS acceptance (2026-11-04):** independently edited `viper4linux-re-git` PKGBUILD fetched the modernization branch, performed `makepkg -Cf` after a pre-existing archive required `-f`, checked out pinned ViPERDSP `6fc1f1b8`, created a fresh `build/_viperdsp-prepared`, applied all three fixes under CMake, compiled all four native targets, passed the lightweight package smoke suite (including 22 output-memory and identity tests), and produced the VCS and debug packages in 22 seconds. Both `prepare()` and `package()` use the new CMake ownership boundaries; no application was installed and no AUR push took place. This enabled deleting the compatibility installer and retaining direct CMake staging tests.

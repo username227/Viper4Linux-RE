@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Compare CMake's direct staging against the compatibility adapter used by
-# separately maintained AUR -git recipes, including bytes, modes and links.
+# Independently stage the same real CMake build twice and compare full file,
+# permission and symlink manifests for deterministic repeatable installation.
 # Usage: bash tests/check-cmake-install-parity.sh BUILD_DIRECTORY
 set -Eeuo pipefail
 if (( $# != 1 )); then
@@ -22,14 +22,14 @@ done
 
 work=$(mktemp -d /tmp/viper-stage-parity-XXXXXXXX)
 trap 'rm -rf -- "$work"' EXIT
-old="$work/original"
-new="$work/cmake"
-mkdir -p -- "$old" "$new"
+first="$work/stage-first"
+second="$work/stage-second"
+mkdir -p -- "$first" "$second"
 
-bash "$root/packaging/arch/install-package.sh" "$root" "$built" "$old" viper4linux-re
-DESTDIR="$new" cmake --install "$built"
+DESTDIR="$first" cmake --install "$built"
+DESTDIR="$second" cmake --install "$built"
 
-python3 - "$old" "$new" <<'PY'
+python3 - "$first" "$second" <<'PY'
 import hashlib
 import os
 from pathlib import Path
@@ -53,19 +53,22 @@ def staged_manifest(directory):
             result[name] = ('unknown', mode)
     return result
 
-original = staged_manifest(sys.argv[1])
-cmake = staged_manifest(sys.argv[2])
-if original != cmake:
-    diff = sorted(set(original) | set(cmake))
-    mismatches = [path for path in diff if original.get(path) != cmake.get(path)]
-    print(f'FAIL: {len(mismatches)} Arch staging differences:', file=sys.stderr)
+first = staged_manifest(sys.argv[1])
+second = staged_manifest(sys.argv[2])
+if first != second:
+    diff = sorted(set(first) | set(second))
+    mismatches = [path for path in diff if first.get(path) != second.get(path)]
+    print(f'FAIL: {len(mismatches)} CMake staging differences:', file=sys.stderr)
     for path in mismatches[:40]:
         print(f'  {path}', file=sys.stderr)
-        print(f'    old: {original.get(path)}', file=sys.stderr)
-        print(f'    new: {cmake.get(path)}', file=sys.stderr)
+        print(f'    first:  {first.get(path)}', file=sys.stderr)
+        print(f'    second: {second.get(path)}', file=sys.stderr)
     sys.exit(1)
-files = sum(kind[0] == 'file' for kind in cmake.values())
-links = sum(kind[0] == 'symlink' for kind in cmake.values())
-print(f'PASS: AUR adapter vs direct CMake staging parity: {files} files, {links} symlinks, '
+files = sum(kind[0] == 'file' for kind in first.values())
+links = sum(kind[0] == 'symlink' for kind in first.values())
+if files < 24 or links != 2:
+    print(f'FAIL: incomplete staged payload: {files} files, {links} symlinks', file=sys.stderr)
+    sys.exit(1)
+print(f'PASS: two independent direct CMake stages: {files} files, {links} symlinks; '
       'matching SHA-256 data, permissions and directory tree')
 PY
