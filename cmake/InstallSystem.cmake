@@ -46,7 +46,8 @@ foreach(_viper_source IN ITEMS
     resources/viper4linux-blue.png resources/viper4linux-blue.svg
     man/viper4linux.1 man/viper4linux-ctl.1
     LICENSE THIRD-PARTY-NOTICES.md README.md)
-  if(NOT IS_REGULAR_FILE "${PROJECT_SOURCE_DIR}/${_viper_source}")
+  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${_viper_source}" OR
+     IS_DIRECTORY "${PROJECT_SOURCE_DIR}/${_viper_source}")
     message(FATAL_ERROR "Missing package source: ${PROJECT_SOURCE_DIR}/${_viper_source}")
   endif()
 endforeach()
