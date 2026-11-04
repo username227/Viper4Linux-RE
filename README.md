@@ -8,6 +8,8 @@
   <img src="docs/screenshots/output-classic-blue.png" width="100%" alt="ViPER4Linux-RE Classic Viper blue theme, Output tab with Master Limiter, playback gain and LUFS targeting controls">
 </p>
 
+## Additional Screenshots
+
 <details>
 <summary><strong>EQ &amp; Tone</strong> — 31-band graphic equalizer with Acoustic preset</summary>
 
