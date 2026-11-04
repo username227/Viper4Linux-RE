@@ -2,6 +2,42 @@
 
 **Bringing ViPER back to Linux.**
 
+<!-- BEGIN ViPER4Linux screenshot gallery -->
+
+<p align="center">
+  <img src="docs/screenshots/output-classic-blue.png" width="100%" alt="ViPER4Linux-RE Classic Viper blue theme, Output tab with Master Limiter, playback gain and LUFS targeting controls">
+</p>
+
+<details>
+<summary><strong>EQ &amp; Tone</strong> — 31-band graphic equalizer with Acoustic preset</summary>
+
+<img src="docs/screenshots/equalizer-classic-blue.png" width="100%" alt="Classic Viper EQ and Tone tab with 31-band equalizer, Acoustic preset response graph, Dynamic EQ, and Clarity controls">
+
+</details>
+
+<details>
+<summary><strong>Sound Correction</strong> — native IRS convolution</summary>
+
+<img src="docs/screenshots/convolver-classic-blue.png" width="100%" alt="Classic Viper Sound Correction tab with ViPER-DDC, Speaker Correction and Convolver impulse response controls">
+
+</details>
+
+<details>
+<summary><strong>Effect Presets</strong> — save, load, rename and assign to audio outputs</summary>
+
+<img src="docs/screenshots/effect-presets-modern-teal.png" width="100%" alt="ViPER4Linux-RE Effect Presets dialog in Modern teal theme showing saved effect preset management">
+
+</details>
+
+<details>
+<summary><strong>Modern teal theme</strong> — alternative visual style</summary>
+
+<img src="docs/screenshots/output-modern-teal.png" width="100%" alt="ViPER4Linux-RE Output tab with Master Limiter controls in the Modern teal theme">
+
+</details>
+
+<!-- END ViPER4Linux screenshot gallery -->
+
 I've always wanted a modern, working version of ViPER for Linux. The older
 ViPER4Linux project hadn't been updated in years and no longer worked smoothly
 for me, so I decided to see whether something new could be built.
