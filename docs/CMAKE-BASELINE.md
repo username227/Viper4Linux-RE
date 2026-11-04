@@ -15,7 +15,11 @@ This combines source-level inventory and maintainer-supplied command output. Pas
 
 **New CMake-owned preparation baseline:** After `cmake/PrepareViPERDSP.cmake` was introduced, a completely separate `build-cmake-prepared` was configured with **no manual patches** and developer tests OFF. CMake reported a private patched source directory under that build tree, applied each of the three verified fixes, and built ViPERDSP plus all four production targets to 100% without visible errors/warnings. `nm -D build-cmake-prepared/viper_dsp_ladspa.so` produced `0000000000017580 T ladspa_descriptor`. `git -C third_party/ViPERDSP status --short` produced no output, confirming no tracked submodule modifications.
 
-**Still unverified:** Reconfiguration/rebuild reuse, intentional patch-failure handling, staged Arch/Debian package parity, and live PipeWire/audio acceptance.
+**Incremental-build verification:** Following a branch update, CMake reported `Reusing verified private ViPERDSP source` and all three fixes already present. ViPERDSP and LADSPA were reused without recompilation; the GUI rebuilt because the Git-derived About revision changed.
+
+**Unified-source archive verification:** A test archive under `/tmp` configured without Git metadata, with CMake's Git lookup disabled. Private DSP preparation applied all three fixes. The built `viper_dsp_ladspa.so` exported `0000000000017580 T ladspa_descriptor`. The unused Git-discovery CLI variable is expected because no `find_package(Git)` ran. Git remained installed on the host; this is a metadata/discovery independence test, not proof of an absent Git executable.
+
+**Still unverified:** Intentional patch-failure handling, staged Arch/Debian package parity, and live PipeWire/audio acceptance.
 
 ## Existing responsibilities
 
