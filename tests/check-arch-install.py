@@ -56,7 +56,9 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
         'add_library(viper_dsp_ladspa MODULE IMPORTED GLOBAL)\n'
         'set_target_properties(viper_dsp_ladspa PROPERTIES IMPORTED_LOCATION '
         '"${CMAKE_BINARY_DIR}/viper_dsp_ladspa.so")\n'
-        f'include("{INSTALL}")\n'
+        'if(VIPER_ENABLE_SYSTEM_INSTALL)\n'
+        f'  include("{INSTALL}")\n'
+        'endif()\n'
     )
     configured = subprocess.run(['cmake', '-S', str(tree), '-B', str(build)],
                                 text=True, capture_output=True)
