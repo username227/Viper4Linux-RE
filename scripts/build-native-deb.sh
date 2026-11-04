@@ -7,9 +7,9 @@ if [[ $# != 4 || ! $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 2
 fi
 version=$1 target=$2 archive=$3 out=$4
-# Development-only switch: preserve existing release builds by default.
-# The CMake path is enabled explicitly for distro acceptance runs.
-stage_backend=${VIPER_DEB_STAGING_BACKEND:-legacy}
+# CMake package staging is the default after manifest and distro CI parity.
+# Preserve the legacy packager path temporarily for controlled comparisons.
+stage_backend=${VIPER_DEB_STAGING_BACKEND:-cmake}
 case "$stage_backend" in
     legacy|cmake) ;;
     *) echo "Unsupported VIPER_DEB_STAGING_BACKEND: $stage_backend" >&2; exit 2 ;;
@@ -64,8 +64,7 @@ if [[ $stage_backend == legacy ]]; then
     VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/preallocate_multiband_compressor.py"
     cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release -DVIPERDSP_SOURCE_DIR="$dsp"
 else
-    # CMake alone verifies the pinned bundled DSP and prepares the patches.
-    # This path is not the release workflow default until distro validation.
+    # CMake verifies the pinned bundled DSP and prepares a private patched copy.
     cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
