@@ -2,6 +2,18 @@
 
 **Bringing ViPER back to Linux.**
 
+I've always wanted a modern, working version of ViPER for Linux. The older
+ViPER4Linux project hadn't been updated in years and no longer worked smoothly
+for me, so I decided to see whether something new could be built.
+
+ViPER4Linux-RE is the result. It brings ViPER's extensive sound enhancements
+to the Linux desktop, letting you customize bass, clarity, surround sound,
+equalization, and much more. It works with your existing music players and other
+audio applications, without requiring you to change how you listen.
+
+While building the GUI, I attempted to keep the *essence* of the original
+ViPER4Android alive, so that it still feels like ViPER:
+
 <!-- BEGIN ViPER4Linux screenshot gallery -->
 
 <p align="center">
@@ -40,17 +52,6 @@
 
 <!-- END ViPER4Linux screenshot gallery -->
 
-I've always wanted a modern, working version of ViPER for Linux. The older
-ViPER4Linux project hadn't been updated in years and no longer worked smoothly
-for me, so I decided to see whether something new could be built.
-
-ViPER4Linux-RE is the result. It brings ViPER's extensive sound enhancements
-to the Linux desktop, letting you customize bass, clarity, surround sound,
-equalization, and much more. It works with your existing music players and other
-audio applications, without requiring you to change how you listen.
-
-While building the GUI, I attempted to keep the *essence* of the original
-ViPER4Android alive, so that it still feels like ViPER.
 
 ## A little about this project
 
