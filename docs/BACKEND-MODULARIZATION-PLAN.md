@@ -296,6 +296,61 @@ fixtures are expected test behavior.
 Further restructuring remains subject to separately reviewed diffs and
 tests. Real-device auditory equivalence remains a later maintainer gate.
 
+## Checkpoint 3 — processor extraction regression (2026-11-04)
+
+**Implementation commit:** `29556cde66736ead005947f9fc0b1c3dcad13f16`.
+
+- Moved the entire `Processor` class verbatim into
+  `src/backend/processor.inc` (1,104 physical lines). The parent
+  `src/viper-ladspa.cpp` now has 105 physical lines and retains the shared
+  control-page owner and all LADSPA hooks/descriptors. The 288-line
+  `src/backend/startup-settings.inc` remains unchanged.
+- Kept the same anonymous namespace and single C++ translation unit,
+  using a local implementation include. Reinserting the class in place
+  reproduces the old source **byte for byte**; worker lifetime, native
+  effects, `std::try_to_lock` callback behavior, processing order, buffers,
+  serial handoffs, and ABI were not rewritten.
+- Updated the existing UI/native-effect/DEQ source contract tests to
+  inspect the new processor file and assert its inclusion from the main
+  LADSPA source. These checks continue to verify actual implementation
+  text rather than merely passing because it moved.
+- The commit inadvertently reset the executable bit on
+  `tests/check-native-effect-routing.py` from 100755 to 100644. This is
+  unrelated to DSP and is corrected in the documentation follow-up,
+  preserving the original test script permission.
+
+**Maintainer's fresh Arch checkpoint:**
+
+~~~bash
+git pull --ff-only
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+bash tests/check-developer.sh
+nm -D build/viper_dsp_ladspa.so | grep ' ladspa_descriptor$'
+grep VIPER4LINUX_DEV_VERSION build/generated/viper-build-info.h
+git status --short
+~~~
+
+**Results:** source pull fast-forwarded; CMake verified all three DSP
+patches in the existing private dependency copy; native LADSPA,
+mock LADSPA and Qt GUI rebuilt to 100% without compiler warnings/errors
+in the supplied output. **CTest 4/4 PASS**, **full developer regression
+suite PASS**, including all **22 Audio Output tests**, IPC, mock DSP,
+Convolver/IRS and DDC/rate coverage, settings precision, DEQ handoff,
+effects, packaging and UI contracts. Git working tree remained clean.
+Exported symbol was `T ladspa_descriptor`; generated source-build GUI
+version was `1.1.0-29556cde6673` (matches the extraction commit).
+The build/test run did not install or restart the real audio backend.
+
+**Acceptance:** this processor-class move has passed automated tests.
+Post-extraction live playback and audible equivalence have **not** yet
+been verified by this log. Review the complete callback and the
+worker/native-configuration ownership as potential next responsibilities;
+split only when the resulting source is easier to audit, **not to reach
+a particular file count**.
+
 ## History and release notes
 
 The preceding GUI refactor was merged as PR #1 on 2026-11-03; the feature
@@ -305,6 +360,6 @@ until it is merged or accepted for a release. The earlier GUI planning
 document is preserved by its original Git commits, not duplicated as
 another active plan.
 
-**Next action:** inventory and plan the next natural Processor extraction
-(Checkpoint 3) without imposing a file quota. First startup-settings
-extraction has passed automated acceptance; live audio remains untested.
+**Next action:** inspect the Processor callback and worker dependencies for
+a justified next extraction. Maintain the passing Arch test baseline and
+treat live sound equivalence as a separate acceptance gate.
