@@ -73,7 +73,8 @@ pkgroot="$work/package"
 mkdir -p "$pkgroot/DEBIAN"
 # All native application payload paths and Debian documentation are supplied
 # by the same CMake installation rules used by Arch; no manual file copy list.
-DESTDIR="$pkgroot" cmake --install "$built"# Let Debian's actual shlibs database determine Qt/C++ ABI dependencies.
+DESTDIR="$pkgroot" cmake --install "$built"
+# Let Debian's actual shlibs database determine Qt/C++ ABI dependencies.
 # In particular Noble has libqt6widgets6t64; Debian 13 has libqt6widgets6.
 mkdir -p "$work/dpkg-shlibdeps/debian"
 cat > "$work/dpkg-shlibdeps/debian/control" <<'CONTROL'
