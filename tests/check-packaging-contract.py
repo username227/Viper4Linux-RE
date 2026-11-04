@@ -104,6 +104,7 @@ if modules.is_file():
 smoke = (root / 'tests/check-package.sh').read_text()
 developer = (root / 'tests/check-developer.sh').read_text()
 for required in ('python3 tests/check-launcher.py', 'python3 tests/check-arch-install.py',
+                 'python3 tests/check-source-setup.py',
                  "python3 -m unittest discover -s tests -p 'test_output_*.py'",
                  'python3 tests/check-packaging-contract.py'):
     require(required in smoke, f'Package smoke test missing: {required}')
@@ -117,7 +118,8 @@ for required in ('ln -s -- viper4linux-ctl "$pkgdir/usr/bin/v4l-cli"',
                  'viper_output_monitor.py', 'Missing package source:'):
     require(required in installer, f'Installation contract missing: {required}')
 require('viper-output-state' in cmake, 'Native output-state binary missing from CMake')
-for path in ('tests/check-package.sh', 'tests/check-developer.sh', 'LICENSE',
+for path in ('tests/check-package.sh', 'tests/check-developer.sh',
+             'scripts/setup-source-checkout.sh', 'tests/check-source-setup.py', 'LICENSE',
              'THIRD-PARTY-NOTICES.md', 'packaging/arch/viper4linux.desktop'):
     require((root / path).is_file(), f'Missing project file: {path}')
 require('SYSTEM_MODE' in launcher and "Path('/usr/bin/viper4linux-gui')" in launcher,
