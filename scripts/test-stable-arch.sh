@@ -18,8 +18,7 @@ mkdir -p "$release_dir/arch-build"
 cp "$pkg" "$release_dir/arch-build/PKGBUILD"
 chown -R builder:builder "$release_dir"
 
-runuser -u builder -- env SRCDEST="$release_dir" \
-    VIPER_ARCH_STAGING_BACKEND="${VIPER_ARCH_STAGING_BACKEND:-cmake}" bash -c '
+runuser -u builder -- env SRCDEST="$release_dir" bash -c '
     set -Eeuo pipefail
     cd "$1/arch-build"
     makepkg --noconfirm --cleanbuild --nodeps
@@ -29,12 +28,10 @@ runuser -u builder -- env SRCDEST="$release_dir" \
 # Keep full native DSP tests in CI, not routine user's makepkg check().
 source_tree="$release_dir/arch-build/src/viper4linux-re-$version"
 test -f "$source_tree/tests/check-developer.sh"
-if [[ ${VIPER_ARCH_STAGING_BACKEND:-cmake} == cmake ]]; then
-    # Unsafe DESTDIR tests run ONLY inside this disposable Arch Docker job,
+# Unsafe DESTDIR tests run ONLY inside this disposable Arch Docker job,
     # against the real CMake install script produced by makepkg.
     VIPER_CI_STAGING_GUARD_TEST=1 bash "$source_tree/tests/check-cmake-install-guard.sh" \
         "$release_dir/arch-build/src/viper4linux-build"
-fi
 runuser -u builder -- bash -c '
     set -Eeuo pipefail
     cd "$1"
@@ -43,8 +40,7 @@ runuser -u builder -- bash -c '
 
 # Independently exercise the *normal source-checkout* CMake defaults from the
 # same pinned source archive. No package install or PipeWire audio is started.
-if [[ ${VIPER_ARCH_STAGING_BACKEND:-cmake} == cmake ]]; then
-    runuser -u builder -- bash -c '
+runuser -u builder -- bash -c '
         set -Eeuo pipefail
         source_tree=$1
         cmake -S "$source_tree" -B "$source_tree/build" \
@@ -56,7 +52,6 @@ if [[ ${VIPER_ARCH_STAGING_BACKEND:-cmake} == cmake ]]; then
         (cd "$source_tree" && python3 src/viper_launcher.py --fingerprint >/dev/null)
         echo "PASS: real CMake source-checkout build, routing setup and backend fingerprint"
     ' bash "$source_tree"
-fi
 
 # Only the main application package is a release asset. makepkg may also
 # produce a debug-symbol package, which is deliberately not distributed here.

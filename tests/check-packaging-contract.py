@@ -71,27 +71,24 @@ source_packages = set(shlex.split(pacman.group(1)))
 require({'base-devel', 'cmake', 'git', 'pkgconf', 'ladspa', 'pipewire', 'qt6-base', 'python'} <= source_packages,
         'README source-install dependency list incomplete')
 
-# Stable and VCS builds share this staging script; do not reintroduce a
-# per-PKGBUILD installation file list. The VCS version's recipe stays in AUR.
+# The stable recipe uses only the CMake-owned install layout. The separate
+# AUR -git recipe still needs the legacy helper path until its own transition.
 for required in ('package() {', 'check() {', 'sha256sums=(',
-                 'releases/download/v${pkgver}', 'packaging/arch/install-package.sh',
-                 'ViPERDSP-patched', '-DVIPERDSP_SOURCE_DIR=', 'bash tests/check-package.sh'):
-    require(required in stable, f'Stable PKGBUILD contract missing: {required}')
-# Stable package defaults to CMake; legacy staging remains an explicit option
-# for parity comparisons and the separately maintained VCS AUR recipe.
-require(stable.count('${VIPER_ARCH_STAGING_BACKEND:-cmake}') == 4,
-        'Stable Arch recipe must select CMake DSP preparation/staging by default')
-require('DESTDIR="$pkgdir" cmake --install "$built"' in stable,
-        'Stable Arch CMake staging is missing')
-require('${VIPER_ARCH_STAGING_BACKEND:-legacy}' not in stable,
-        'Stable Arch recipe accidentally reverts to legacy by default')
-require('install -Dm' not in stable, 'Stable recipe must delegate staging to installer')
-require(stable.count('bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"') == 1,
-        'Stable recipe must invoke shared staging exactly once')
+                 'releases/download/v${pkgver}', 'bash tests/check-package.sh',
+                 'DESTDIR="$pkgdir" cmake --install "$srcdir/viper4linux-build"',
+                 '-DVIPER_ENABLE_SYSTEM_INSTALL=ON', '-DVIPER_SYSTEM_INSTALL_LAYOUT=arch',
+                 '-DVIPER_SYSTEM_PACKAGE_NAME="$pkgname"'):
+    require(required in stable, f'Stable PKGBUILD CMake contract missing: {required}')
+for forbidden in ('VIPER_ARCH_STAGING_BACKEND', 'install-package.sh',
+                  'ViPERDSP-patched', 'fix_lufs_speed.py'):
+    require(forbidden not in stable, f'Legacy stable packaging path remains: {forbidden}')
+require('install -Dm' not in stable, 'Stable recipe must delegate staging to CMake')
 require('bash tests/check-mock.sh' not in stable, 'Full developer tests must not run during makepkg')
 for patch in ('fix_lufs_speed.py', 'preallocate_stereo_imager.py',
               'preallocate_multiband_compressor.py'):
-    require(patch in stable and patch in source_install, f'Native DSP patch missing: {patch}')
+    require(patch in (root / 'cmake/PrepareViPERDSP.cmake').read_text(),
+            f'CMake-owned DSP patch missing: {patch}')
+    require(patch in source_install, f'Legacy source installer patch missing: {patch}')
 require('git submodule update --init --checkout' in source_install,
         'Source installer no longer checks pinned DSP')
 modules = (root / '.gitmodules')
