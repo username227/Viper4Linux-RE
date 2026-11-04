@@ -18,7 +18,8 @@ mkdir -p "$release_dir/arch-build"
 cp "$pkg" "$release_dir/arch-build/PKGBUILD"
 chown -R builder:builder "$release_dir"
 
-runuser -u builder -- env SRCDEST="$release_dir" bash -c '
+runuser -u builder -- env SRCDEST="$release_dir" \
+    VIPER_ARCH_STAGING_BACKEND="${VIPER_ARCH_STAGING_BACKEND:-legacy}" bash -c '
     set -Eeuo pipefail
     cd "$1/arch-build"
     makepkg --noconfirm --cleanbuild --nodeps
