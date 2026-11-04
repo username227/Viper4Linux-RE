@@ -30,6 +30,7 @@ with tempfile.TemporaryDirectory(prefix='viper cmake source checkout ') as tmp:
         'cmake_minimum_required(VERSION 3.20)\n'
         'project(DevFixture NONE)\n'
         'option(VIPER_ENABLE_SYSTEM_INSTALL "" OFF)\n'
+        'option(VIPER_SOURCE_VERIFY_LADSPA_EXPORT "" OFF)\n'
         'foreach(name IN ITEMS viper-gui viper-ctl viper-output-state viper_dsp_ladspa)\n'
         '  add_custom_target(${name})\n'
         'endforeach()\n'

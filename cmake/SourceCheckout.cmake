@@ -16,6 +16,26 @@ function(_viper_source_validate)
       message(FATAL_ERROR "Empty source build output: ${VIPER_SOURCE_BUILD_DIR}/${_name}")
     endif()
   endforeach()
+  # Preserve the original source installer's LADSPA ABI verification.
+  if(VIPER_SOURCE_VERIFY_LADSPA_EXPORT)
+    find_program(_viper_nm NAMES nm REQUIRED)
+    execute_process(
+      COMMAND "${_viper_nm}" -D "${VIPER_SOURCE_BUILD_DIR}/viper_dsp_ladspa.so"
+      RESULT_VARIABLE _viper_nm_result
+      OUTPUT_VARIABLE _viper_symbols
+      ERROR_VARIABLE _viper_nm_error)
+    if(NOT _viper_nm_result EQUAL 0 OR
+       NOT _viper_symbols MATCHES "(^|[\r\n])[0-9a-fA-F]+ [TW] ladspa_descriptor([\r\n]|$)")
+      message(FATAL_ERROR
+        "Native LADSPA module missing exported ladspa_descriptor: ${_viper_nm_error}")
+    endif()
+  endif()
+  # Old pre-modernization outputs must not accidentally shadow real builds.
+  foreach(_viper_old IN ITEMS viperbass_ladspa.so viperbass-ctl viperbass-gui)
+    if(EXISTS "${VIPER_SOURCE_BUILD_DIR}/${_viper_old}")
+      message(FATAL_ERROR "Obsolete source build output present: ${_viper_old}")
+    endif()
+  endforeach()
   if(NOT EXISTS "${VIPER_SOURCE_ROOT}/viper4linux")
     message(FATAL_ERROR "Missing source launcher")
   endif()
@@ -113,6 +133,8 @@ set(VIPER_SOURCE_ROUTING_TEMPLATE "/usr/share/pipewire/filter-chain.conf" CACHE 
   "Stock PipeWire filter-chain template for source-checkout builds")
 option(VIPER_ENABLE_SOURCE_LINK_TARGET
   "Enable explicit viper_source_links target for private ~/.local/bin aliases" OFF)
+option(VIPER_SOURCE_VERIFY_LADSPA_EXPORT
+  "Validate native LADSPA descriptor symbol in viper_source_check" ON)
 
 if(VIPER_SOURCE_PREPARE_ROUTING)
   if(NOT EXISTS "${VIPER_SOURCE_ROUTING_TEMPLATE}" OR IS_DIRECTORY "${VIPER_SOURCE_ROUTING_TEMPLATE}")
@@ -133,6 +155,7 @@ endif()
 add_custom_target(viper_source_check
   COMMAND "${CMAKE_COMMAND}"
     "-DVIPER_SOURCE_ACTION=check"
+    "-DVIPER_SOURCE_VERIFY_LADSPA_EXPORT=${VIPER_SOURCE_VERIFY_LADSPA_EXPORT}"
     "-DVIPER_SOURCE_ROOT=${PROJECT_SOURCE_DIR}"
     "-DVIPER_SOURCE_BUILD_DIR=${PROJECT_BINARY_DIR}"
     -P "${CMAKE_CURRENT_LIST_FILE}"
@@ -150,6 +173,7 @@ if(VIPER_ENABLE_SOURCE_LINK_TARGET)
   add_custom_target(viper_source_links
     COMMAND "${CMAKE_COMMAND}"
       "-DVIPER_SOURCE_ACTION=links"
+      "-DVIPER_SOURCE_VERIFY_LADSPA_EXPORT=${VIPER_SOURCE_VERIFY_LADSPA_EXPORT}"
       "-DVIPER_SOURCE_ROOT=${PROJECT_SOURCE_DIR}"
       "-DVIPER_SOURCE_BUILD_DIR=${PROJECT_BINARY_DIR}"
       "-DVIPER_SOURCE_LINK_DIRECTORY=${VIPER_SOURCE_LINK_DIRECTORY}"
