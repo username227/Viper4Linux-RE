@@ -85,6 +85,10 @@ install -Dm644 "$source_tree/THIRD-PARTY-NOTICES.md" \
 install -Dm644 "$source_tree/README.md" "$pkgdir/usr/share/doc/viper4linux/README.md"
 install -d "$pkgdir/usr/share/doc/viper4linux/docs"
 cp -a -- "$source_tree/docs/." "$pkgdir/usr/share/doc/viper4linux/docs/"
+# cp -a preserves the *source directory's* special mode bits. A maintainer's
+# setgid docs checkout must not produce a machine-dependent package directory.
+# Five-digit chmod clears inherited setgid/setuid bits on GNU coreutils.
+chmod 00755 -- "$pkgdir/usr/share/doc/viper4linux/docs"
 
 # The final staged file list is checked before makepkg creates the archive.
 for file in "${python_modules[@]}"; do
