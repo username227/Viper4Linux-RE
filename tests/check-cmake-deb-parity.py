@@ -16,7 +16,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY = ROOT / "scripts/build-native-deb.sh"
 START = "# Keep installation paths identical to the working Arch package and launcher."
-END = "# Let Debian's actual shlibs database determine Qt/C++ ABI dependencies."
+END = "# End of legacy-only filesystem staging."
 
 
 def fail(message):
