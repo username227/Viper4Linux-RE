@@ -43,6 +43,7 @@ jobs:
                         scripts/test-stable-arch.sh \
                         packaging/arch/PKGBUILD.stable.in \
                         scripts/setup-source-checkout.sh \
+                        tests/check-cmake-install-guard.sh \
                         install.sh; do
             bash -n "$script"
           done

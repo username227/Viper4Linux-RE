@@ -29,6 +29,12 @@ runuser -u builder -- env SRCDEST="$release_dir" \
 # Keep full native DSP tests in CI, not routine user's makepkg check().
 source_tree="$release_dir/arch-build/src/viper4linux-re-$version"
 test -f "$source_tree/tests/check-developer.sh"
+if [[ ${VIPER_ARCH_STAGING_BACKEND:-cmake} == cmake ]]; then
+    # Unsafe DESTDIR tests run ONLY inside this disposable Arch Docker job,
+    # against the real CMake install script produced by makepkg.
+    VIPER_CI_STAGING_GUARD_TEST=1 bash "$source_tree/tests/check-cmake-install-guard.sh" \
+        "$release_dir/arch-build/src/viper4linux-build"
+fi
 runuser -u builder -- bash -c '
     set -Eeuo pipefail
     cd "$1"

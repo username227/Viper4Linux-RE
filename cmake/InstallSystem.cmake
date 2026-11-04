@@ -51,11 +51,24 @@ install(CODE [[
       "refusing to install to the host.")
   endif()
   cmake_path(NORMAL_PATH _viper_destdir)
-  if(_viper_destdir STREQUAL "/" OR
-     _viper_destdir STREQUAL "/usr" OR
-     _viper_destdir STREQUAL "/usr/local")
-    message(FATAL_ERROR "Unsafe DESTDIR '${_viper_destdir}'; refusing host installation.")
+  # A symlink into / or another host directory must never escape DESTDIR.
+  # Existing package builders create their private staging roots beforehand.
+  if(NOT IS_DIRECTORY "${_viper_destdir}")
+    message(FATAL_ERROR
+      "DESTDIR must name an existing private staging directory: '${_viper_destdir}'.")
   endif()
+  file(REAL_PATH "${_viper_destdir}" _viper_real_destdir)
+  if(NOT "${_viper_real_destdir}" STREQUAL "${_viper_destdir}")
+    message(FATAL_ERROR
+      "Symlinked DESTDIR '${_viper_destdir}' resolves to '${_viper_real_destdir}'; refusing installation.")
+  endif()
+  foreach(_viper_unsafe IN ITEMS
+      / /usr /usr/local /etc /var /home /root /opt /tmp /run
+      /dev /proc /sys /boot /bin /sbin /lib /lib64)
+    if("${_viper_real_destdir}" STREQUAL "${_viper_unsafe}")
+      message(FATAL_ERROR "Unsafe DESTDIR '${_viper_destdir}'; refusing host installation.")
+    endif()
+  endforeach()
   if(NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
     message(FATAL_ERROR "Packaged launchers require --prefix /usr.")
   endif()
