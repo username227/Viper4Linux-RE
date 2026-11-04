@@ -46,17 +46,17 @@ with tempfile.TemporaryDirectory(prefix='viper arch packaging ') as tmp:
     # A fixture with imported targets exercises the *real* install rules,
     # without compiling, starting audio or writing outside temp directories.
     (tree / 'CMakeLists.txt').write_text(
-        'cmake_minimum_required(VERSION 3.20)\\n'
-        'project(ArchStageFixture LANGUAGES C CXX)\\n'
-        'foreach(name IN ITEMS viper-gui viper-ctl viper-output-state)\\n'
-        '  add_executable(${name} IMPORTED GLOBAL)\\n'
+        'cmake_minimum_required(VERSION 3.20)\n'
+        'project(ArchStageFixture LANGUAGES C CXX)\n'
+        'foreach(name IN ITEMS viper-gui viper-ctl viper-output-state)\n'
+        '  add_executable(${name} IMPORTED GLOBAL)\n'
         '  set_target_properties(${name} PROPERTIES IMPORTED_LOCATION '
-        '"${CMAKE_BINARY_DIR}/${name}")\\n'
-        'endforeach()\\n'
-        'add_library(viper_dsp_ladspa MODULE IMPORTED GLOBAL)\\n'
+        '"${CMAKE_BINARY_DIR}/${name}")\n'
+        'endforeach()\n'
+        'add_library(viper_dsp_ladspa MODULE IMPORTED GLOBAL)\n'
         'set_target_properties(viper_dsp_ladspa PROPERTIES IMPORTED_LOCATION '
-        '"${CMAKE_BINARY_DIR}/viper_dsp_ladspa.so")\\n'
-        f'include("{INSTALL}")\\n'
+        '"${CMAKE_BINARY_DIR}/viper_dsp_ladspa.so")\n'
+        f'include("{INSTALL}")\n'
     )
     configured = subprocess.run(['cmake', '-S', str(tree), '-B', str(build)],
                                 text=True, capture_output=True)
