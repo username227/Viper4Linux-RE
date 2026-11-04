@@ -8,6 +8,7 @@ python3 tests/check-packaging-contract.py
 python3 tests/check-launcher.py
 python3 tests/check-arch-install.py
 python3 tests/check-source-setup.py
+python3 tests/check-cmake-source-checkout.py
 python3 -m unittest discover -s tests -p 'test_output_*.py' -v
 
 echo 'PASS: package smoke checks (launcher, staging, per-output logic)'
