@@ -22,10 +22,18 @@ plugins at runtime.
 
 ## CMake installation parity (development branch only)
 
-The `refactor/cmake-modernization` branch adds an **experimental,
-staging-only** Debian layout to CMake. This does **not** yet change the
-production `.deb` workflow, whose packaging, dependency detection,
-distribution-specific images and installed smoke tests remain authoritative.
+On the `refactor/cmake-modernization` branch, `scripts/build-native-deb.sh`
+defaults to CMake-owned DSP source preparation and guarded `DESTDIR`
+installation of the runtime payload. For controlled comparison, set
+`VIPER_DEB_STAGING_BACKEND=legacy`. Debian-specific `dpkg-shlibdeps`,
+`dpkg-deb`, distro base checks and packaging metadata remain in the script.
+The published `main` workflow is unchanged until the modernization branch is
+accepted and merged.
+
+An isolated GitHub Actions matrix has already **built and installed**
+CMake-staged native packages in disposable Arch, Ubuntu 24.04 and Debian 13
+containers (7/7 jobs in run 41845893378). This does not claim validation
+of desktop PipeWire routing or audio hardware.
 
 On an Arch developer workstation, compare the staged filesystem payloads
 without building or installing a Debian package:

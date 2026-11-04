@@ -14,11 +14,16 @@ There are three supported paths; they do **not** share a PKGBUILD:
   `packaging/arch/PKGBUILD.stable.in` and a pinned, unified source archive.
   It runs an actual Arch package build; generation does not publish to AUR.
 
-Both Arch package variants delegate installation to the source-controlled
-`packaging/arch/install-package.sh`. It validates the built binaries and
-source assets, installs runtime Python modules automatically from
-`src/viper_*.py`, and verifies the staged package. Source reorganization
-therefore normally requires no AUR PKGBUILD edits.
+On `refactor/cmake-modernization`, the **stable** Arch package uses CMake's
+private DSP preparation and guarded `DESTDIR` staging by default. Set
+`VIPER_ARCH_STAGING_BACKEND=legacy` only to compare with the old
+`packaging/arch/install-package.sh` reference. CMake automatically discovers
+runtime Python modules from `src/viper_*.py`.
+
+The separately maintained `viper4linux-re-git` AUR recipe has not been changed
+by this migration and may still use the legacy staging helper. It needs an
+independent update in the maintainer's AUR checkout after final acceptance;
+neither this branch nor the GitHub Actions jobs publish anything to the AUR.
 
 ## Dependency and package regression checks
 
@@ -132,7 +137,8 @@ mkdir -p release-candidate
 bash scripts/prepare-stable-release.sh 1.1.1 "$PWD/release-candidate"
 ```
 
-The resulting source archive contains the pinned, unpatched upstream DSP; the
-stable PKGBUILD applies the three compatibility fixes only to a private build
-copy. The full Arch packaging test requires an Arch environment with pacman,
+The resulting source archive contains the pinned, unpatched upstream DSP.
+The stable PKGBUILD now lets CMake verify the upstream revision and apply
+all three DSP compatibility patches to a **private** build copy. The source
+archive and its upstream dependency remain unmodified. The full Arch packaging test requires an Arch environment with pacman,
 Qt6, CMake and the other declared dependencies.
