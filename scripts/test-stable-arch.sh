@@ -28,11 +28,35 @@ runuser -u builder -- env SRCDEST="$release_dir" bash -c '
 # Keep full native DSP tests in CI, not routine user's makepkg check().
 source_tree="$release_dir/arch-build/src/viper4linux-re-$version"
 test -f "$source_tree/tests/check-developer.sh"
+# Unsafe DESTDIR tests run ONLY inside this disposable Arch Docker job,
+    # against the real CMake install script produced by makepkg.
+    VIPER_CI_STAGING_GUARD_TEST=1 bash "$source_tree/tests/check-cmake-install-guard.sh" \
+        "$release_dir/arch-build/src/viper4linux-build"
 runuser -u builder -- bash -c '
     set -Eeuo pipefail
     cd "$1"
     bash tests/check-developer.sh
 ' bash "$source_tree"
+
+# Independently exercise the *normal source-checkout* CMake defaults from the
+# same pinned source archive. No package install or PipeWire audio is started.
+runuser -u builder -- bash -c '
+        set -Eeuo pipefail
+        source_tree=$1
+        cmake -S "$source_tree" -B "$source_tree/build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DVIPER_BUILD_DEVELOPER_TESTS=OFF
+        cmake --build "$source_tree/build" --target viper_source_check --parallel 4
+        test -r "$source_tree/build/routing-config/filter-chain.conf"
+        test -r "$source_tree/build/routing-config/filter-chain.conf.d/99-viper-smart.conf"
+        (cd "$source_tree" && python3 src/viper_launcher.py --fingerprint >/dev/null)
+        echo "PASS: real CMake source-checkout build, routing setup and backend fingerprint"
+    ' bash "$source_tree"
+
+# Verify repeatable CMake staging from the native compiled package build.
+# Only private temporary DESTDIR trees are used; never install on this host.
+bash "$source_tree/tests/check-cmake-install-parity.sh" \
+    "$release_dir/arch-build/src/viper4linux-build"
 
 # Only the main application package is a release asset. makepkg may also
 # produce a debug-symbol package, which is deliberately not distributed here.

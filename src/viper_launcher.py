@@ -28,6 +28,14 @@ SYSTEM_ROUTING = Path('/usr/share/viper4linux/routing-config/filter-chain.conf.d
 PROC = Path('/proc')
 
 
+def source_routing_dir(root: Path) -> Path:
+    """Match scripts/start.sh: keep custom source config, otherwise use CMake."""
+    legacy = root / 'routing-config'
+    if (legacy / 'filter-chain.conf').is_file():
+        return legacy
+    return root / 'build/routing-config'
+
+
 def fingerprint(root: Path = ROOT) -> str:
     # Include the native DSP binary, the IPC controller and the filter-chain
     # configuration. A rebuilt backend is detected even if Git HEAD is unchanged.
@@ -37,13 +45,16 @@ def fingerprint(root: Path = ROOT) -> str:
         root = Path('/usr')  # stable path components in the fingerprint
     else:
         paths = [root / 'build/viper_dsp_ladspa.so', root / 'build/viper-ctl']
-        paths += sorted((root / 'routing-config').rglob('*.conf'))
+        routing = source_routing_dir(root)
+        if not (routing / 'filter-chain.conf').is_file():
+            raise RuntimeError('Source PipeWire routing config missing; rerun CMake configure.')
+        paths += sorted(routing.rglob('*.conf'))
     if len(paths) < 3:
-        raise RuntimeError('PipeWire configuration missing. Run ./install.sh first.')
+        raise RuntimeError('PipeWire configuration missing. Run cmake -S . -B build && cmake --build build first.')
     digest = hashlib.sha256(b'viper4linux-backend-fingerprint-v1\0')
     for path in paths:
         if not path.is_file():
-            raise RuntimeError(f'Missing backend build artifact: {path}. Run ./install.sh first.')
+            raise RuntimeError(f'Missing backend build artifact: {path}. Run cmake -S . -B build && cmake --build build first.')
         digest.update(str(path.relative_to(root)).encode() + b'\0')
         with path.open('rb') as f:
             while chunk := f.read(1024 * 1024):
@@ -142,6 +153,44 @@ def ensure_backend(root: Path = ROOT) -> None:
         raise RuntimeError(f'Backend did not become ready; see {log_path}')
 
 
+
+def launch_preflight(root: Path = ROOT, proc_root: Path = PROC) -> str:
+    """Read-only preview of ensure_backend's initial decision.
+
+    The live launcher takes a lock and rechecks the backend before changing
+    anything. This preview is only a momentary snapshot, not a reservation.
+    """
+    desired = fingerprint(root)
+    system = SYSTEM_MODE and root == ROOT
+    gui = Path('/usr/bin/viper4linux-gui') if system else root / 'build/viper-gui'
+    start = Path('/usr/lib/viper4linux/start-backend') if system else root / 'scripts/start.sh'
+    for name, path in (('GUI', gui), ('backend start command', start)):
+        if not path.is_file() or not os.access(path, os.X_OK):
+            raise RuntimeError(f'{name} missing or not executable: {path}')
+    runtime = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
+    if not runtime.is_dir():
+        raise RuntimeError(f'PipeWire runtime directory does not exist: {runtime}')
+    current = running_clients(proc_root)
+    lines = [
+        'Viper4Linux launch preflight (read-only snapshot; no actions taken):',
+        f'  Build: {"system package" if system else "source checkout"}',
+        f'  Launcher backend: {start}',
+        f'  Backend fingerprint: {desired}',
+    ]
+    if not current:
+        lines.append('  Action on launch: START a backend (none detected).')
+    elif len(current) == 1 and next(iter(current.values())) == desired:
+        pid = next(iter(current))
+        lines.append(f'  Action on launch: REUSE matching backend PID {pid}.')
+    else:
+        pids = ', '.join(str(pid) for pid in sorted(current))
+        lines.append(f'  Action on launch: REPLACE existing backend PID(s) {pids}.')
+        lines.append('  WARNING: Launch would stop the existing ViPER backend, briefly interrupting audio.')
+    lines.append('  No GUI or backend was started, stopped, or modified.')
+    lines.append('  Process state may change before an actual launch.')
+    return '\n'.join(lines)
+
+
 # An Audio Output manager is a separate process, never tied to the GUI.
 OUTPUT_MANAGER_TAG = b'VIPER_AUDIO_OUTPUT_MANAGER_SHA='
 
@@ -203,15 +252,21 @@ def ensure_output_monitor(backend_pid: int, root: Path = ROOT) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='Viper4Linux unified launcher')
-    parser.add_argument('--fingerprint', action='store_true', help='print the built backend fingerprint')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--fingerprint', action='store_true', help='print the built backend fingerprint')
+    mode.add_argument('--preflight', action='store_true',
+                      help='preview backend reuse/replacement without launching or changing audio')
     args = parser.parse_args()
     try:
         if args.fingerprint:
             print(fingerprint())
             return 0
+        if args.preflight:
+            print(launch_preflight())
+            return 0
         gui = Path('/usr/bin/viper4linux-gui') if SYSTEM_MODE else ROOT / 'build/viper-gui'
         if not gui.is_file() or not os.access(gui, os.X_OK):
-            raise RuntimeError('GUI not built. Run ./install.sh first.')
+            raise RuntimeError('GUI not built. Run cmake -S . -B build && cmake --build build first.')
         backend_pid = ensure_backend()
         try:
             ensure_output_monitor(backend_pid)

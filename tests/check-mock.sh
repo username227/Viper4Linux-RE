@@ -6,10 +6,26 @@ cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 work=$(mktemp -d)
 config=$(mktemp -d)
 trap 'rm -rf -- "$work" "$config"' EXIT
+# CTest supplies CMake-built mock binaries. When called directly (including
+# from existing packaging/CI scripts) this runner retains its proven g++ path.
+binary_dir=${VIPER_MOCK_BIN_DIR:-$work}
+if [[ -n ${VIPER_MOCK_BIN_DIR:-} ]]; then
+    for binary in viper_mock.so check check-eq-presets check-ir-reader check-ddc-reader check-cli-controls check-cli-batch check-cli-settings check-cli-eq-presets check-output-state; do
+        if [[ ! -f "$binary_dir/$binary" ]]; then
+            echo "Missing CMake-built mock test: $binary_dir/$binary" >&2
+            echo 'Run cmake --build <build-dir> --target viper_native_mock_tests first.' >&2
+            exit 1
+        fi
+    done
+fi
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -shared -Wall -Wextra -Itests/mock -Isrc \
-  src/viper-ladspa.cpp tests/mock/mock_viper.cpp -o "$work/viper_mock.so"
+  src/viper-ladspa.cpp tests/mock/mock_viper.cpp -o "$binary_dir/viper_mock.so"
+fi
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -Wall -Wextra -Itests/mock -Isrc \
-  tests/mock/check.cpp -ldl -o "$work/check"
+  tests/mock/check.cpp -ldl -o "$binary_dir/check"
+fi
 mkdir -p "$config/ViPERforLinux"
 python3 - "$config/impulse.irs" <<'PY_WAV'
 import sys, wave, struct
@@ -96,13 +112,19 @@ python3 tests/check-dynamic-eq-ui-contract.py
 python3 tests/check-about-and-deq-handoff.py
 python3 tests/check-tray-contract.py
 python3 tests/check-native-effect-routing.py
-g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-eq-presets.cpp -o "$work/check-eq-presets"
-"$work/check-eq-presets"
-g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ir-reader.cpp -o "$work/check-ir-reader"
-"$work/check-ir-reader" "$work"
-g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ddc-reader.cpp -o "$work/check-ddc-reader"
-"$work/check-ddc-reader"
-XDG_CONFIG_HOME="$config" "$work/check" "$work/viper_mock.so"
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-eq-presets.cpp -o "$binary_dir/check-eq-presets"
+fi
+"$binary_dir/check-eq-presets"
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ir-reader.cpp -o "$binary_dir/check-ir-reader"
+fi
+"$binary_dir/check-ir-reader" "$work"
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc tests/check-ddc-reader.cpp -o "$binary_dir/check-ddc-reader"
+fi
+"$binary_dir/check-ddc-reader"
+XDG_CONFIG_HOME="$config" "$binary_dir/check" "$binary_dir/viper_mock.so"
 
 # A separate fresh DSP instance loads [precision] after the legacy GUI values.
 # No live PipeWire server or user's preferences are involved.
@@ -118,33 +140,43 @@ spectrum_exciter_milli=2345
 diff_lp_hz=4267
 field_depth=537
 INI_PRECISION
-XDG_CONFIG_HOME="$config/precision" "$work/check" "$work/viper_mock.so" --precision
+XDG_CONFIG_HOME="$config/precision" "$binary_dir/check" "$binary_dir/viper_mock.so" --precision
 
 # The CLI test uses a PID-scoped mock IPC channel and never connects to live audio.
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
   $(pkg-config --cflags Qt6Core) tests/check-cli-controls.cpp \
-  -o "$work/check-cli-controls" $(pkg-config --libs Qt6Core)
-XDG_CONFIG_HOME="$config/cli-basic" "$work/check-cli-controls"
+  -o "$binary_dir/check-cli-controls" $(pkg-config --libs Qt6Core)
+fi
+XDG_CONFIG_HOME="$config/cli-basic" "$binary_dir/check-cli-controls"
 
 # The command tokenizer and whole-sequence validator are independent of Qt.
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
 g++ -std=c++17 -O2 -Wall -Wextra -Werror -Isrc \
-  tests/check-cli-batch.cpp -o "$work/check-cli-batch"
-"$work/check-cli-batch"
+  tests/check-cli-batch.cpp -o "$binary_dir/check-cli-batch"
+fi
+"$binary_dir/check-cli-batch"
 
 # CLI persistence is tested in its own temporary config home.
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
   $(pkg-config --cflags Qt6Core) tests/check-cli-settings.cpp \
-  -o "$work/check-cli-settings" $(pkg-config --libs Qt6Core)
-XDG_CONFIG_HOME="$config/cli-only" "$work/check-cli-settings"
+  -o "$binary_dir/check-cli-settings" $(pkg-config --libs Qt6Core)
+fi
+XDG_CONFIG_HOME="$config/cli-only" "$binary_dir/check-cli-settings"
 
 # Preset selection and complete status use another isolated mock channel/store.
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
   $(pkg-config --cflags Qt6Core) tests/check-cli-eq-presets.cpp \
-  -o "$work/check-cli-eq-presets" $(pkg-config --libs Qt6Core)
-XDG_CONFIG_HOME="$config/cli-presets" "$work/check-cli-eq-presets"
+  -o "$binary_dir/check-cli-eq-presets" $(pkg-config --libs Qt6Core)
+fi
+XDG_CONFIG_HOME="$config/cli-presets" "$binary_dir/check-cli-eq-presets"
 
 # Native per-output DSP round-trip tests use a PID-isolated mock IPC page.
+if [[ -z ${VIPER_MOCK_BIN_DIR:-} ]]; then
 g++ -pthread -std=c++17 -DVIPER_MOCK_TEST_IPC -O2 -fPIC -Wall -Wextra -Werror -Isrc \
   $(pkg-config --cflags Qt6Core) tests/check-output-state.cpp \
-  -o "$work/check-output-state" $(pkg-config --libs Qt6Core)
-XDG_CONFIG_HOME="$config/output-state" "$work/check-output-state"
+  -o "$binary_dir/check-output-state" $(pkg-config --libs Qt6Core)
+fi
+XDG_CONFIG_HOME="$config/output-state" "$binary_dir/check-output-state"

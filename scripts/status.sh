@@ -29,5 +29,5 @@ if [[ -x build/viper-ctl ]]; then
   echo 'DSP control channel:'
   ./build/viper-ctl status || true
 else
-  echo 'Not built yet: ./install.sh'
+  echo 'Not built yet: cmake -S . -B build && cmake --build build'
 fi

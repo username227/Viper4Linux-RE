@@ -22,9 +22,70 @@
 - `resources/`, `routing-config/`, `packaging/arch/`: icons, PipeWire configuration, local Arch packaging.
 - `tests/`: isolated DSP mock, parsing, GUI contract and launcher tests.
 
-The full upstream processor source is **not embedded** in the main application
-repository. `install.sh` and the local Arch PKGBUILD retrieve pinned ViPERDSP
-commit `6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`.
+The upstream ViPERDSP processor is a Git submodule pinned to commit
+`6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`. CMake verifies the
+recorded revision in a Git checkout and creates an untracked, private patched
+build copy. Release archives bundle that exact source for offline builds.
+
+## CMake-first source checkout (modernization branch)
+
+A normal source build no longer requires an installer script to prepare DSP
+patches or routing configuration:
+
+```sh
+git submodule update --init --checkout third_party/ViPERDSP
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+cmake --build build --target viper_source_check
+```
+
+CMake verifies the recorded upstream ViPERDSP revision and applies all three
+downstream fixes to a **private build-tree copy**, without modifying the Git
+submodule. Unless `VIPER_ENABLE_SYSTEM_INSTALL=ON`, the source-build option
+`VIPER_SOURCE_PREPARE_ROUTING=ON` automatically copies the stock PipeWire
+filter-chain template and project fragment into
+`build/routing-config/` at configure time. The default template is
+`/usr/share/pipewire/filter-chain.conf`, overridable by
+`-DVIPER_SOURCE_ROUTING_TEMPLATE=/absolute/template`. A package build
+does not need the developer's stock filter-chain file, because it sets
+`VIPER_ENABLE_SYSTEM_INSTALL=ON` and defaults routing preparation to OFF.
+
+The source launcher expects the build directory named **`build`**.
+When a developer already has a custom
+`routing-config/filter-chain.conf` in the checkout, the launcher and
+backend keep using that file; otherwise they use CMake's generated files
+under `build/routing-config/`. The `viper_source_check` build target
+verifies the compiled binaries, module and effective routing configuration.
+It does **not** start PipeWire, the backend or the GUI.
+
+### Optional private command shortcuts
+
+If you explicitly want `~/.local/bin/viper4linux` and `v4l-cli`
+to point into the source checkout, enable an **additional developer option**:
+
+```sh
+cmake -S . -B build -DVIPER_ENABLE_SOURCE_LINK_TARGET=ON
+cmake --build build --target viper_source_links
+```
+
+The shortcuts are never created by configure or the normal build.
+`viper_source_links` runs only when explicitly requested. It verifies the
+source build, requires a private home subdirectory, checks both names for
+unrelated files/symlinks before creating either shortcut, and preserves
+existing matching shortcuts. An alternative user-private directory can be
+set using `-DVIPER_SOURCE_LINK_DIRECTORY=/absolute/path/under/your/home`.
+
+**Do not invoke `viper_source_links` or the source launcher on a workstation
+with a working installed ViPER session unless you intend to switch command
+resolution or perform the separately planned live-audio test.**
+Neither operation is part of native package building.
+
+These behaviors are covered by
+`python3 tests/check-cmake-source-checkout.py` and the launcher regression
+suite. The separate `install.sh` and `scripts/setup-source-checkout.sh` source
+setup scripts have been retired from this development branch. CMake and its
+developer targets now own their functionality. This is not proof of live
+PipeWire/audio acceptance, which must still be checked before merging.
 
 ## Unreleased change log — refactor branch versus `main`
 
@@ -175,10 +236,25 @@ the precision keys to prevent values from leaking between devices.
 ## Build and test workflow
 
 Development on Arch Linux requires C++17, CMake, Qt6 Widgets, PipeWire,
-LADSPA headers and upstream ViPERDSP. For a direct-source build from a clean
-checkout, run `./install.sh` (which runs the DSP mock tests and checks the LADSPA
-export), then `./viper4linux`. For a system build, use
-[Arch packaging](ARCH-PACKAGING.md).
+LADSPA headers and pinned upstream ViPERDSP. For a direct source build,
+initialize the submodule, run `cmake -S . -B build`,
+`cmake --build build --parallel 4` and
+`cmake --build build --target viper_source_check`. The last target checks
+the native LADSPA symbol and source routing without launching audio.
+Before a live source launch, run `./viper4linux --preflight` from the
+checkout. This **read-only** command checks the source build and current
+ViPER process marker and reports whether an actual launch would start a new
+backend, reuse a matching backend, or stop/replace an existing backend.
+It does not create process locks, start the GUI, change presets, or stop audio.
+The result is a snapshot; the real launcher rechecks state under a lock.
+When the output says **REPLACE**, a subsequent normal launch may briefly
+interrupt the current ViPER audio session. Check that your existing output
+memory and settings are preserved before proceeding.
+
+Run `./viper4linux` only when intentionally testing the source backend.
+For complete DSP mock and regression tests, use CTest or the preserved
+standalone `tests/check-developer.sh` CI script. For a system package,
+see [Arch packaging](ARCH-PACKAGING.md).
 
 Routine Arch package builds run a deliberately small, deterministic smoke suite
 after compiling the application. It checks launcher process handling, offline

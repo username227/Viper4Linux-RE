@@ -2,10 +2,15 @@
 
 There are three supported paths; they do **not** share a PKGBUILD:
 
-- **Direct source build:** `./install.sh` checks for required commands,
-  headers and Qt6 components, initializes the pinned ViPERDSP submodule,
-  patches a private copy and builds with CMake. It does not invoke `makepkg`
-  or read any PKGBUILD. Install the prerequisites listed in the README.
+- **Direct source build:** initialize the pinned ViPERDSP submodule,
+  then `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release`,
+  `cmake --build build --parallel 4`, and
+  `cmake --build build --target viper_source_check`.
+  CMake prepares the private DSP dependency, generates the build-local routing
+  configuration and verifies the native LADSPA export. This does not invoke
+  `makepkg`, install a system package or launch audio. Optional shell aliases
+  require a separate explicit `viper_source_links` CMake target. See the
+  README and `docs/DEVELOPMENT.md`.
 - **Development VCS package:** `viper4linux-re-git` is published and its
   authoritative PKGBUILD is maintained separately in the AUR. Build/update
   it using the AUR Git checkout or an AUR helper. The obsolete duplicate
@@ -14,23 +19,36 @@ There are three supported paths; they do **not** share a PKGBUILD:
   `packaging/arch/PKGBUILD.stable.in` and a pinned, unified source archive.
   It runs an actual Arch package build; generation does not publish to AUR.
 
-Both Arch package variants delegate installation to the source-controlled
-`packaging/arch/install-package.sh`. It validates the built binaries and
-source assets, installs runtime Python modules automatically from
-`src/viper_*.py`, and verifies the staged package. Source reorganization
-therefore normally requires no AUR PKGBUILD edits.
+On `refactor/cmake-modernization`, **CMake is the only application
+installation engine.** The stable Arch PKGBUILD uses `cmake --install`
+with a guarded `DESTDIR`; it does not maintain a second file-copy list or
+manually patch ViPERDSP. The AUR compatibility installer has been retired.
+
+The maintainer updated the independently maintained `viper4linux-re-git`
+PKGBUILD locally to let CMake validate the pinned ViPERDSP checkout, prepare
+and patch a private copy, compile and stage all package files directly.
+A complete `makepkg -Cf` test on Arch (November 4, 2026) passed:
+the private source was prepared afresh, all three patches applied, the package
+smoke suite and 22 output-memory/identity tests passed, and the main and
+debug pacman package archives were generated. Its test-only Git branch
+selector must be removed before publication. **Do not push the revised AUR
+recipe until this branch has been merged into `main`.** No AUR release
+or system installation was performed by this test.
 
 ## Dependency and package regression checks
 
 `tests/check-packaging-contract.py` checks the stable template's runtime
-and build dependencies, direct installer probes (including Qt6 Widgets and
-Network), CMake requirements, the README's source-install package list,
-pinned ViPERDSP handling, downstream patches, shared staging and backend
+and build dependencies, CMake dependency discovery (including Qt6 Widgets and
+Network), the README's source-build package list, pinned ViPERDSP handling,
+downstream patches, sole-source CMake staging and backend
 launcher contracts. It is invoked by `tests/check-package.sh` from both
 normal package `check()` and the full developer suite. It is intentionally
 compatible with a unified release archive, which has no `.gitmodules`.
 `tests/check-arch-install.py` independently stages a mock stable and VCS
-package and validates its file manifest and failure behavior.
+package directly through CMake, validating paths, permissions, dynamic
+Python files, failure behavior and stable/VCS license directories. A separate
+real-build staging test compares the complete manifests of two independently
+staged CMake installations.
 
 The packaged `check()` suite is intentionally short and offline. For
 native DSP and GUI regression coverage, run
@@ -132,7 +150,8 @@ mkdir -p release-candidate
 bash scripts/prepare-stable-release.sh 1.1.1 "$PWD/release-candidate"
 ```
 
-The resulting source archive contains the pinned, unpatched upstream DSP; the
-stable PKGBUILD applies the three compatibility fixes only to a private build
-copy. The full Arch packaging test requires an Arch environment with pacman,
+The resulting source archive contains the pinned, unpatched upstream DSP.
+The stable PKGBUILD now lets CMake verify the upstream revision and apply
+all three DSP compatibility patches to a **private** build copy. The source
+archive and its upstream dependency remain unmodified. The full Arch packaging test requires an Arch environment with pacman,
 Qt6, CMake and the other declared dependencies.

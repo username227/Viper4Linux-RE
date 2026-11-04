@@ -4,7 +4,12 @@
 get_filename_component(_v4l_source_root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set(V4L_BASE_VERSION "0.0.0")
 set(V4L_REVISION "unknown")
-find_package(Git QUIET)
+# Unified source archives carry release metadata and must build without Git.
+# Only source checkouts need an optional Git lookup for version discovery.
+if(EXISTS "${_v4l_source_root}/.git" AND
+   NOT EXISTS "${_v4l_source_root}/RELEASE-VERSION")
+  find_package(Git QUIET)
+endif()
 
 if(EXISTS "${_v4l_source_root}/RELEASE-VERSION")
   file(STRINGS "${_v4l_source_root}/RELEASE-VERSION" _v4l_release_version LIMIT_COUNT 1)
