@@ -29,7 +29,7 @@ if(NOT VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "arch" AND
 endif()
 
 set(VIPER_SYSTEM_PACKAGE_NAME "viper4linux-re" CACHE STRING
-    "Package name for the Arch /usr/share/licenses directory")
+    "Package name for the Arch ViPERDSP-specific notice directory")
 if(NOT VIPER_SYSTEM_PACKAGE_NAME MATCHES "^[a-z0-9][a-z0-9@._+-]*$")
   message(FATAL_ERROR "Unsafe VIPER_SYSTEM_PACKAGE_NAME: '${VIPER_SYSTEM_PACKAGE_NAME}'")
 endif()
@@ -63,7 +63,7 @@ if(_viper_runtime_count LESS 5)
 endif()
 
 # The first install rule rejects host installs and unsafe staging roots before
-# installing even one file. The compatibility wrappers delegate to this CMake installer.
+# installing even one file. Native packagers invoke this installer directly.
 install(CODE [[
   set(_viper_destdir "$ENV{DESTDIR}")
   if(NOT IS_ABSOLUTE "${_viper_destdir}")
@@ -131,8 +131,8 @@ install(FILES
   DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
 
 if(VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "arch")
-  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${VIPER_SYSTEM_PACKAGE_NAME}")
+  # GPL-3.0-only is supplied by Arch's system licenses package; do not duplicate it.
+  # Retain the custom ViPERDSP notice for LicenseRef-ViPERDSP.
   install(FILES "${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES.md"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${VIPER_SYSTEM_PACKAGE_NAME}"
     RENAME "ViPERDSP-NOTICE.md")
@@ -154,7 +154,8 @@ else()
   # Match the existing Debian copyright payload, including its UTF-8 heading.
   file(READ "${PROJECT_SOURCE_DIR}/LICENSE" _viper_deb_license)
   string(CONCAT _viper_deb_copyright
-    "ViPER for Linux RE original code — MIT license.\n"
+    "ViPER4Linux-RE original code — GNU GPL version 3 only (GPL-3.0-only).\n"
+    "Copyright (C) 2026 Gerald Frank (username227).\n"
     "ViPERDSP has separate terms; see THIRD-PARTY-NOTICES.md.\n\n"
     "${_viper_deb_license}")
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")

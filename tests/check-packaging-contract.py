@@ -17,6 +17,9 @@ prepare = (root / 'cmake/PrepareViPERDSP.cmake').read_text()
 source_setup = (root / 'cmake/SourceCheckout.cmake').read_text()
 cmake = (root / 'CMakeLists.txt').read_text()
 readme = (root / 'README.md').read_text()
+license_text = (root / 'LICENSE').read_text()
+copyright_notice = (root / 'COPYRIGHT').read_text()
+third_party_notices = (root / 'THIRD-PARTY-NOTICES.md').read_text()
 launcher = (root / 'src/viper_launcher.py').read_text()
 backend = (arch / 'start-backend').read_text()
 
@@ -39,6 +42,16 @@ require(not (arch / 'install-package.sh').exists(),
         'Obsolete AUR CMake compatibility installer was reintroduced')
 
 require('pkgname=viper4linux-re\n' in stable, 'Wrong stable package name')
+require("license=('GPL-3.0-only' 'LicenseRef-ViPERDSP')" in stable,
+        'Arch package must declare GPL-3.0-only plus third-party notice')
+require(license_text.startswith('GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n'),
+        'Missing GNU GPL v3 text')
+require('Gerald Frank (username227)' in copyright_notice and
+        'GPL-3.0-only' in copyright_notice, 'Project author and license missing')
+require('Gerald Frank' in readme and 'GPL-3.0-only' in readme,
+        'User-visible author/license attribution missing')
+require('GPL-3.0-only' in third_party_notices and 'ViPERDSP' in third_party_notices,
+        'Third-party licensing boundary missing')
 runtime = {'glibc', 'gcc-libs', 'qt6-base', 'pipewire', 'ladspa', 'python'}
 build = {'cmake', 'pkgconf'}  # gcc/make/binutils belong to Arch base-devel
 require(runtime <= bash_array(stable, 'depends'), 'Stable runtime dependencies incomplete')
@@ -118,6 +131,12 @@ require('bash tests/check-mock.sh' in developer and
 # AUR -git PKGBUILD. The maintainer confirmed a clean -git makepkg -Cf build
 # using the same options and direct DESTDIR staging before adapter retirement.
 system = (root / 'cmake/InstallSystem.cmake').read_text()
+arch_rules = system.split('if(VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "arch")', 1)[1].split('else()', 1)[0]
+require('install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"' not in arch_rules,
+        'Arch must not package a duplicate standard GPL license')
+require('ViPERDSP-NOTICE.md' in arch_rules, 'Missing custom upstream license notice')
+require('Copyright (C) 2026 Gerald Frank (username227)' in system,
+        'Debian metadata must credit original author')
 for required in ('src/viper_launcher.py', 'src/viper_output_monitor.py',
                  'file(GLOB _viper_runtime_python', 'Missing package source:',
                  'viper4linux-output-state', 'viper4linux-output',
@@ -125,7 +144,7 @@ for required in ('src/viper_launcher.py', 'src/viper_output_monitor.py',
     require(required in system, f'CMake install contract missing: {required}')
 require('viper-output-state' in cmake, 'Native output-state binary missing from CMake')
 for path in ('tests/check-package.sh', 'tests/check-developer.sh',
-             'cmake/SourceCheckout.cmake', 'tests/check-cmake-source-checkout.py', 'LICENSE',
+             'cmake/SourceCheckout.cmake', 'tests/check-cmake-source-checkout.py', 'LICENSE', 'COPYRIGHT',
              'THIRD-PARTY-NOTICES.md', 'packaging/arch/viper4linux.desktop'):
     require((root / path).is_file(), f'Missing project file: {path}')
 require('SYSTEM_MODE' in launcher and "Path('/usr/bin/viper4linux-gui')" in launcher,

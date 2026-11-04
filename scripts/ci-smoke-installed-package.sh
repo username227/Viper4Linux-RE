@@ -33,7 +33,9 @@ case "$mode" in
         pacman -U --noconfirm "$package"
         pacman -Q viper4linux-re
         echo 'Checking Arch-specific installed documentation and man-page links...'
-        test -r /usr/share/licenses/viper4linux-re/LICENSE
+        # Arch provides standard GPL text; custom upstream notice remains packaged.
+        test ! -e /usr/share/licenses/viper4linux-re/LICENSE
+        test -r /usr/share/licenses/viper4linux-re/ViPERDSP-NOTICE.md
         # Arch makepkg's zipman step may compress .1 files to .1.gz.
         # Official minimal Arch Docker images can also omit all man pages
         # during pacman installation. Verify the built archive contains them

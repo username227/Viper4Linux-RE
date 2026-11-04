@@ -91,7 +91,7 @@ with tempfile.TemporaryDirectory(prefix='viper arch cmake packaging ') as tmp:
     assert os.readlink(dest / 'usr/share/man/man1/v4l-cli.1') == 'viper4linux-ctl.1'
     assert (dest / 'usr/lib/ladspa/viper_dsp_ladspa.so').stat().st_mode & 0o777 == 0o755
     assert (dest / 'usr/share/doc/viper4linux/docs/guide.md').read_text() == 'example\n'
-    assert (dest / 'usr/share/licenses/viper4linux-re-git/LICENSE').is_file()
+    assert not (dest / 'usr/share/licenses/viper4linux-re-git/LICENSE').exists()
     assert (dest / 'usr/share/licenses/viper4linux-re-git/ViPERDSP-NOTICE.md').is_file()
 
     # A second, independently configured CMake build stages the stable package.
@@ -106,7 +106,8 @@ with tempfile.TemporaryDirectory(prefix='viper arch cmake packaging ') as tmp:
     stable.mkdir()
     result = stage(stable_build, stable)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert (stable / 'usr/share/licenses/viper4linux-re/LICENSE').is_file()
+    assert not (stable / 'usr/share/licenses/viper4linux-re/LICENSE').exists()
+    assert (stable / 'usr/share/licenses/viper4linux-re/ViPERDSP-NOTICE.md').is_file()
     assert not (stable / 'usr/share/licenses/viper4linux-re-git').exists()
 
     # Missing inputs fail at configure time, before anything can be staged.
@@ -129,5 +130,5 @@ with tempfile.TemporaryDirectory(prefix='viper arch cmake packaging ') as tmp:
     result = stage(build, alias)
     assert result.returncode != 0 and 'Symlinked DESTDIR' in result.stderr, result.stderr
 
-print('PASS: direct CMake staging handles stable/VCS licenses, dynamic Python, '
+print('PASS: direct CMake staging retains custom notices without redundant GPL copies, dynamic Python, '
       'modes, aliases, missing inputs and fail-closed private DESTDIR')

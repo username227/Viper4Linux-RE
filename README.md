@@ -205,15 +205,20 @@ and I'm grateful for their contributions.
 
 ## Source, contributions, and licensing
 
-The application, Qt interface, PipeWire integration, launcher, CLI and our
-original supporting code are released under the [MIT License](LICENSE),
-intended to make forks, experiments and improvements straightforward.
-**This MIT license does not cover ViPERDSP.**
+The original application, Qt interface, PipeWire integration, launcher, CLI
+and original supporting code are Copyright (C) 2026 Gerald Frank
+(`username227`) and are licensed under the
+[GNU General Public License version 3 only](LICENSE) (`GPL-3.0-only`).
+The project copyright statement is in [COPYRIGHT](COPYRIGHT).
+Earlier MIT-licensed versions retain the permissions originally granted;
+the new GPL license does not retroactively revoke them.
+**The GPL license applies only to original code licensed by its copyright
+holder; it does not relicense ViPERDSP or other third-party material.**
 
 ViPERDSP is a [separate upstream project](https://github.com/likelikeslike/ViPERDSP),
 tracked here as a pinned Git submodule in `third_party/ViPERDSP`. Its upstream
 README describes restrictions on use and does not grant a conventional
-open-source redistribution license. **Do not assume that our MIT license
+open-source redistribution license. **Do not assume that our GPL license
 permits redistribution of the combined DSP library, binary packages or
 unified-source archives.** See [third-party notices](THIRD-PARTY-NOTICES.md)
 and the [development guide](docs/DEVELOPMENT.md) for the exact dependency

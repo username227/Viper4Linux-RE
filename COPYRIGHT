@@ -1,0 +1,16 @@
+ViPER4Linux-RE — original application and integration code
+Copyright (C) 2026 Gerald Frank (username227)
+
+The original application code, Qt interface, PipeWire integration, launcher,
+command-line tools, and original supporting code are licensed under the
+GNU General Public License, version 3 only (SPDX: GPL-3.0-only).
+The complete GPL text is in LICENSE.
+
+This notice is limited to the copyrightable original contributions to this
+project. It does not claim authorship of third-party materials or supersede
+their licenses and notices. ViPERDSP is a separate upstream dependency with
+different terms; see THIRD-PARTY-NOTICES.md.
+
+Earlier versions distributed under the MIT license remain available under
+the rights granted by that license; this change governs the newly published
+GPL-licensed version and later GPL-licensed contributions.

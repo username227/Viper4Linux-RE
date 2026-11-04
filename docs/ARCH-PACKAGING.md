@@ -46,7 +46,7 @@ normal package `check()` and the full developer suite. It is intentionally
 compatible with a unified release archive, which has no `.gitmodules`.
 `tests/check-arch-install.py` independently stages a mock stable and VCS
 package directly through CMake, validating paths, permissions, dynamic
-Python files, failure behavior and stable/VCS license directories. A separate
+Python files, failure behavior and stable/VCS custom notice directories. A separate
 real-build staging test compares the complete manifests of two independently
 staged CMake installations.
 
@@ -97,8 +97,14 @@ reciprocal conflicts, upstream licenses, proper sources/hashes, dependencies,
 and reproducible builds. The VCS PKGBUILD is maintained in its separate AUR Git repository and is
 not duplicated here.
 
-Our application code is MIT-licensed. ViPERDSP has different upstream terms,
-which the MIT license does not supersede; see `THIRD-PARTY-NOTICES.md`.
+Original application code is copyrighted to Gerald Frank (`username227`)
+and is licensed under GPL-3.0-only; see `COPYRIGHT` and `LICENSE`.
+Arch supplies the standard GPL-3 text in its `licenses` package, so no
+duplicate GPL `LICENSE` is installed under the package's `/usr/share/licenses/`
+directory. The custom `ViPERDSP-NOTICE.md` stays in
+`/usr/share/licenses/viper4linux-re[-git]/` because upstream DSP
+terms remain separate (`LicenseRef-ViPERDSP`). See `THIRD-PARTY-NOTICES.md`.
+This GPL grant does not override upstream redistribution restrictions.
 Publishing a unified source archive is a separate, deliberate distribution
 step, not part of GitHub's automatic source archives.
 

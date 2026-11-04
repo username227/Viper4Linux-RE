@@ -41,6 +41,11 @@ can compare the CMake stage to a **frozen test-only baseline** located in
 production Debian builder. The comparison runs in temporary directories,
 without `apt`, `dpkg`, or a live audio session.
 
+Debian packages continue to include the GPL text under
+`/usr/share/doc/viper4linux-re/LICENSE` and the package-specific `copyright`
+file credits Gerald Frank while keeping ViPERDSP's separate notices. Arch
+omits only the redundant common GPL license file, not the upstream notice.
+
 The installed application still uses absolute `/usr` paths. CMake refuses
 other prefixes and unsafe `DESTDIR` values. Do not call `cmake --install`
 on a live host without an approved packaging environment.

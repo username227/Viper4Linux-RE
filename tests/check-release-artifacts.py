@@ -24,7 +24,7 @@ def verify(version: str, dest: Path):
     prefix = f'viper4linux-re-{version}/'
     with tarfile.open(tarpath, 'r:xz') as archive:
         members = set(archive.getnames())
-        required = {'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md',
+        required = {'README.md', 'LICENSE', 'COPYRIGHT', 'THIRD-PARTY-NOTICES.md',
                     'CMakeLists.txt', 'cmake/PrepareViPERDSP.cmake',
                     'cmake/InstallSystem.cmake', 'cmake/SourceCheckout.cmake',
                     'SOURCE-MANIFEST.txt', 'RELEASE-REVISION',

@@ -31,9 +31,10 @@ cp -a "$tree/docs" "$pkgroot/usr/share/doc/viper4linux-re/docs"
 # Standardize staged documentation permissions; cp -a otherwise propagates
 # setgid from a checkout and makes package modes host-dependent.
 chmod 00755 -- "$pkgroot/usr/share/doc/viper4linux-re/docs"
-# Debian copyright file is package-specific; our MIT license doesn't relicense DSP.
+# Preserve original Debian file layout; update metadata for current code license.
 {
-    printf 'ViPER for Linux RE original code — MIT license.\n'
+    printf 'ViPER4Linux-RE original code — GNU GPL version 3 only (GPL-3.0-only).\n'
+    printf 'Copyright (C) 2026 Gerald Frank (username227).\n'
     printf 'ViPERDSP has separate terms; see THIRD-PARTY-NOTICES.md.\n\n'
     cat "$tree/LICENSE"
 } > "$pkgroot/usr/share/doc/viper4linux-re/copyright"
