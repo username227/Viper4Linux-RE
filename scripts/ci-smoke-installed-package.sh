@@ -118,17 +118,7 @@ test -L /usr/bin/v4l-cli
 test "$(readlink /usr/bin/v4l-cli)" = viper4linux-ctl
 test -s /usr/lib/ladspa/viper_dsp_ladspa.so
 # Avoid grep -q in a pipefail pipeline: an early match can SIGPIPE nm.
-nm -D /usr/lib/ladspa/viper_dsp_ladspa.so | grep -E ' [TW] ladspa_descriptor
-
-echo 'Checking read-only CLI help and backend fingerprint entrypoints...'
-# Read-only command paths from the original release workflow smoke contract.
-# Do not run viper4linux, start-backend, or a live PipeWire session.
-viper4linux-ctl --help >/dev/null
-v4l-cli --help >/dev/null
-python3 /usr/lib/viper4linux/viper_launcher.py --fingerprint >/dev/null
-
-echo "PASS: installed $mode package in disposable CI container; files, aliases, LADSPA export, and read-only CLI checks passed (no audio launched)"
- >/dev/null
+nm -D /usr/lib/ladspa/viper_dsp_ladspa.so | grep -E ' [TW] ladspa_descriptor$' >/dev/null
 
 echo 'Checking read-only CLI help and backend fingerprint entrypoints...'
 # Read-only command paths from the original release workflow smoke contract.
