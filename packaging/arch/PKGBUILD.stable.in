@@ -16,10 +16,19 @@ source=("https://github.com/username227/viper4linux-re/releases/download/v${pkgv
 # Replace with the actual checksum after the workflow creates the release archive.
 sha256sums=('REPLACE_WITH_RELEASE_SHA256')
 
+# Developer CI can opt into the new CMake-owned DSP preparation and staging.
+# The stable release workflow and users retain the original path by default.
+case ${VIPER_ARCH_STAGING_BACKEND:-legacy} in
+    legacy|cmake) ;;
+    *) printf 'Unsupported VIPER_ARCH_STAGING_BACKEND: %s\n' "$VIPER_ARCH_STAGING_BACKEND" >&2; return 2 ;;
+esac
+
 prepare() {
     local tree="$srcdir/viper4linux-re-$pkgver"
     local dsp="$srcdir/ViPERDSP-patched"
 
+    # In CMake mode the configure step verifies and patches a private DSP copy.
+    [[ ${VIPER_ARCH_STAGING_BACKEND:-legacy} != cmake ]] || return 0
     # Keep the bundled upstream source unmodified: patch a private build copy.
     cp -a -- "$tree/third_party/ViPERDSP" "$dsp"
     VIPERDSP_SOURCE_DIR="$dsp" python3 "$tree/patches/fix_lufs_speed.py"
@@ -28,9 +37,17 @@ prepare() {
 }
 
 build() {
-    cmake -S "$srcdir/viper4linux-re-$pkgver" -B "$srcdir/viper4linux-build" \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DVIPERDSP_SOURCE_DIR="$srcdir/ViPERDSP-patched"
+    if [[ ${VIPER_ARCH_STAGING_BACKEND:-legacy} == cmake ]]; then
+        cmake -S "$srcdir/viper4linux-re-$pkgver" -B "$srcdir/viper4linux-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
+            -DVIPER_SYSTEM_INSTALL_LAYOUT=arch
+    else
+        cmake -S "$srcdir/viper4linux-re-$pkgver" -B "$srcdir/viper4linux-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DVIPERDSP_SOURCE_DIR="$srcdir/ViPERDSP-patched"
+    fi
     cmake --build "$srcdir/viper4linux-build" --parallel "$(nproc)"
 }
 
@@ -44,5 +61,9 @@ check() {
 package() {
     local tree="$srcdir/viper4linux-re-$pkgver"
     local built="$srcdir/viper4linux-build"
-    bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
+    if [[ ${VIPER_ARCH_STAGING_BACKEND:-legacy} == cmake ]]; then
+        DESTDIR="$pkgdir" cmake --install "$built"
+    else
+        bash "$tree/packaging/arch/install-package.sh" "$tree" "$built" "$pkgdir" "$pkgname"
+    fi
 }
