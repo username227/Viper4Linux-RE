@@ -17,8 +17,18 @@ if(NOT CMAKE_INSTALL_BINDIR STREQUAL "bin" OR
     "share and share/man paths for parity with the existing Arch package.")
 endif()
 
+set(VIPER_SYSTEM_INSTALL_LAYOUT "arch" CACHE STRING
+    "System package staging layout: arch or debian")
+set_property(CACHE VIPER_SYSTEM_INSTALL_LAYOUT PROPERTY STRINGS arch debian)
+if(NOT VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "arch" AND
+   NOT VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "debian")
+  message(FATAL_ERROR
+    "Unsupported VIPER_SYSTEM_INSTALL_LAYOUT='${VIPER_SYSTEM_INSTALL_LAYOUT}' "
+    "(choose arch or debian).")
+endif()
+
 set(VIPER_SYSTEM_PACKAGE_NAME "viper4linux-re" CACHE STRING
-    "Package name for the staged Arch-style /usr/share/licenses directory")
+    "Package name for the Arch /usr/share/licenses directory")
 if(NOT VIPER_SYSTEM_PACKAGE_NAME MATCHES "^[a-z0-9][a-z0-9@._+-]*$")
   message(FATAL_ERROR "Unsafe VIPER_SYSTEM_PACKAGE_NAME: '${VIPER_SYSTEM_PACKAGE_NAME}'")
 endif()
@@ -84,22 +94,71 @@ install(FILES
   "${PROJECT_SOURCE_DIR}/man/viper4linux.1"
   "${PROJECT_SOURCE_DIR}/man/viper4linux-ctl.1"
   DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
-install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${VIPER_SYSTEM_PACKAGE_NAME}")
-install(FILES "${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES.md"
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${VIPER_SYSTEM_PACKAGE_NAME}"
-  RENAME "ViPERDSP-NOTICE.md")
-install(FILES "${PROJECT_SOURCE_DIR}/README.md"
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/viper4linux")
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/docs/"
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/viper4linux/docs")
+
+if(VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "arch")
+  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${VIPER_SYSTEM_PACKAGE_NAME}")
+  install(FILES "${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES.md"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${VIPER_SYSTEM_PACKAGE_NAME}"
+    RENAME "ViPERDSP-NOTICE.md")
+  install(FILES "${PROJECT_SOURCE_DIR}/README.md"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/viper4linux")
+  install(DIRECTORY "${PROJECT_SOURCE_DIR}/docs/"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/viper4linux/docs")
+else()
+  # Debian/Ubuntu document layout differs intentionally from the Arch package.
+  set(_viper_deb_doc_dir "${CMAKE_INSTALL_DATADIR}/doc/viper4linux-re")
+  install(FILES
+    "${PROJECT_SOURCE_DIR}/README.md"
+    "${PROJECT_SOURCE_DIR}/LICENSE"
+    "${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES.md"
+    DESTINATION "${_viper_deb_doc_dir}")
+  install(DIRECTORY "${PROJECT_SOURCE_DIR}/docs/"
+    DESTINATION "${_viper_deb_doc_dir}/docs")
+
+  # Match the existing Debian copyright payload, including its UTF-8 heading.
+  file(READ "${PROJECT_SOURCE_DIR}/LICENSE" _viper_deb_license)
+  set(_viper_deb_copyright
+    "ViPER for Linux RE original code — MIT license.\\n"
+    "ViPERDSP has separate terms; see THIRD-PARTY-NOTICES.md.\\n\\n"
+    "${_viper_deb_license}")
+  string(JOIN "" _viper_deb_copyright ${_viper_deb_copyright})
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated/viper-debian-copyright"
+    "${_viper_deb_copyright}")
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/generated/viper-debian-copyright"
+    DESTINATION "${_viper_deb_doc_dir}" RENAME "copyright")
+
+  # Debian distributes compressed deterministic manual pages. Keep the
+  # compression after the normal install(FILES) rules, inside DESTDIR only.
+  find_program(VIPER_SYSTEM_GZIP_EXECUTABLE gzip REQUIRED)
+  install(CODE [[
+    foreach(_viper_man IN ITEMS viper4linux.1 viper4linux-ctl.1)
+      set(_viper_man_path
+        "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/man/man1/${_viper_man}")
+      execute_process(
+        COMMAND gzip -n -9 -f "${_viper_man_path}"
+        RESULT_VARIABLE _viper_gzip_result)
+      if(NOT _viper_gzip_result EQUAL 0)
+        message(FATAL_ERROR "Failed to compress staged Debian man page: ${_viper_man_path}")
+      endif()
+    endforeach()
+  ]])
+endif()
 
 # Relative symlinks survive package staging. Refuse conflicting destinations
 # instead of replacing unrelated files in an existing staging directory.
-install(CODE [[
+if(VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "debian")
+  set(_viper_man_link "share/man/man1/v4l-cli.1.gz|viper4linux-ctl.1.gz")
+else()
+  set(_viper_man_link "share/man/man1/v4l-cli.1|viper4linux-ctl.1")
+endif()
+# The string configuration substitutes only the chosen man-page variant,
+# leaving DESTDIR evaluation to CMake's generated install script.
+set(_viper_links_code [=[
   foreach(_viper_link IN ITEMS
       "bin/v4l-cli|viper4linux-ctl"
-      "share/man/man1/v4l-cli.1|viper4linux-ctl.1")
+      "@_viper_man_link@")
     string(REPLACE "|" ";" _viper_link_parts "${_viper_link}")
     list(GET _viper_link_parts 0 _viper_relative)
     list(GET _viper_link_parts 1 _viper_target)
@@ -115,4 +174,6 @@ install(CODE [[
       file(CREATE_LINK "${_viper_target}" "${_viper_link_path}" SYMBOLIC)
     endif()
   endforeach()
-]])
+]=])
+string(CONFIGURE "${_viper_links_code}" _viper_links_code @ONLY)
+install(CODE "${_viper_links_code}")
