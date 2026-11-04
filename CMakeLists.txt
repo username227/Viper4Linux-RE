@@ -58,3 +58,11 @@ if(VIPER_BUILD_DEVELOPER_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+# System package installation is intentionally opt-in during staging parity
+# validation. It rejects direct host installs and unsupported prefixes.
+option(VIPER_ENABLE_SYSTEM_INSTALL
+  "Enable DESTDIR-only /usr package installation rules" OFF)
+if(VIPER_ENABLE_SYSTEM_INSTALL)
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/InstallSystem.cmake")
+endif()
