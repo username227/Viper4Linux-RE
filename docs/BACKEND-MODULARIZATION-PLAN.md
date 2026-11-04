@@ -449,6 +449,24 @@ Remaining: Checkpoint 5 real PipeWire live checks and maintainer
 approval before merging. No additional splitting is indicated by
 the successful four-file architecture.
 
+### Checkpoint 5 — initial live-audio confirmation (2026-11-04)
+
+The maintainer launched the GUI reporting **`1.1.0-5c66fb830883`**,
+which identifies the last DSP source change (the mechanically extracted
+real-time callback). The later commits only changed documentation.
+The launcher **reused the existing source-checkout backend** instead
+of interrupting ongoing playback, and the maintainer reported that
+**effects were still processing**.
+
+**Status:** initial live playback and GUI/backend reuse confirmed.
+This is positive evidence of runtime continuity, **not yet** confirmation
+of intentional backend replacement, every effect toggle, IRS/VDC profile
+changes, device switching, Bluetooth reconnect, settings restoration
+or reboot behavior. The source-checkout and installed system package
+have different fingerprints; keep the installed package untouched.
+Complete those remaining cases before claiming full Checkpoint 5
+acceptance or merging to `main`.
+
 ## History and release notes
 
 The preceding GUI refactor was merged as PR #1 on 2026-11-03; the feature
