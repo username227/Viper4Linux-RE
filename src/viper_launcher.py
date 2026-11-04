@@ -153,6 +153,44 @@ def ensure_backend(root: Path = ROOT) -> None:
         raise RuntimeError(f'Backend did not become ready; see {log_path}')
 
 
+
+def launch_preflight(root: Path = ROOT, proc_root: Path = PROC) -> str:
+    """Read-only preview of ensure_backend's initial decision.
+
+    The live launcher takes a lock and rechecks the backend before changing
+    anything. This preview is only a momentary snapshot, not a reservation.
+    """
+    desired = fingerprint(root)
+    system = SYSTEM_MODE and root == ROOT
+    gui = Path('/usr/bin/viper4linux-gui') if system else root / 'build/viper-gui'
+    start = Path('/usr/lib/viper4linux/start-backend') if system else root / 'scripts/start.sh'
+    for name, path in (('GUI', gui), ('backend start command', start)):
+        if not path.is_file() or not os.access(path, os.X_OK):
+            raise RuntimeError(f'{name} missing or not executable: {path}')
+    runtime = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
+    if not runtime.is_dir():
+        raise RuntimeError(f'PipeWire runtime directory does not exist: {runtime}')
+    current = running_clients(proc_root)
+    lines = [
+        'Viper4Linux launch preflight (read-only snapshot; no actions taken):',
+        f'  Build: {"system package" if system else "source checkout"}',
+        f'  Launcher backend: {start}',
+        f'  Backend fingerprint: {desired}',
+    ]
+    if not current:
+        lines.append('  Action on launch: START a backend (none detected).')
+    elif len(current) == 1 and next(iter(current.values())) == desired:
+        pid = next(iter(current))
+        lines.append(f'  Action on launch: REUSE matching backend PID {pid}.')
+    else:
+        pids = ', '.join(str(pid) for pid in sorted(current))
+        lines.append(f'  Action on launch: REPLACE existing backend PID(s) {pids}.')
+        lines.append('  WARNING: Launch would stop the existing ViPER backend, briefly interrupting audio.')
+    lines.append('  No GUI or backend was started, stopped, or modified.')
+    lines.append('  Process state may change before an actual launch.')
+    return '\n'.join(lines)
+
+
 # An Audio Output manager is a separate process, never tied to the GUI.
 OUTPUT_MANAGER_TAG = b'VIPER_AUDIO_OUTPUT_MANAGER_SHA='
 
@@ -214,11 +252,17 @@ def ensure_output_monitor(backend_pid: int, root: Path = ROOT) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='Viper4Linux unified launcher')
-    parser.add_argument('--fingerprint', action='store_true', help='print the built backend fingerprint')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--fingerprint', action='store_true', help='print the built backend fingerprint')
+    mode.add_argument('--preflight', action='store_true',
+                      help='preview backend reuse/replacement without launching or changing audio')
     args = parser.parse_args()
     try:
         if args.fingerprint:
             print(fingerprint())
+            return 0
+        if args.preflight:
+            print(launch_preflight())
             return 0
         gui = Path('/usr/bin/viper4linux-gui') if SYSTEM_MODE else ROOT / 'build/viper-gui'
         if not gui.is_file() or not os.access(gui, os.X_OK):

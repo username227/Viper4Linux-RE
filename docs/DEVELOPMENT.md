@@ -241,6 +241,16 @@ initialize the submodule, run `cmake -S . -B build`,
 `cmake --build build --parallel 4` and
 `cmake --build build --target viper_source_check`. The last target checks
 the native LADSPA symbol and source routing without launching audio.
+Before a live source launch, run `./viper4linux --preflight` from the
+checkout. This **read-only** command checks the source build and current
+ViPER process marker and reports whether an actual launch would start a new
+backend, reuse a matching backend, or stop/replace an existing backend.
+It does not create process locks, start the GUI, change presets, or stop audio.
+The result is a snapshot; the real launcher rechecks state under a lock.
+When the output says **REPLACE**, a subsequent normal launch may briefly
+interrupt the current ViPER audio session. Check that your existing output
+memory and settings are preserved before proceeding.
+
 Run `./viper4linux` only when intentionally testing the source backend.
 For complete DSP mock and regression tests, use CTest or the preserved
 standalone `tests/check-developer.sh` CI script. For a system package,

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Offline launcher checks; never touch actual system PipeWire."""
 from pathlib import Path
+from contextlib import redirect_stdout
+from io import StringIO
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 import os
@@ -64,6 +66,61 @@ with TemporaryDirectory() as tmp:
     runtime.mkdir()
     state = root / 'state'
     fake_env = {'XDG_RUNTIME_DIR': str(runtime), 'XDG_STATE_HOME': str(state)}
+    # Live-acceptance preflight inspects the same process/fingerprint decision
+    # without changing audio, creating locks, writing logs, or opening the GUI.
+    (root / 'scripts').mkdir()
+    backend_script = root / 'scripts/start.sh'
+    backend_script.write_text('#!/bin/sh\nexit 0\n')
+    backend_script.chmod(0o755)
+    gui = root / 'build/viper-gui'
+    gui.write_bytes(b'fake GUI binary')
+    gui.chmod(0o755)
+    with patch.dict(os.environ, fake_env), \
+            patch.object(v.os, 'kill') as kill, \
+            patch.object(v.os, 'execv') as execv, \
+            patch.object(v.subprocess, 'Popen') as spawn:
+        with patch.object(v, 'running_clients', return_value={}):
+            plan = v.launch_preflight(root)
+            assert 'Action on launch: START' in plan and 'read-only' in plan
+        with patch.object(v, 'running_clients', return_value={112: desired}):
+            plan = v.launch_preflight(root)
+            assert 'Action on launch: REUSE matching backend PID 112' in plan
+        with patch.object(v, 'running_clients', return_value={113: None}):
+            plan = v.launch_preflight(root)
+            assert 'Action on launch: REPLACE existing backend PID(s) 113' in plan
+            assert 'WARNING' in plan and 'interrupting audio' in plan
+        with patch.object(v, 'running_clients', return_value={114: desired, 115: desired}):
+            plan = v.launch_preflight(root)
+            assert 'Action on launch: REPLACE' in plan, 'Duplicate clients require reconciliation'
+        kill.assert_not_called()
+        execv.assert_not_called()
+        spawn.assert_not_called()
+    assert not (runtime / 'viper4linux-launch.lock').exists(), 'Preflight must not create lock files'
+    assert not state.exists(), 'Preflight must not create state or logs'
+    gui.unlink()
+    with patch.dict(os.environ, fake_env):
+        try:
+            v.launch_preflight(root)
+        except RuntimeError as exc:
+            assert 'GUI missing or not executable' in str(exc)
+        else:
+            raise AssertionError('Preflight failed to reject missing GUI')
+    gui.write_bytes(b'fake GUI binary')
+    gui.chmod(0o755)
+
+    # The CLI mode itself must exit before ensure_backend or execv.
+    with patch.object(v, 'launch_preflight', return_value='safe plan') as preview, \
+            patch.object(v, 'ensure_backend') as backend, \
+            patch.object(v.os, 'execv') as execv, \
+            patch.object(sys, 'argv', ['viper4linux', '--preflight']):
+        output = StringIO()
+        with redirect_stdout(output):
+            assert v.main() == 0
+        assert output.getvalue().strip() == 'safe plan'
+        preview.assert_called_once()
+        backend.assert_not_called()
+        execv.assert_not_called()
+
     # Matching backend is reused without launching a second one.
     with patch.dict(os.environ, fake_env), patch.object(v, 'running_clients', return_value={111: desired}), \
             patch.object(v.subprocess, 'Popen') as spawn, patch.object(v.os, 'kill') as kill:
