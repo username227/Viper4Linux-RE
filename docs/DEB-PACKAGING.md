@@ -20,45 +20,30 @@ as Ubuntu Noble's `libqt6widgets6t64` and Debian Trixie's
 requirements; the build also requires `pipewire`, `python3` and Qt6's platform
 plugins at runtime.
 
-## CMake installation parity (development branch only)
+## CMake-owned installation (modernization branch)
 
-On the `refactor/cmake-modernization` branch, `scripts/build-native-deb.sh`
-defaults to CMake-owned DSP source preparation and guarded `DESTDIR`
-installation of the runtime payload. For controlled comparison, set
-`VIPER_DEB_STAGING_BACKEND=legacy`. Debian-specific `dpkg-shlibdeps`,
-`dpkg-deb`, distro base checks and packaging metadata remain in the script.
-The published `main` workflow is unchanged until the modernization branch is
-accepted and merged.
+The native Debian and Ubuntu builder `scripts/build-native-deb.sh` no longer
+has independent DSP patching or application file-staging rules. It configures
+CMake with `VIPER_ENABLE_SYSTEM_INSTALL=ON` and
+`VIPER_SYSTEM_INSTALL_LAYOUT=debian`, builds the application, and stages
+every runtime file with guarded `DESTDIR=... cmake --install`.
 
-An isolated GitHub Actions matrix has already **built and installed**
-CMake-staged native packages in disposable Arch, Ubuntu 24.04 and Debian 13
-containers (7/7 jobs in run 41845893378). This does not claim validation
-of desktop PipeWire routing or audio hardware.
+The script remains because native `.deb` creation needs distribution-specific
+Qt/C++ dependency discovery via `dpkg-shlibdeps`, `DEBIAN/control` metadata,
+`dpkg-deb`, and optional installation smoke tests in disposable distro
+containers. These operations are not application installation rules.
+The source archive stays pinned, and the published `main` release workflow
+has not been changed.
 
-On an Arch developer workstation, compare the staged filesystem payloads
-without building or installing a Debian package:
+For historical parity regression, `tests/check-cmake-deb-parity.py`
+can compare the CMake stage to a **frozen test-only baseline** located in
+`tests/fixtures/legacy-deb-stage.txt`. That file is never called by the
+production Debian builder. The comparison runs in temporary directories,
+without `apt`, `dpkg`, or a live audio session.
 
-```sh
-cmake -S . -B build-deb-parity -DCMAKE_BUILD_TYPE=Release \\
-  -DCMAKE_INSTALL_PREFIX=/usr \\
-  -DVIPER_ENABLE_SYSTEM_INSTALL=ON \\
-  -DVIPER_SYSTEM_INSTALL_LAYOUT=debian \\
-  -DVIPER_BUILD_DEVELOPER_TESTS=OFF
-cmake --build build-deb-parity --parallel 4
-python3 tests/check-cmake-deb-parity.py build-deb-parity
-```
-
-The comparator stages the same built outputs into two disposable directories,
-using the legacy Debian package-copy commands and CMake. It compares file
-bytes, all paths, modes, symlink targets and directories. It does not invoke
-`apt`, `dpkg`, host installs or a running audio backend. The Debian-specific
-control file and runtime dependencies are intentionally **not** included in
-this filesystem parity test; those require actual Ubuntu 24.04 and Debian 13
-container builds.
-
-The packaged application still uses absolute `/usr` paths. CMake refuses
-other installation prefixes and requires a safe absolute `DESTDIR` for
-staging. Do not call `cmake --install` without `DESTDIR`.
+The installed application still uses absolute `/usr` paths. CMake refuses
+other prefixes and unsafe `DESTDIR` values. Do not call `cmake --install`
+on a live host without an approved packaging environment.
 
 ## Prepare release assets
 

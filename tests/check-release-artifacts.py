@@ -25,7 +25,9 @@ def verify(version: str, dest: Path):
     with tarfile.open(tarpath, 'r:xz') as archive:
         members = set(archive.getnames())
         required = {'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md',
-                    'CMakeLists.txt', 'SOURCE-MANIFEST.txt', 'RELEASE-REVISION',
+                    'CMakeLists.txt', 'cmake/PrepareViPERDSP.cmake',
+                    'cmake/InstallSystem.cmake', 'cmake/SourceCheckout.cmake',
+                    'SOURCE-MANIFEST.txt', 'RELEASE-REVISION',
                     'RELEASE-VERSION', 'cmake/Version.cmake',
                     'third_party/ViPERDSP/CMakeLists.txt', 'src/viper-gui.cpp',
                     'src/gui-single-instance.h',

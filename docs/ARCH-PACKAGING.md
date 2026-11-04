@@ -2,16 +2,15 @@
 
 There are three supported paths; they do **not** share a PKGBUILD:
 
-- **Direct source build:** `./install.sh` checks for required commands,
-  headers and Qt6 components, initializes the pinned ViPERDSP submodule,
-  patches a private copy and builds with CMake. It does not invoke `makepkg`
-  or read any PKGBUILD. Install the prerequisites listed in the README.
-  On the `refactor/cmake-modernization` development branch, the modern path
-  is `cmake -S . -B build && cmake --build build`: CMake prepares the private
-  DSP copy and the build-local routing configuration automatically. Run
-  `cmake --build build --target viper_source_check` to verify the files
-  without starting audio. Local command shortcuts are a **separate, opt-in**
-  `viper_source_links` target, described in `docs/DEVELOPMENT.md`.
+- **Direct source build:** initialize the pinned ViPERDSP submodule,
+  then `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release`,
+  `cmake --build build --parallel 4`, and
+  `cmake --build build --target viper_source_check`.
+  CMake prepares the private DSP dependency, generates the build-local routing
+  configuration and verifies the native LADSPA export. This does not invoke
+  `makepkg`, install a system package or launch audio. Optional shell aliases
+  require a separate explicit `viper_source_links` CMake target. See the
+  README and `docs/DEVELOPMENT.md`.
 - **Development VCS package:** `viper4linux-re-git` is published and its
   authoritative PKGBUILD is maintained separately in the AUR. Build/update
   it using the AUR Git checkout or an AUR helper. The obsolete duplicate
@@ -20,28 +19,31 @@ There are three supported paths; they do **not** share a PKGBUILD:
   `packaging/arch/PKGBUILD.stable.in` and a pinned, unified source archive.
   It runs an actual Arch package build; generation does not publish to AUR.
 
-On `refactor/cmake-modernization`, the **stable** Arch package uses CMake's
-private DSP preparation and guarded `DESTDIR` staging by default. Set
-`VIPER_ARCH_STAGING_BACKEND=legacy` only to compare with the old
-`packaging/arch/install-package.sh` reference. CMake automatically discovers
-runtime Python modules from `src/viper_*.py`.
+On `refactor/cmake-modernization`, **CMake is the only application
+installation engine.** The stable Arch PKGBUILD calls `cmake --install`
+with a guarded `DESTDIR`; it does not maintain a second file-copy list
+or manually patch ViPERDSP.
 
-The separately maintained `viper4linux-re-git` AUR recipe has not been changed
-by this migration and may still use the legacy staging helper. It needs an
-independent update in the maintainer's AUR checkout after final acceptance;
-neither this branch nor the GitHub Actions jobs publish anything to the AUR.
+The separately maintained `viper4linux-re-git` AUR recipe has not been
+edited. Its existing call to `packaging/arch/install-package.sh` is retained
+as a **small compatibility adapter**: the adapter reconfigures its existing
+build with CMake install rules and delegates the entire package stage to
+`cmake --install`. It copies no application files itself. We must still
+test the actual AUR checkout before publication. Neither this branch nor CI
+publishes or upgrades the AUR package.
 
 ## Dependency and package regression checks
 
 `tests/check-packaging-contract.py` checks the stable template's runtime
-and build dependencies, direct installer probes (including Qt6 Widgets and
-Network), CMake requirements, the README's source-install package list,
-pinned ViPERDSP handling, downstream patches, shared staging and backend
+and build dependencies, CMake dependency discovery (including Qt6 Widgets and
+Network), the README's source-build package list, pinned ViPERDSP handling,
+downstream patches, sole-source CMake staging and backend
 launcher contracts. It is invoked by `tests/check-package.sh` from both
 normal package `check()` and the full developer suite. It is intentionally
 compatible with a unified release archive, which has no `.gitmodules`.
 `tests/check-arch-install.py` independently stages a mock stable and VCS
-package and validates its file manifest and failure behavior.
+package via the CMake-backed AUR adapter, validating paths, permissions,
+dynamic Python files, failure behavior and stable/VCS license directories.
 
 The packaged `check()` suite is intentionally short and offline. For
 native DSP and GUI regression coverage, run

@@ -129,30 +129,27 @@ Do not run that illustrative command against the current tree yet; there are no 
 | 2. CMake configuration and DSP preparation | **Core checks passed on Arch:** checkout build, incrementals, unified archive, invalid patch rejection and missing-source rejection; still requires integration/packaging review |
 | 3. Optional CTest developer suite | **Arch core acceptance passed:** 10 native mock test targets built, 4/4 CTest groups passed (6.65 s), tests OFF registered none, original standalone full suite passed; CI distro coverage remains for checkpoint 5 |
 | 4. CMake installation and packaging parity | **Automated package build and container install acceptance passed:** Arch, Ubuntu 24.04 and Debian 13 from one pinned unified source; run `41845893378` green 7/7; live desktop/audio acceptance separate |
-| 5. Full acceptance and installer retirement | **In progress:** CMake defaults accepted in CI; guarded source-checkout helper implemented with isolated tests, maintainer live-audio acceptance/AUR coordination still pending; no installer retired |
+| 5. Full acceptance and installer retirement | **In progress:** production source/Arch/Debian installation logic consolidated under CMake on development branch; GitHub CI and live Arch/AUR acceptance remain the release gates |
 
-### Remaining installer responsibilities and retirement gate
+### CMake installation ownership and remaining gates
 
-The CMake and native package migration **does not imply** that the source
-installer can be deleted. Its responsibilities are now split:
-
-| Original `install.sh` responsibility | Replacement or status |
+| Responsibility | Owner on modernization branch |
 | --- | --- |
-| Pinned source and downstream three-patch verification | **CMake-owned**, verified by independent checkout and unified-source builds |
-| Compile production GUI, LADSPA and CLI outputs | **CMake-owned**, exercised by Arch and Debian-family CI |
-| Native package staging and command aliases | **CMake-owned**, exact Arch/Debian staging parity and 7-job container build/install smoke accepted |
-| Isolated regression tests | **CTest opt-in**, preserves standalone regression suite |
-| Developer source launcher and `build/`-relative runtime files | **Pending source-checkout acceptance**; system package paths are different |
-| Copy distribution PipeWire filter-chain config for source launch | **CMake-owned and CI accepted:** `VIPER_SOURCE_PREPARE_ROUTING` generates build-local routing while preserving source overrides |
-| Create safe `~/.local/bin/viper4linux` and `v4l-cli` aliases | **CMake-owned and CI accepted:** opt-in `VIPER_ENABLE_SOURCE_LINK_TARGET`/`viper_source_links`, collision-safe and never in the normal build |
-| Published separate AUR `-git` PKGBUILD | **Not changed here**; maintain in its own AUR Git checkout |
-| Real Bluetooth/speaker routing, audio output memory, GUI/tray controls | **Manual Arch hardware acceptance still pending** |
+| Pinned DSP copy, three patches and all native compilation | `CMakeLists.txt`, `cmake/PrepareViPERDSP.cmake` |
+| Direct source routing and read-only verification | `cmake/SourceCheckout.cmake` with opt-in developer targets |
+| All Arch and Debian installed application files | `cmake/InstallSystem.cmake` with guarded `DESTDIR` |
+| Stable Arch package archive, checksum and metadata | Generated PKGBUILD, `makepkg` and GitHub Actions |
+| Existing `-git` AUR entry point | `packaging/arch/install-package.sh` compatibility adapter calling CMake |
+| Debian dependency metadata and native `.deb` archive | `scripts/build-native-deb.sh` (`dpkg-shlibdeps`, `dpkg-deb`) |
+| Unified source exports and stable release candidate | GitHub Actions release-preparation utilities |
+| Package regression and installation smoke tests | Existing `tests/` and CI scripts; retained |
+| Real GUI, PipeWire, Bluetooth/EDIFIER audio and output memory | **Maintainer's Arch hardware acceptance still pending** |
 
-Do not delete `install.sh`, `packaging/arch/install-package.sh`, or related
-legacy-reference tests before the corresponding replacement and maintainer
-acceptance. The staging helper must remain while separate AUR VCS packaging
-still references it. Do not merge this development branch without explicit
-approval and live-audio regression acceptance.
+The original `install.sh` has been removed from this development branch;
+`scripts/setup-source-checkout.sh` was retired earlier. The retained AUR
+entry point does not maintain a second file list. Historical baseline tests
+remain in `tests/`. Avoid merging this branch or changing the released AUR
+recipe before final local audio and AUR compatibility acceptance.
 
 ### Branch work log
 
@@ -192,4 +189,5 @@ standalone developer suite, native package builds and container installation.
 This was **not** live audio testing. Do not retire `install.sh` until
 maintainer local audio acceptance.
 - **Acceptance sequence agreed:** finish building and validating packages in GitHub Actions first. Treat installing the generated packages and verifying live PipeWire/DSP operation as a *separate later acceptance stage*.
-- **Still pending:** maintainer's actual Arch desktop source-launch/relaunch, GUI, physical audio and routing acceptance; a separate update to the published AUR VCS PKGBUILD; and explicit approval before retiring `install.sh` or merging.
+- **CMake-only production consolidation (2026-11-04, CI acceptance pending):** Stable Arch PKGBUILD now has exactly one CMake build/staging path; Debian/Ubuntu packaging has no duplicate patching or file-install list; the original AUR helper is a compatibility adapter to CMake with the same four-argument interface. The old `install.sh` was retired after its source-build, routing, optional aliases, LADSPA export and build safety functions were integrated with CMake developer targets. The historical Debian parity payload was frozen as a test-only fixture, and the existing CI/release packaging scripts remain intact. All changes remain on `refactor/cmake-modernization`; no user installation, main merge or AUR push occurred.
+- **Still pending:** successful fresh 7-job CI acceptance on this consolidated revision, maintainer's actual Arch desktop source-launch/relaunch, GUI, physical audio and routing acceptance, separate AUR VCS recipe review, and explicit approval before merging.
