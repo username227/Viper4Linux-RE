@@ -2,7 +2,8 @@
 """Static contracts complement the DSP mock; GUI rendering needs Qt6/Arch."""
 from pathlib import Path
 r = Path(__file__).resolve().parents[1]
-s = (r / 'src/viper-ladspa.cpp').read_text()
+assert '#include "backend/processor.inc"' in (r / 'src/viper-ladspa.cpp').read_text()
+s = (r / 'src/backend/processor.inc').read_text()
 start = s.index('    void apply_dynamic_eq_from_controls() {')
 end = s.index('    void run_dry_while_loading(', start)
 method = s[start:end]

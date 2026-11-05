@@ -4,7 +4,9 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 cli = (root / "src/viper-cli-settings.h").read_text()
-backend = (root / "src/viper-ladspa.cpp").read_text()
+backend_cpp = (root / "src/viper-ladspa.cpp").read_text()
+assert '#include "backend/startup-settings.inc"' in backend_cpp
+backend = (root / "src/backend/startup-settings.inc").read_text()
 gui = "\n".join([
     (root / "src/viper-gui.cpp").read_text(),
     (root / "src/sync/gui-settings-bridge.inc").read_text(),

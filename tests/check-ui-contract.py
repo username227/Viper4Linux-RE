@@ -41,7 +41,10 @@ assert 'Gain / Headroom' not in source
 assert 'addEffectPanel(outputLayout, gain_group' not in source
 assert 'input_percent_' not in source
 assert 'input_permille' not in source
-backend = (Path(__file__).resolve().parents[1] / 'src/viper-ladspa.cpp').read_text()
+assert '#include "backend/processor.inc"' in (root / "src/viper-ladspa.cpp").read_text()
+processor = (root / 'src/backend/processor.inc').read_text()
+assert '#include "processor-run.inc"' in processor, 'Real-time callback include missing'
+backend = processor + "\n" + (root / 'src/backend/processor-run.inc').read_text()
 assert '* safe_attenuation' not in backend
 assert 'InputScale' not in backend
 assert 'input_permille' not in backend
@@ -211,7 +214,7 @@ for token in (
     'analogx_applied_serial.store(',
     'kind_ == "analogx"',
 ):
-    assert token in ((Path(__file__).resolve().parents[1] / 'src/viper-ladspa.cpp').read_text() if token.startswith(('wet.', 'analogx_request_serial', 'analogx_applied_serial')) else source), token
+    assert token in ((Path(__file__).resolve().parents[1] / 'src/backend/processor.inc').read_text() if token.startswith(('wet.', 'analogx_request_serial', 'analogx_applied_serial')) else source), token
 print('PASS: Tube Simulator, native AnalogX and simplified Viper4Linux GUI controls')
 for token in ('imager_enabled_', 'imager_low_', 'imager_mid_', 'imager_high_',
               'imager_low_xover_', 'imager_high_xover_', 'preset/imager_enabled',
@@ -296,7 +299,7 @@ assert 'if (selectBand) selectBand(nearest);' in dynamic
 assert 'if (!editor_mode_ && openEditor) openEditor();' in dynamic
 assert 'selectBand(nearest)' in dynamic
 assert 'deq_table_->setFixedHeight(36 + deq_active_count_ * 25)' in brand_gui
-backend = (brand_root / 'src/viper-ladspa.cpp').read_text()
+backend = processor + "\n" + (brand_root / 'src/backend/processor-run.inc').read_text()
 assert 'if (!enabled && !last_deq_enabled) return;' in backend
 print('PASS: transparent Qt-branded logos, stable blue X11 icon, selected-theme header, compact Dynamic EQ editor, disabled-edit bypass fix')
 
@@ -313,7 +316,7 @@ for token in (
     'wet.ApplyCure(p);',
 ):
     if token in source: continue
-    assert token in (Path(__file__).resolve().parents[1] / 'src/viper-ladspa.cpp').read_text(), token
+    assert token in (Path(__file__).resolve().parents[1] / 'src/backend/processor.inc').read_text(), token
 print('PASS: native Crossfeed UI and presets, no substitute DSP')
 
 # DDC: dedicated library, no disposable test profile in package.
