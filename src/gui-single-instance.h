@@ -2,6 +2,8 @@
 // One GUI per user session, whether started by viper4linux or viper-gui.
 // Only an explicit, user-approved GUI exit may stop the independent DSP backend.
 #include <QDebug>
+#include <QByteArray>
+#include <QSharedPointer>
 #include <QDir>
 #include <QLocalServer>
 #include <QLocalSocket>
@@ -24,7 +26,7 @@ public:
         lock_.setStaleLockTime(0);
     }
 
-    StartResult claim() {
+    StartResult claim(const QByteArray& startupToken = qgetenv("XDG_ACTIVATION_TOKEN")) {
         if (runtime_dir_.isEmpty() || !QDir(runtime_dir_).exists()) {
             qCritical().noquote() << "viper-gui: user runtime directory is unavailable";
             return StartResult::Error; // Fail closed rather than start two GUI writers.
@@ -46,8 +48,16 @@ public:
             QLocalSocket client;
             client.connectToServer(socket_path_);
             if (client.waitForConnected(100)) {
-                // Connecting is the activation request; no settings are transferred.
-                // The primary's newConnection handler restores its own window.
+                // Send the compositor-issued Wayland activation token to the
+                // existing GUI. A user-local socket never sends settings/DSP data.
+                QByteArray token = startupToken;
+                if (token.size() > 4096 || token.contains('\n') || token.contains('\r') ||
+                    token.contains('\0'))
+                    token.clear();
+                const QByteArray payload = "V4L-ACTIVATE/1 " + token.toBase64() + "\n";
+                client.write(payload);
+                client.flush();
+                client.waitForBytesWritten(300);
                 client.disconnectFromServer();
                 return StartResult::Forwarded;
             }
@@ -58,15 +68,49 @@ public:
         return StartResult::Error;
     }
 
+    // Compatibility overload: headless ownership tests and callers without a token.
     void onActivation(QObject* receiver, std::function<void()> showWindow) {
+        onActivation(receiver,
+            [callback = std::move(showWindow)](const QByteArray&) { callback(); });
+    }
+
+    void onActivation(QObject* receiver,
+                      std::function<void(const QByteArray&)> showWindow) {
         QObject::connect(&server_, &QLocalServer::newConnection, receiver,
-            [this, showWindow = std::move(showWindow)] {
+            [this, receiver, showWindow = std::move(showWindow)] {
                 while (server_.hasPendingConnections()) {
                     QLocalSocket* client = server_.nextPendingConnection();
                     if (!client) continue;
-                    client->disconnectFromServer();
-                    client->deleteLater();
-                    showWindow();
+                    auto buffer = QSharedPointer<QByteArray>::create();
+                    auto delivered = QSharedPointer<bool>::create(false);
+                    auto finish = [client, buffer, delivered, showWindow] {
+                        if (*delivered) return;
+                        buffer->append(client->readAll());
+                        if (!buffer->contains('\n') &&
+                            client->state() != QLocalSocket::UnconnectedState &&
+                            buffer->size() <= 8192)
+                            return;
+                        *delivered = true;
+                        QByteArray token;
+                        if (buffer->startsWith("V4L-ACTIVATE/1 ") &&
+                            buffer->size() <= 8192) {
+                            const int newline = buffer->indexOf('\n');
+                            if (newline > 15) {
+                                const QByteArray encoded = buffer->mid(15, newline - 15);
+                                token = QByteArray::fromBase64(encoded);
+                                if (token.size() > 4096 || token.contains('\0'))
+                                    token.clear();
+                            }
+                        }
+                        client->disconnectFromServer();
+                        client->deleteLater();
+                        showWindow(token);
+                    };
+                    QObject::connect(client, &QLocalSocket::readyRead, receiver, finish);
+                    QObject::connect(client, &QLocalSocket::disconnected, receiver, finish);
+                    // Handle a peer which closed before we accepted the socket.
+                    if (client->bytesAvailable() || client->state() == QLocalSocket::UnconnectedState)
+                        finish();
                 }
             });
     }

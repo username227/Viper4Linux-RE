@@ -35,6 +35,13 @@ add_executable(viper-gui src/viper-gui.cpp resources/viper4linux-icons.qrc)
 set_target_properties(viper-gui PROPERTIES AUTORCC ON)
 target_include_directories(viper-gui PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(viper-gui PRIVATE Qt6::Widgets Qt6::Network)
+# Explicit X11 startup completion is needed when the running GUI receives
+# another launch request. Native Wayland continues to use Qt's compositor API.
+if(UNIX AND NOT APPLE)
+  find_package(X11 REQUIRED)
+  target_link_libraries(viper-gui PRIVATE X11::X11)
+  target_compile_definitions(viper-gui PRIVATE VIPER_HAVE_X11=1)
+endif()
 target_compile_options(viper-gui PRIVATE -Wall -Wextra -Wpedantic)
 
 # Non-realtime native DSP snapshot transport for per-output settings.

@@ -95,12 +95,14 @@ with tempfile.TemporaryDirectory(prefix="viper-startup-ci-") as isolated:
             debug = primary_log.read_text(errors="replace")
             appids = re.findall(r'set_app_id\("([^"]+)"\)', debug)
             print(f"DIAGNOSTIC: Wayland native window application IDs: {appids}", flush=True)
+            assert "viper4linux" in appids, "Qt Wayland app ID does not match installed desktop entry"
             print("NOTE: compositor support alone does not validate a real user-issued activation token", flush=True)
         else:
             observed, trace = finish_observer(observer1)
             observer1 = None
             (logs / "x11-cold-start.txt").write_text(trace)
             print(f"DIAGNOSTIC: initial X11 startup REMOVE observed: {observed}", flush=True)
+            assert observed, "Cold-start Qt X11 startup completion is missing"
 
         env2 = env.copy()
         env2["DESKTOP_STARTUP_ID"] = "viper-ci-second_TIME23456"
@@ -121,6 +123,7 @@ with tempfile.TemporaryDirectory(prefix="viper-startup-ci-") as isolated:
             observed, trace = finish_observer(observer2)
             (logs / "x11-second-launch.txt").write_text(trace)
             print(f"DIAGNOSTIC: second X11 startup REMOVE observed: {observed}", flush=True)
+            assert observed, "Forwarded X11 launch failed to complete its startup sequence"
         print("NOTE: no real desktop launcher, Cinnamon spinner, GNOME Shell, or KWin session was exercised", flush=True)
     finally:
         if observer1 is not None and observer1.poll() is None:
