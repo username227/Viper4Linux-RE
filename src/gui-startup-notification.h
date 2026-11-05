@@ -19,7 +19,7 @@ inline bool completeForwardedX11(const QByteArray& startupId) {
         QGuiApplication::platformName() != QLatin1String("xcb"))
         return false;
 
-    auto* native = QGuiApplication::instance()->nativeInterface<QNativeInterface::QX11Application>();
+    auto* native = static_cast<QGuiApplication*>(QCoreApplication::instance())->nativeInterface<QNativeInterface::QX11Application>();
     Display* display = native ? reinterpret_cast<Display*>(native->display()) : nullptr;
     if (!display) return false;
 
