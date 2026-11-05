@@ -1,0 +1,66 @@
+name: Desktop startup diagnostics (X11 / native Wayland)
+
+# Diagnostic only: isolated test branch, never a release, AUR push, or host install.
+on:
+  push:
+    branches:
+      - test/startup-notification-ci
+
+permissions:
+  contents: read
+
+jobs:
+  startup:
+    name: Qt GUI startup — ${{ matrix.session }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        session: [x11, wayland]
+    steps:
+      - name: Check out tested commit and pinned ViPERDSP source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install graphical test dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build qt6-base-dev qt6-wayland \
+            libx11-dev xauth xvfb xdotool x11-utils \
+            sway wayland-utils dbus-x11 libgl1-mesa-dri
+
+      - name: Compile real Qt6 GUI only (no PipeWire, no installation)
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DVIPER_SOURCE_PREPARE_ROUTING=OFF
+          cmake --build build --target viper-gui --parallel 2
+
+      - name: Compile X11 startup protocol observer
+        if: matrix.session == 'x11'
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror \
+            tests/ci-x11-startup-observer.cpp -lX11 -o build/ci-x11-startup-observer
+
+      - name: Exercise startup and second-launch in graphical session
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if [[ "${{ matrix.session }}" == x11 ]]; then
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x800x24' \
+              bash tests/ci-startup-protocol.sh x11
+          else
+            dbus-run-session -- bash tests/ci-startup-protocol.sh wayland
+          fi
+
+      - name: Upload diagnostic logs even if session fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-diagnostics-${{ matrix.session }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: startup-diagnostics/
