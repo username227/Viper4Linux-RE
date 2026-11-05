@@ -72,7 +72,7 @@ listing=$(pacman -Qlp "$package")
 for installed in usr/bin/viper4linux usr/bin/viper4linux-gui \
                  usr/bin/viper4linux-ctl usr/lib/ladspa/viper_dsp_ladspa.so \
                  usr/share/man/man1/viper4linux.1 \
-                 usr/share/licenses/viper4linux-re/LICENSE; do
+                 usr/share/licenses/viper4linux-re/ViPERDSP-NOTICE.md; do
     grep -Fq "$installed" <<< "$listing" || {
         echo "Missing expected package entry: $installed" >&2; exit 1;
     }
