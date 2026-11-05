@@ -467,13 +467,20 @@ matching-fingerprint backend reuse during uninterrupted playback.
 These are the maintainer's observed outcomes; no new DSP changes
 were made for these checks.
 
+**Additional maintainer confirmation:** physical audio output switching
+between the EDIFIER headphones and laptop speakers, then returning to the
+headphones, was **already tested and works**, including the previously
+requested per-output settings recall check. This is user-confirmed;
+do not request a redundant retest. A distinct Bluetooth disconnect/
+reconnect scenario was not separately confirmed in this report.
+
 **Status:** live playback/effects, GUI/backend reuse, cold backend
-startup, IRS/VDC changes and retained settings have positive maintainer
-confirmation. Still outstanding for a complete Checkpoint 5 sign-off:
-physical output switching/Bluetooth reconnect and per-device recall,
-intentional backend replacement/restart as appropriate, a focused
-multi-effect toggle/bypass pass and any required reboot and
-sample-rate-specific checks. The source-checkout and installed system
+startup, IRS/VDC changes, retained settings and physical output switching
+with settings recall have positive maintainer confirmation. Remaining
+for a complete Checkpoint 5 sign-off: intentional backend replacement/
+restart as appropriate, a focused multi-effect toggle/bypass pass, and
+any required Bluetooth disconnect/reconnect, reboot and sample-rate-
+specific checks. The source-checkout and installed system
 package have different fingerprints; keep the installed package
 untouched. Obtain explicit maintainer approval before merging to `main`.
 
@@ -486,10 +493,9 @@ until it is merged or accepted for a release. The earlier GUI planning
 document is preserved by its original Git commits, not duplicated as
 another active plan.
 
-**Next action:** Checkpoint 5 live-audio acceptance on the source
-checkout: confirm backend reuse and intentional restart behavior,
-real playback across output switches/Bluetooth reconnect, GUI/CLI
-settings and presets, IRS/DDC loading and 44.1/48/96-kHz processing
-as supported. Record exceptions before the maintainer's explicit
-merge decision. Do not change the installed system package as part
+**Next action:** avoid re-running already confirmed playback,
+output switching/recall, IRS/VDC loading, backend reuse and cold start.
+Check intentional replacement/restart and focused effect bypass, then
+review any untested Bluetooth-reconnect, reboot or sample-rate paths
+as needed before the maintainer's explicit merge decision. Do not change the installed system package as part
 of this test, and do not add source files without architectural need.
