@@ -83,8 +83,10 @@ like to see what the community can make of it.
   Android runtime, Wine, or bundled web framework.
 - **Smart output routing** to the default physical output, with recovery across
   ordinary player changes and supported Bluetooth reconnections.
-- **Independent GUI and audio backend:** closing the interface leaves audio
-  processing running. GUI-only upgrades do not need to interrupt playback.
+- **Independent GUI and audio backend:** on quitting the interface, choose
+  whether to leave processing active or stop only the ViPER backend, with
+  a remembered choice configurable in Preferences. GUI-only upgrades
+  do not need to interrupt playback.
 - **Qt6 desktop interface:** collapsible effect cards, light/dark themes,
   system tray, optional login autostart, and configurable minimize/close behavior.
 - **Named presets and external libraries** for impulse responses (`IRS`) and
@@ -131,8 +133,9 @@ Music players / other audio applications
 The launcher starts the DSP backend when necessary, reuses a compatible
 running instance, and replaces an outdated one when its backend components
 have changed. It does **not** restart PipeWire itself. The DSP runs separately
-from the GUI, so the window can be minimized, hidden in the tray, or closed
-without stopping processing.
+from the GUI, so the window can be minimized or hidden in the tray
+without stopping processing. On actual GUI exit, a prompt offers to keep or
+stop only the ViPER backend; the choice can be remembered in Preferences.
 
 See the [user guide](docs/USER-GUIDE.md) for routing, tray settings, and
 troubleshooting, and the [developer guide](docs/DEVELOPMENT.md) for the
