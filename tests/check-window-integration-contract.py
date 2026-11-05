@@ -10,6 +10,7 @@ modules = (
     ("window-correction.inc", "void refreshIrsLibrary()"),
     ("window-shell.inc", "void showPreferences()"),
     ("window-graphic-eq.inc", "void migrateEqPrecision()"),
+    ("window-initialization.inc", "void loadSavedEffectSettings()"),
     ("window-dynamics.inc", "void refreshDeqBandSelector()"),
     ("window-effect-actions.inc", "void applySettings(bool master"),
 )
@@ -20,6 +21,18 @@ for name, marker in modules:
     assert main.count('#include "window/' + name + '"') == 1, name
     assert marker not in main, (name, "implementation retained in main")
 assert 'ViperWindow() : settings_("ViPERforLinux", "ViPERClean")' in main
+for marker in ('loadSavedEffectSettings();',
+               'connectEffectSignals(eq_reset, deq_spread);',
+               'setupThemeMonitoring();'):
+    assert main.count(marker) == 1, marker
+assert (main.index('loadSavedEffectSettings();') <
+        main.index('connectEffectSignals(eq_reset, deq_spread);') <
+        main.index('setupThemeMonitoring();'))
+initialization = (root / "src/window/window-initialization.inc").read_text()
+for method in ('void loadSavedEffectSettings()',
+               'void connectEffectSignals(QPushButton* eq_reset, QPushButton* deq_spread)',
+               'void setupThemeMonitoring()'):
+    assert initialization.count(method) == 1, method
 assert 'void push() {' in main
 assert 'void showOffline() {' in main
 assert 'bool eventFilter(QObject* watched, QEvent* event) override' in main

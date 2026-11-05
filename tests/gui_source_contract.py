@@ -22,6 +22,7 @@ GUI_FILES = (
     "src/window/window-correction.inc",
     "src/window/window-shell.inc",
     "src/window/window-graphic-eq.inc",
+    "src/window/window-initialization.inc",
     "src/window/window-dynamics.inc",
     "src/window/window-effect-actions.inc",
 )
