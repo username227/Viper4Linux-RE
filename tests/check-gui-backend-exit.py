@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import os
 import subprocess
+import signal
 
 root = Path(__file__).resolve().parents[1]
 gui = (root / "src/viper-gui.cpp").read_text()
@@ -84,5 +85,16 @@ with TemporaryDirectory(prefix="viper-gui-exit-") as dirname:
         [os.environ.get("CXX", "c++"), "-std=c++17", "-Wall", "-Wextra",
          "-Werror", "-I", str(root / "src"), str(cpp), "-o", str(executable)],
         check=True, timeout=40)
-    subprocess.run([str(executable), str(fixture)], check=True, timeout=10)
+    # The test forks a dummy child; clean up its entire isolated process group
+    # even if an assertion in the C++ helper aborts before waitpid().
+    process = subprocess.Popen([str(executable), str(fixture)], start_new_session=True)
+    try:
+        assert process.wait(timeout=10) == 0, "isolated backend stop test failed"
+    finally:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        if process.poll() is None:
+            process.wait(timeout=3)
 print("PASS: GUI backend exit choices, preferences and isolated pidfd stop guard")
