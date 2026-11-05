@@ -458,14 +458,24 @@ The launcher **reused the existing source-checkout backend** instead
 of interrupting ongoing playback, and the maintainer reported that
 **effects were still processing**.
 
-**Status:** initial live playback and GUI/backend reuse confirmed.
-This is positive evidence of runtime continuity, **not yet** confirmation
-of intentional backend replacement, every effect toggle, IRS/VDC profile
-changes, device switching, Bluetooth reconnect, settings restoration
-or reboot behavior. The source-checkout and installed system package
-have different fingerprints; keep the installed package untouched.
-Complete those remaining cases before claiming full Checkpoint 5
-acceptance or merging to `main`.
+**Additional maintainer live tests (2026-11-04):**
+IRS impulse-response changes continue to work, VDC profile changes
+continue to work, and settings remain remembered. In this later
+test the backend had **not been running** and started properly.
+This checks the startup path separately from the earlier successful
+matching-fingerprint backend reuse during uninterrupted playback.
+These are the maintainer's observed outcomes; no new DSP changes
+were made for these checks.
+
+**Status:** live playback/effects, GUI/backend reuse, cold backend
+startup, IRS/VDC changes and retained settings have positive maintainer
+confirmation. Still outstanding for a complete Checkpoint 5 sign-off:
+physical output switching/Bluetooth reconnect and per-device recall,
+intentional backend replacement/restart as appropriate, a focused
+multi-effect toggle/bypass pass and any required reboot and
+sample-rate-specific checks. The source-checkout and installed system
+package have different fingerprints; keep the installed package
+untouched. Obtain explicit maintainer approval before merging to `main`.
 
 ## History and release notes
 
