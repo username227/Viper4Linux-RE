@@ -11,7 +11,7 @@ root = Path(__file__).resolve().parents[1]
 gui = (root / "src/viper-gui.cpp").read_text()
 cmake = (root / "CMakeLists.txt").read_text()
 assert '#include "gui-single-instance.h"' in gui
-assert 'guiInstance.claim();' in gui
+assert 'guiInstance.claim(waylandActivationToken);' in gui
 assert 'instance == ViperGuiInstance::StartResult::Forwarded) {' in gui
 assert 'viper_startup::completeForwardedX11(x11StartupId);' in gui
 assert 'app.setDesktopFileName("viper4linux");' in gui
