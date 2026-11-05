@@ -55,12 +55,23 @@ with tempfile.TemporaryDirectory(prefix="viper-single-gui-") as temp:
         raise AssertionError(f"timed out waiting for {path.name}")
 
     def second():
+        # The real single-instance socket must preserve a new Wayland
+        # compositor activation token when the second process exits.
+        child_env = env.copy()
+        child_env["XDG_ACTIVATION_TOKEN"] = "viper-ci-test-token"
         result = subprocess.run(
-            [str(output), str(markers)], env=env, capture_output=True,
+            [str(output), str(markers)], env=child_env, capture_output=True,
             text=True, timeout=5
         )
         assert result.returncode == 0, (result.returncode, result.stderr)
-        wait_for(markers / "activated")
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            marker = markers / "activated"
+            if marker.exists() and b"token=viper-ci-test-token" in marker.read_bytes():
+                break
+            time.sleep(0.04)
+        else:
+            raise AssertionError("Second-instance activation token was not forwarded")
 
     primary = start()
     try:

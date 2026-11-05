@@ -119,6 +119,15 @@ with tempfile.TemporaryDirectory(prefix="viper-startup-ci-") as isolated:
             raise AssertionError(f"Second GUI returned {result.returncode}")
         alive(primary)
         print("PASS: existing-window activation forwarded; no second GUI process remains", flush=True)
+        if mode == "wayland":
+            # Qt consumes the forwarded XDG_ACTIVATION_TOKEN when the existing
+            # window calls requestActivate(). The test token is deliberately fake
+            # to avoid claiming that a compositor granted focus.
+            requested = poll(lambda:
+                'activate("viper-ci-not-a-real-token"' in
+                primary_log.read_text(errors="replace"), seconds=7)
+            assert requested, "Wayland second launch did not forward token to Qt activation"
+            print("PASS: forwarded Wayland token reached native xdg_activation_v1.activate", flush=True)
         if observer2 is not None:
             observed, trace = finish_observer(observer2)
             (logs / "x11-second-launch.txt").write_text(trace)

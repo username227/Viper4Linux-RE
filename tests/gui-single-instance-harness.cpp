@@ -15,10 +15,16 @@ int main(int argc, char** argv) {
     if (result == ViperGuiInstance::StartResult::Forwarded) return 0;
     if (result != ViperGuiInstance::StartResult::Primary) return 21;
 
-    instance.onActivation(&app, [markers] {
+    instance.onActivation(&app, [markers](const QByteArray& token) {
         QFile activation(QDir(markers).filePath("activated"));
-        if (activation.open(QIODevice::WriteOnly | QIODevice::Append))
+        if (activation.open(QIODevice::WriteOnly | QIODevice::Append)) {
             activation.write("restored\n");
+            if (!token.isEmpty()) {
+                activation.write("token=");
+                activation.write(token);
+                activation.write("\n");
+            }
+        }
     });
     QFile ready(QDir(markers).filePath("ready"));
     if (!ready.open(QIODevice::WriteOnly | QIODevice::Truncate)) return 22;

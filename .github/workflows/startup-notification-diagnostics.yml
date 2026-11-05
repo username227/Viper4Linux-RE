@@ -39,6 +39,11 @@ jobs:
             -DVIPER_SOURCE_PREPARE_ROUTING=OFF
           cmake --build build --target viper-gui --parallel 2
 
+      - name: Test one-GUI ownership, activation-token IPC and packaging contracts
+        run: |
+          python3 tests/check-single-gui.py
+          python3 tests/check-packaging-contract.py
+
       - name: Compile X11 startup protocol observer
         if: matrix.session == 'x11'
         run: |
