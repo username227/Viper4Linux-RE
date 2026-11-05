@@ -22,6 +22,8 @@ Open **☰ → Preferences** to configure:
 - Startup: show window, start minimized to the taskbar, or start hidden in the tray.
 - Title-bar minimize: normal taskbar minimize or minimize to tray.
 - Close (X): quit the GUI, minimize to taskbar, or hide to tray.
+- When quitting: ask every time (default), always keep the backend running, or
+  stop the backend. This setting also applies to the menu and tray **Quit GUI**.
 - Optional login autostart using the user's XDG autostart directory.
 
 The tray menu provides Show/Hide, the Master processing toggle, Preferences,
@@ -31,9 +33,19 @@ than hide it permanently. On Cinnamon/X11 the black taskbar-window regression
 was fixed by not clearing the minimized state after hiding the window.
 KDE Plasma tray behavior remains to be verified on a real KDE session.
 
-**Quit GUI** closes the interface; it does not stop the independent audio backend.
-For a full backend stop during development, see the scripts below. To verify
-login autostart you only need to log out and back in, not reboot.
+When the GUI actually exits while a ViPER backend is running, it asks whether
+to **Keep backend running**, **Stop backend**, or **Cancel**. Check
+**Remember this choice** to skip future prompts; to change it later, return
+to **Preferences → When quitting the GUI** and select **Ask every time**,
+**Keep audio backend running**, or **Stop audio backend**.
+Choosing Stop signals only the explicitly marked ViPER filter-chain client,
+**never the system PipeWire daemon**. If the backend cannot be safely identified
+or signaled, the GUI stays open and shows an error instead of guessing.
+When no backend is running, the GUI quits without prompting. Closing to
+taskbar or tray does not prompt or affect audio. On forced termination
+(SIGKILL, crashes, terminal job-control signals), no interactive quit dialog
+can be shown. To verify login autostart you only need to log out and back in,
+not reboot.
 
 ## CLI and troubleshooting
 
