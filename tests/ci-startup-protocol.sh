@@ -21,20 +21,23 @@ if [[ "$mode" == x11 ]]; then
     xdpyinfo | head -n 4 >> startup-diagnostics/session.txt
 elif [[ "$mode" == wayland ]]; then
     export QT_QPA_PLATFORM=wayland
-    export WAYLAND_DISPLAY=wayland-ci
     export WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_HEADLESS_OUTPUTS=1
     export XDG_CURRENT_DESKTOP=sway
-    unset DISPLAY
+    unset DISPLAY WAYLAND_DISPLAY WAYLAND_SOCKET
     printf 'set $mod Mod4\noutput * resolution 1280x800\n' > "$runtime/sway.conf"
-    sway --unsupported-gpu --config "$runtime/sway.conf" --socket "$WAYLAND_DISPLAY" \
+    # Ubuntu 24.04 Sway 1.9 creates the Wayland socket automatically.
+    sway --unsupported-gpu --config "$runtime/sway.conf" \
       > startup-diagnostics/sway.log 2>&1 &
     sway_pid=$!
+    socket=''
     for attempt in $(seq 1 80); do
-        [[ -S "$runtime/$WAYLAND_DISPLAY" ]] && break
+        socket="$(find "$runtime" -maxdepth 1 -type s -name 'wayland-*' -print -quit)"
+        [[ -n "$socket" ]] && break
         kill -0 "$sway_pid" 2>/dev/null || { cat startup-diagnostics/sway.log; exit 1; }
         sleep 0.2
     done
-    [[ -S "$runtime/$WAYLAND_DISPLAY" ]] || { cat startup-diagnostics/sway.log; exit 1; }
+    [[ -n "$socket" && -S "$socket" ]] || { cat startup-diagnostics/sway.log; exit 1; }
+    export WAYLAND_DISPLAY="${socket##*/}"
     wayland-info > startup-diagnostics/wayland-info.txt 2>&1
     grep -q xdg_activation_v1 startup-diagnostics/wayland-info.txt || {
         echo 'The test compositor did not expose xdg_activation_v1' >&2
