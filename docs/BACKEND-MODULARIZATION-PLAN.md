@@ -484,6 +484,47 @@ specific checks. The source-checkout and installed system
 package have different fingerprints; keep the installed package
 untouched. Obtain explicit maintainer approval before merging to `main`.
 
+### Checkpoint 5 — final maintainer acceptance (2026-11-04)
+
+The maintainer additionally tested the source-checkout CLI/master DSP controls
+and **stopped and restarted the development backend**. Playback resumed with
+effects processing after restart. In context, this completes the requested
+live processing/bypass and intentional restart workflow; the maintainer's
+specific report is that “everything still processes including after backend
+restart.” The terminal `Ctrl+Z` episode was separately reproduced: suspending
+the GUI stopped event handling, `fg` resumed it normally when no close
+event had been queued; no backend regression was found.
+
+**Final acceptance summary:** The maintainer confirmed GUI operation (version
+`1.1.0-5c66fb830883`, identifying the last DSP source commit),
+uninterrupted matching-backend reuse, cold startup, deliberate restart,
+normal live effects, changeable IRS and VDC, persisted preferences,
+and working physical output switching with per-device recall. Automated
+checks: full Arch developer suite, CTest 4/4 (incremental and fully
+clean build), two independent deterministic CMake staging installs
+(35 matching files, 2 symlinks), unchanged LADSPA symbol export and
+clean working tree.
+
+**Final code-review check:** the original `src/viper-ladspa.cpp` and
+the three included refactor files (`startup-settings.inc`,
+`processor.inc`, `processor-run.inc`) reconstruct to the same
+**16,588 non-comment C++ tokens** after include expansion. The changes
+are source organization, comments/whitespace and static test file paths;
+there were no DSP operations changed. GitHub tree modes confirm
+`tests/check-native-effect-routing.py` remains executable (`100755`)
+and `third_party/ViPERDSP` retains its pinned gitlink.
+
+**Decision:** core backend modularization verification accepted for
+merge into `main`, subject to the final pull-request review. A separate
+manual Bluetooth disconnection/reconnection, full reboot, and all
+supported hardware sample-rate variations were *not* individually
+repeated for this mechanical refactor; they remain release/hardware
+qualification rather than blockers for merging these source-only
+changes. A complete native Arch `makepkg` archive has not been
+produced by these CMake tests. GitHub's workflow settings do not
+automatically run the package CI on this refactor branch; do not
+describe these as passing GitHub Actions.
+
 ## History and release notes
 
 The preceding GUI refactor was merged as PR #1 on 2026-11-03; the feature
@@ -493,9 +534,7 @@ until it is merged or accepted for a release. The earlier GUI planning
 document is preserved by its original Git commits, not duplicated as
 another active plan.
 
-**Next action:** avoid re-running already confirmed playback,
-output switching/recall, IRS/VDC loading, backend reuse and cold start.
-Check intentional replacement/restart and focused effect bypass, then
-review any untested Bluetooth-reconnect, reboot or sample-rate paths
-as needed before the maintainer's explicit merge decision. Do not change the installed system package as part
-of this test, and do not add source files without architectural need.
+**Next action:** review and merge the validated source-only branch
+into `main`. Leave installed system packages untouched; their rebuild,
+actual `makepkg`/distribution verification, and any extended hardware
+matrix checks belong to subsequent packaging/release preparation.
