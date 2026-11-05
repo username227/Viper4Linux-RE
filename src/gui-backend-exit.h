@@ -45,10 +45,8 @@ inline StopResult stopMarkedBackend(pid_t pid, std::string& error,
     // Revalidate after binding the pidfd. A stale PID or an unrelated
     // PipeWire process must NEVER receive a stop request.
     if (!isMarkedBackend(pid, procRoot)) {
-        const bool gone = errno == ENOENT || errno == ESRCH;
         ::close(fd);
-        if (gone) return StopResult::AlreadyStopped;
-        error = "The backend process no longer has the expected ViPER identity.";
+        error = "The target process could not be verified as the ViPER backend; refusing to stop it.";
         return StopResult::Refused;
     }
     const int sent = static_cast<int>(::syscall(SYS_pidfd_send_signal, fd, SIGTERM,
