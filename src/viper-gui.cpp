@@ -2,6 +2,7 @@
 // Audio runs in PipeWire's independent filter-chain, not inside this GUI.
 #include "viper-control.h"
 #include "viper-backend-state.h"
+#include "gui-backend-exit.h"
 #include "sync/gui-control-channel.h"
 #include "viper-eq-presets.h"
 #include "widgets/eq-overviews.h"
@@ -965,9 +966,9 @@ public:
     }
 protected:
     void closeEvent(QCloseEvent* event) override {
-        saveUiGeometry();
         const QString choice = settings_.value("ui/closeBehavior", "quit").toString();
         if (choice == "tray") {
+            saveUiGeometry();
             if (!trayAvailable()) {
                 event->ignore();
                 statusMessage("System tray unavailable; the window stays open.");
@@ -978,16 +979,17 @@ protected:
             return;
         }
         if (choice == "minimized") {
+            saveUiGeometry();
             event->ignore();
             force_taskbar_minimize_ = true;
             showMinimized();
             QTimer::singleShot(0, this, [this]{ force_taskbar_minimize_ = false; });
             return;
         }
-        event->accept();
-        // quitOnLastWindowClosed is false to support tray-only startup;
-        // a genuine close/quit must therefore explicitly terminate the GUI.
-        QTimer::singleShot(0, qApp, [] { qApp->quit(); });
+        // Normal X-to-quit and menu/tray Quit share the same backend choice.
+        // Ignore this close event: Cancel must leave the window alive.
+        event->ignore();
+        quitGui();
     }
     void changeEvent(QEvent* event) override {
         // The window manager has already iconified this native top-level window.

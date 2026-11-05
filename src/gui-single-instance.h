@@ -1,6 +1,6 @@
 #pragma once
 // One GUI per user session, whether started by viper4linux or viper-gui.
-// The GUI does not start, stop, or supervise the independent DSP backend.
+// Only an explicit, user-approved GUI exit may stop the independent DSP backend.
 #include <QDebug>
 #include <QDir>
 #include <QLocalServer>

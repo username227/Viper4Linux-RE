@@ -27,9 +27,55 @@
         raise();
         activateWindow();
     }
+    // Called only on actual GUI exit, never on hide/minimize.
+    bool prepareBackendForGuiExit() {
+        const pid_t backendPid = viperbass::running_backend_pid();
+        if (backendPid <= 0) return true; // No backend to keep or stop.
+
+        QString decision = settings_.value("ui/backendOnExit", "ask").toString();
+        bool remember = false;
+        QWidget* promptParent = isVisible() ? static_cast<QWidget*>(this) : nullptr;
+        if (decision != "keep" && decision != "stop") {
+            QMessageBox prompt(QMessageBox::Question, "Quit Viper4Linux",
+                "The ViPER audio backend is still running. "
+                "Should it continue processing after the GUI closes?",
+                QMessageBox::NoButton, promptParent);
+            prompt.setWindowIcon(QIcon(":/viper4linux/blue.png"));
+            auto* keepButton = prompt.addButton("Keep backend running", QMessageBox::AcceptRole);
+            auto* stopButton = prompt.addButton("Stop backend", QMessageBox::DestructiveRole);
+            auto* cancelButton = prompt.addButton(QMessageBox::Cancel);
+            auto* rememberChoice = new QCheckBox("Remember this choice", &prompt);
+            prompt.setCheckBox(rememberChoice);
+            prompt.setDefaultButton(keepButton);
+            prompt.setEscapeButton(cancelButton);
+            prompt.exec();
+            if (prompt.clickedButton() == keepButton) decision = "keep";
+            else if (prompt.clickedButton() == stopButton) decision = "stop";
+            else return false;
+            remember = rememberChoice->isChecked();
+        }
+        if (decision == "stop") {
+            std::string error;
+            const auto result = viper_gui_exit::stopMarkedBackend(backendPid, error);
+            if (result != viper_gui_exit::StopResult::Signalled &&
+                result != viper_gui_exit::StopResult::AlreadyStopped) {
+                QMessageBox::warning(promptParent, "Could not stop ViPER backend",
+                    QString::fromStdString(error) +
+                    "\nThe GUI will stay open. The system PipeWire service was not touched.");
+                return false;
+            }
+        }
+        // Do not remember Cancel, and never change the preference when a stop fails.
+        if (remember) {
+            settings_.setValue("ui/backendOnExit", decision);
+            settings_.sync();
+        }
+        return true;
+    }
     void quitGui() {
+        if (!prepareBackendForGuiExit()) return;
         saveUiGeometry();
-        qApp->quit(); // Does not touch the separate PipeWire backend.
+        qApp->quit(); // Only an explicit Stop choice signals the marked backend.
     }
     void setupTray() {
         tray_icon_ = new QSystemTrayIcon(QIcon(":/viper4linux/blue.png"), this);
@@ -194,7 +240,7 @@
         auto* closeBox = new QGroupBox("When the close (X) button is clicked", &dialog);
         auto* closeLayout = new QVBoxLayout(closeBox);
         auto* closeGroup = new QButtonGroup(&dialog);
-        auto* closeQuit = new QRadioButton("Quit GUI (keep audio backend running)", closeBox);
+        auto* closeQuit = new QRadioButton("Quit GUI (use backend exit preference)", closeBox);
         auto* closeMin = new QRadioButton("Minimize to taskbar", closeBox);
         auto* closeTray = new QRadioButton("Hide to system tray", closeBox);
         closeGroup->addButton(closeQuit, 0);
@@ -206,6 +252,22 @@
         else if (ending == "tray") closeTray->setChecked(true);
         else closeQuit->setChecked(true);
         body->addWidget(closeBox);
+
+        auto* exitBox = new QGroupBox("When quitting the GUI (menu, tray or close X)", &dialog);
+        auto* exitLayout = new QVBoxLayout(exitBox);
+        auto* exitGroup = new QButtonGroup(&dialog);
+        auto* exitAsk = new QRadioButton("Ask every time", exitBox);
+        auto* exitKeep = new QRadioButton("Keep audio backend running", exitBox);
+        auto* exitStop = new QRadioButton("Stop audio backend", exitBox);
+        exitGroup->addButton(exitAsk, 0);
+        exitGroup->addButton(exitKeep, 1);
+        exitGroup->addButton(exitStop, 2);
+        for (auto* item : {exitAsk, exitKeep, exitStop}) exitLayout->addWidget(item);
+        const QString backendExit = settings_.value("ui/backendOnExit", "ask").toString();
+        if (backendExit == "keep") exitKeep->setChecked(true);
+        else if (backendExit == "stop") exitStop->setChecked(true);
+        else exitAsk->setChecked(true);
+        body->addWidget(exitBox);
 
         auto* autostart = new QCheckBox("Launch automatically when I log in", &dialog);
         autostart->setChecked(QFile::exists(autostartFile()));
@@ -239,6 +301,8 @@
         settings_.setValue("ui/minimizeToTray", minimize->isChecked());
         settings_.setValue("ui/closeBehavior",
             closeGroup->checkedId() == 2 ? "tray" : closeGroup->checkedId() == 1 ? "minimized" : "quit");
+        settings_.setValue("ui/backendOnExit",
+            exitGroup->checkedId() == 2 ? "stop" : exitGroup->checkedId() == 1 ? "keep" : "ask");
         settings_.sync();
         if (!setAutostart(autostart->isChecked())) {
             QMessageBox::warning(this, "Autostart",
