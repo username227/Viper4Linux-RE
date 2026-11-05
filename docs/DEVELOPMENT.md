@@ -87,13 +87,12 @@ setup scripts have been retired from this development branch. CMake and its
 developer targets now own their functionality. This is not proof of live
 PipeWire/audio acceptance, which must still be checked before merging.
 
-## Unreleased change log — refactor branch versus `main`
+## Unreleased change log — release-note candidates
 
-**Tracking only; not a release announcement.** This list records the small
-observable changes in `refactor/gui-modularization` compared with the current
-`main` baseline. Move the relevant entries into release notes only when the
-maintainer approves an actual release. The large structural split is not a
-new DSP-feature release.
+**Tracking only; not a release announcement.** These user-visible changes
+have been merged into `main` but are retained here for a future changelog.
+Move the relevant entries into release notes only when the maintainer approves
+an actual release. Source-code modularization itself is not a new DSP feature.
 
 ### User-facing improvements and fixes
 
@@ -114,6 +113,15 @@ new DSP-feature release.
   *combined* response. Explains frequency, Q, shelf-filter interaction and
   other bands, and states explicitly that this is not live audio metering.
   No DSP or Dynamic EQ graph algorithm change.
+- **Explicit GUI exit and audio backend choice (new behavior):** when quitting
+  the GUI from the close button (if configured to quit), application menu, or
+  system tray, users can keep the ViPER audio backend running, stop only the
+  ViPER backend, or cancel. A **Remember this choice** checkbox suppresses
+  future prompts; Preferences lets users switch between **Ask every time**,
+  **Keep audio backend running**, and **Stop audio backend**. Hiding or
+  minimizing the GUI does not prompt or stop processing, and the system
+  PipeWire service is never stopped. This behavior was confirmed by the
+  maintainer using a package build of the feature branch before PR #4 merged.
 - **Source-checkout launcher fix:** after developer scripts moved into
   `scripts/`, the launcher once again invokes `scripts/start.sh`
   correctly. This is a regression fix, not a new audio feature.
