@@ -49,3 +49,6 @@ else
     exit 2
 fi
 python3 tests/ci-startup-protocol.py "$mode" build/viper-gui
+if [[ "$mode" == x11 ]]; then
+    python3 tests/ci-x11-tray-startup.py
+fi

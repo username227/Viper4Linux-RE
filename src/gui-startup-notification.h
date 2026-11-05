@@ -1,7 +1,8 @@
 #pragma once
-// Complete only a successfully forwarded (second-instance) X11 startup.
-// Normal first-launch completion remains Qt's responsibility.
-// Wayland uses Qt's native xdg-activation-v1 support instead.
+// Complete X11 startup when no new top-level window is mapped:
+// an existing-instance handoff or a successful cold start hidden in the tray.
+// Visible first-launch notification remains Qt's responsibility; Wayland uses
+// native xdg-activation-v1 rather than this X11-specific completion.
 #include <QByteArray>
 #include <QGuiApplication>
 
@@ -13,7 +14,7 @@
 #endif
 
 namespace viper_startup {
-inline bool completeForwardedX11(const QByteArray& startupId) {
+inline bool completeX11Startup(const QByteArray& startupId) {
 #ifdef VIPER_HAVE_X11
     if (startupId.isEmpty() || startupId.size() > 4096 ||
         QGuiApplication::platformName() != QLatin1String("xcb"))

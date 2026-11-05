@@ -13,7 +13,10 @@ cmake = (root / "CMakeLists.txt").read_text()
 assert '#include "gui-single-instance.h"' in gui
 assert 'guiInstance.claim(waylandActivationToken);' in gui
 assert 'instance == ViperGuiInstance::StartResult::Forwarded) {' in gui
-assert 'viper_startup::completeForwardedX11(x11StartupId);' in gui
+assert 'viper_startup::completeX11Startup(x11StartupId);' in gui
+assert 'if (!window.isVisible() &&' in gui
+assert 'QTimer::singleShot(0, &window, [x11StartupId]' in gui
+assert 'if (trayAvailable()) return;' in gui
 assert 'app.setDesktopFileName("viper4linux");' in gui
 assert 'window.activateFromSecondLaunch();' in gui
 assert 'void activateFromSecondLaunch() { restoreFromTray(); }' in gui

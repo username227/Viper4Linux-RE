@@ -949,7 +949,7 @@ int main(int argc, char* argv[]) {
     const auto instance = guiInstance.claim(waylandActivationToken);
     if (instance == ViperGuiInstance::StartResult::Forwarded) {
         // The existing window cannot complete this new X11 startup on its own.
-        viper_startup::completeForwardedX11(x11StartupId);
+        viper_startup::completeX11Startup(x11StartupId);
         return 0;
     }
     if (instance == ViperGuiInstance::StartResult::Error) return 1;
@@ -963,5 +963,17 @@ int main(int argc, char* argv[]) {
         qunsetenv("XDG_ACTIVATION_TOKEN");
     });
     window.showAtStartup();
+    // A successful start-in-tray does not map a regular top-level window.
+    // On X11 Qt's automatic startup-notification completion normally occurs
+    // when showing a window, so explicitly complete this *hidden* cold start.
+    // If the tray is unavailable, showAtStartup() falls back to a visible
+    // window, leaving Qt's normal completion path untouched. Never send
+    // X11 messages on a native Wayland session.
+    if (!window.isVisible() &&
+        QGuiApplication::platformName() == QLatin1String("xcb")) {
+        QTimer::singleShot(0, &window, [x11StartupId] {
+            viper_startup::completeX11Startup(x11StartupId);
+        });
+    }
     return app.exec();
 }

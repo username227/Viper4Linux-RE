@@ -44,11 +44,13 @@ jobs:
           python3 tests/check-single-gui.py
           python3 tests/check-packaging-contract.py
 
-      - name: Compile X11 startup protocol observer
+      - name: Compile X11 startup observer and fake system tray
         if: matrix.session == 'x11'
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror \
             tests/ci-x11-startup-observer.cpp -lX11 -o build/ci-x11-startup-observer
+          c++ -std=c++17 -Wall -Wextra -Werror \
+            tests/ci-x11-tray-host.cpp -lX11 -o build/ci-x11-tray-host
 
       - name: Exercise startup and second-launch in graphical session
         shell: bash
