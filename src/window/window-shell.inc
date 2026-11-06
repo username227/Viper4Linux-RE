@@ -73,9 +73,73 @@
         return true;
     }
     void quitGui() {
+        if (audio_restart_process_) {
+            QMessageBox::information(this, "Restarting Audio Engine",
+                "The audio engine restart is still in progress. Quit once it finishes.");
+            return;
+        }
         if (!prepareBackendForGuiExit()) return;
         saveUiGeometry();
         qApp->quit(); // Only an explicit Stop choice signals the marked backend.
+    }
+
+    // One recovery action for the marked PipeWire client and its output monitor.
+    // The normal launcher is reused, so its locks and instance checks prevent
+    // duplicate processes; the system PipeWire daemon is never restarted.
+    void finishAudioEngineRestart(QProcess* process, bool success, const QString& detail) {
+        if (audio_restart_process_ != process) return;
+        audio_restart_process_ = nullptr;
+        if (audio_restart_button_) audio_restart_button_->setEnabled(true);
+        if (audio_restart_action_) audio_restart_action_->setEnabled(true);
+        process->deleteLater();
+        mapping_.close();
+        audio_activity_.reset();
+        if (success) {
+            last_output_memory_revision_.clear();
+            updateAudioOutputDisplay();
+            pollBackend();
+        } else {
+            status_->setText("○ Audio restart failed — details available");
+            status_->setStyleSheet(QString("color:%1;").arg(theme_muted_color_));
+            QMessageBox::warning(this, "Audio engine restart failed",
+                "The ViPER backend and Audio Output monitor could not both be restarted.\n\n" +
+                detail.right(4000) + "\n\nThe system PipeWire daemon was not restarted.");
+        }
+    }
+    void restartAudioEngine() {
+        if (audio_restart_process_) return; // One click, one complete recovery.
+        settings_.sync(); // Flush debounced edits before the backend reads saved settings.
+        auto* process = new QProcess(this);
+        audio_restart_process_ = process;
+        if (audio_restart_button_) audio_restart_button_->setEnabled(false);
+        if (audio_restart_action_) audio_restart_action_->setEnabled(false);
+        status_->setText("○ Restarting ViPER audio engine and output monitor…");
+        status_->setStyleSheet(QString("color:%1;").arg(theme_muted_color_));
+        mapping_.close(); // Do not keep writing to an old shared-memory instance.
+        audio_activity_.reset();
+
+        // The packaged GUI must use its installed launcher; a development GUI
+        // must use its own checkout even when a system package also exists.
+        const QString launcher = QCoreApplication::applicationFilePath() ==
+                QStringLiteral("/usr/bin/viper4linux-gui")
+            ? QStringLiteral("/usr/lib/viper4linux/viper_launcher.py")
+            : QString::fromUtf8(VIPER4LINUX_SOURCE_LAUNCHER);
+        process->setProgram(QStringLiteral("/usr/bin/python3"));
+        process->setArguments({launcher, QStringLiteral("--restart-audio")});
+        process->setProcessChannelMode(QProcess::MergedChannels);
+        connect(process, &QProcess::finished, this,
+                [this, process](int exitCode, QProcess::ExitStatus exitStatus) {
+            const bool success = exitStatus == QProcess::NormalExit && exitCode == 0;
+            const QString output = QString::fromLocal8Bit(process->readAll()).trimmed();
+            finishAudioEngineRestart(process, success,
+                output.isEmpty() ? process->errorString() : output);
+        });
+        connect(process, &QProcess::errorOccurred, this,
+                [this, process](QProcess::ProcessError error) {
+            if (error == QProcess::FailedToStart)
+                finishAudioEngineRestart(process, false, process->errorString());
+        });
+        process->start(); // Asynchronous: keep all six tabs and GUI controls responsive.
     }
     void setupTray() {
         tray_icon_ = new QSystemTrayIcon(QIcon(":/viper4linux/blue.png"), this);
@@ -328,6 +392,10 @@
         connect(preferences, &QAction::triggered, this, [this] { showPreferences(); });
         auto* presets = menu->addAction("Presets…");
         connect(presets, &QAction::triggered, this, [this] { showPresetManager(); });
+        audio_restart_action_ = menu->addAction("Restart Audio Engine");
+        connect(audio_restart_action_, &QAction::triggered, this,
+                [this] { restartAudioEngine(); });
+        menu->addSeparator();
         auto* libraries = menu->addMenu("Open Library");
         auto openFolder = [this](const QString& path) {
             if (!QDir().mkpath(path) ||
