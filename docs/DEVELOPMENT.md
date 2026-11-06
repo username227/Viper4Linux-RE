@@ -87,12 +87,13 @@ setup scripts have been retired from this development branch. CMake and its
 developer targets now own their functionality. This is not proof of live
 PipeWire/audio acceptance, which must still be checked before merging.
 
-## Unreleased change log — release-note candidates
+## v1.1.1 development history — archived notes
 
-**Tracking only; not a release announcement.** These user-visible changes
-have been merged into `main` but are retained here for a future changelog.
-Move the relevant entries into release notes only when the maintainer approves
-an actual release. Source-code modularization itself is not a new DSP feature.
+The following notes were written before the v1.1.1 release tag and describe
+changes already present in that release baseline. They are retained here for
+engineering context, **not** as new post-release changes. For user-facing
+changes merged since v1.1.1, see the [changelog](../CHANGELOG.md).
+Source-code modularization itself is not a new DSP feature.
 
 ### User-facing improvements and fixes
 
