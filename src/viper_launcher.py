@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
+import json
 import os
 from pathlib import Path
 import signal
@@ -98,7 +99,7 @@ def wait_until_absent(pids: set[int], timeout: float = 5.0) -> bool:
     return not (pids & running_clients().keys())
 
 
-def ensure_backend(root: Path = ROOT) -> None:
+def ensure_backend(root: Path = ROOT, *, force_restart: bool = False) -> int:
     desired = fingerprint(root)
     runtime = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
     if not runtime.is_dir():
@@ -108,11 +109,13 @@ def ensure_backend(root: Path = ROOT) -> None:
     with (runtime / 'viper4linux-launch.lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         current = running_clients()
-        if current and all(tag == desired for tag in current.values()) and len(current) == 1:
+        if not force_restart and current and all(tag == desired for tag in current.values()) and len(current) == 1:
             print('Viper4Linux backend already running at the current build; reusing it.', flush=True)
             return next(iter(current))
         if current:
-            print('Previous or mismatched Viper4Linux backend detected; stopping it first.', flush=True)
+            print('Restarting Viper4Linux backend.' if force_restart else
+                  'Previous or mismatched Viper4Linux backend detected; stopping it first.',
+                  flush=True)
             for pid in current:
                 try:
                     os.kill(pid, signal.SIGTERM)
@@ -215,7 +218,8 @@ def running_output_managers(script: Path, proc_root: Path = PROC) -> dict[int, t
             continue
     return result
 
-def ensure_output_monitor(backend_pid: int, root: Path = ROOT) -> None:
+def ensure_output_monitor(backend_pid: int, root: Path = ROOT,
+                          *, force_restart: bool = False) -> int:
     script = (Path('/usr/lib/viper4linux/viper_output_monitor.py')
               if SYSTEM_MODE and root == ROOT else root / 'src/viper_output_monitor.py')
     if not script.is_file():
@@ -225,8 +229,8 @@ def ensure_output_monitor(backend_pid: int, root: Path = ROOT) -> None:
     with (runtime / 'viper4linux-output-launch.lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         existing = running_output_managers(script)
-        if len(existing) == 1 and next(iter(existing.values())) == (backend_pid, desired):
-            return
+        if not force_restart and len(existing) == 1 and next(iter(existing.values())) == (backend_pid, desired):
+            return next(iter(existing))
         if existing:
             for pid in existing:
                 try:
@@ -249,6 +253,44 @@ def ensure_output_monitor(backend_pid: int, root: Path = ROOT) -> None:
         time.sleep(0.25)
         if proc.poll() is not None:
             raise RuntimeError(f'Audio Output monitor exited ({proc.returncode}); see {log_dir / "output-monitor.log"}')
+        return proc.pid
+
+
+def wait_for_output_status(backend_pid: int, manager_pid: int,
+                           since: float, timeout: float = 8.0) -> None:
+    """Do not report restart success until the new monitor publishes a heartbeat."""
+    runtime = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
+    status_file = runtime / 'viper4linux-output-status.json'
+    script = (Path('/usr/lib/viper4linux/viper_output_monitor.py')
+              if SYSTEM_MODE else ROOT / 'src/viper_output_monitor.py')
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            status = json.loads(status_file.read_text(encoding='utf-8'))
+            if (status.get('format') == 1 and
+                status.get('backend_pid') == backend_pid and
+                status.get('manager_pid') == manager_pid and
+                float(status.get('timestamp', 0)) >= since):
+                return
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+        if manager_pid not in running_output_managers(script):
+            raise RuntimeError('Audio Output monitor exited before publishing a fresh status. '
+                               'See output-monitor.log.')
+        time.sleep(0.1)
+    raise RuntimeError('Audio Output monitor did not publish a fresh status after restart. '
+                       'See output-monitor.log.')
+
+
+def restart_audio_engine() -> None:
+    """Replace both owned processes; never launch a second GUI or system PipeWire."""
+    started = time.time()
+    backend_pid = ensure_backend(force_restart=True)
+    manager_pid = ensure_output_monitor(backend_pid, force_restart=True)
+    wait_for_output_status(backend_pid, manager_pid, started)
+    print(f'Viper4Linux audio engine restarted (backend PID {backend_pid}, '
+          f'Audio Output monitor PID {manager_pid}).', flush=True)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='Viper4Linux unified launcher')
@@ -256,6 +298,8 @@ def main() -> int:
     mode.add_argument('--fingerprint', action='store_true', help='print the built backend fingerprint')
     mode.add_argument('--preflight', action='store_true',
                       help='preview backend reuse/replacement without launching or changing audio')
+    mode.add_argument('--restart-audio', action='store_true',
+                      help='restart the ViPER backend and Audio Output monitor without opening a GUI')
     args = parser.parse_args()
     try:
         if args.fingerprint:
@@ -263,6 +307,9 @@ def main() -> int:
             return 0
         if args.preflight:
             print(launch_preflight())
+            return 0
+        if args.restart_audio:
+            restart_audio_engine()
             return 0
         gui = Path('/usr/bin/viper4linux-gui') if SYSTEM_MODE else ROOT / 'build/viper-gui'
         if not gui.is_file() or not os.access(gui, os.X_OK):
