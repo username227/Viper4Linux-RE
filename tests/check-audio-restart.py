@@ -102,6 +102,13 @@ build_info = (ROOT / 'src/viper-build-info.h.in').read_text()
 assert 'viperRestartAudioButton' in gui
 assert 'new QPushButton("Restart Backend", central)' in gui
 assert 'menu->addAction("Restart Backend")' in shell
+# Layout regression: share the existing Presets actions row, with restart at
+# left and presets at right; keep the processing status on its own compact row.
+assert gui.index('actions->addWidget(audio_restart_button_);') < \
+       gui.index('actions->addStretch();') < \
+       gui.index('actions->addWidget(presetsButton);')
+assert 'layout->addWidget(status_);' in gui
+assert 'layout->addLayout(footer);' not in gui
 assert gui.count('[this] { restartAudioEngine(); }') == 1
 assert shell.count('[this] { restartAudioEngine(); }') == 1
 assert 'process->start();' in shell and 'process->waitForFinished(' not in shell
