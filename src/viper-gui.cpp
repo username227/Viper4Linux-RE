@@ -652,6 +652,7 @@ public:
                 tabs_->tabText(index) == "EQ && Tone" ? "EQ & Tone" : tabs_->tabText(index));
         });
         status_ = new QLabel("Checking backend...", central);
+        status_->setWordWrap(true); // Keep connection text readable next to Restart Audio.
         auto* footer = new QHBoxLayout();
         footer->setContentsMargins(0, 0, 0, 0);
         footer->addWidget(status_, 1);
