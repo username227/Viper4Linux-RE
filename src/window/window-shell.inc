@@ -102,7 +102,7 @@
             status_->setText("○ Audio restart failed — details available");
             status_->setStyleSheet(QString("color:%1;").arg(theme_muted_color_));
             QMessageBox::warning(this, "Audio engine restart failed",
-                "The ViPER backend and Audio Output monitor could not both be restarted.\n\n" +
+                QStringLiteral("The ViPER backend and Audio Output monitor could not both be restarted.\n\n") +
                 detail.right(4000) + "\n\nThe system PipeWire daemon was not restarted.");
         }
     }
@@ -138,6 +138,15 @@
                 [this, process](QProcess::ProcessError error) {
             if (error == QProcess::FailedToStart)
                 finishAudioEngineRestart(process, false, process->errorString());
+        });
+        // A stale launcher lock must not leave the button disabled indefinitely.
+        QTimer::singleShot(45000, process, [this, process] {
+            if (audio_restart_process_ != process ||
+                process->state() == QProcess::NotRunning) return;
+            process->kill();
+            finishAudioEngineRestart(process, false,
+                "The restart operation exceeded 45 seconds. Check backend.log and "
+                "output-monitor.log, then retry.");
         });
         process->start(); // Asynchronous: keep all six tabs and GUI controls responsive.
     }
