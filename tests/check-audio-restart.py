@@ -100,7 +100,8 @@ gui = (ROOT / 'src/viper-gui.cpp').read_text()
 shell = (ROOT / 'src/window/window-shell.inc').read_text()
 build_info = (ROOT / 'src/viper-build-info.h.in').read_text()
 assert 'viperRestartAudioButton' in gui
-assert 'Restart Audio Engine' in shell
+assert 'new QPushButton("Restart Backend", central)' in gui
+assert 'menu->addAction("Restart Backend")' in shell
 assert gui.count('[this] { restartAudioEngine(); }') == 1
 assert shell.count('[this] { restartAudioEngine(); }') == 1
 assert 'process->start();' in shell and 'process->waitForFinished(' not in shell
