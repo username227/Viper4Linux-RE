@@ -401,7 +401,7 @@
         connect(preferences, &QAction::triggered, this, [this] { showPreferences(); });
         auto* presets = menu->addAction("Presets…");
         connect(presets, &QAction::triggered, this, [this] { showPresetManager(); });
-        audio_restart_action_ = menu->addAction("Restart Audio Engine");
+        audio_restart_action_ = menu->addAction("Restart Backend");
         connect(audio_restart_action_, &QAction::triggered, this,
                 [this] { restartAudioEngine(); });
         menu->addSeparator();
