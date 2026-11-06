@@ -1,0 +1,23 @@
+# GitHub's "Generate release notes" reads these categories from merged PR labels.
+# Use one primary category label on each PR; unlabeled PRs remain visible.
+# The curated user-facing summary remains in CHANGELOG.md.
+changelog:
+  exclude:
+    labels:
+      - skip-release-notes
+  categories:
+    - title: "New Features"
+      labels:
+        - feature
+    - title: "Improvements"
+      labels:
+        - improvement
+    - title: "Bug Fixes"
+      labels:
+        - bug
+    - title: "Internal Changes"
+      labels:
+        - internal
+    - title: "Other Changes"
+      labels:
+        - "*"
