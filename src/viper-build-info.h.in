@@ -3,3 +3,5 @@
 #define VIPER4LINUX_DEV_REVISION "@V4L_REVISION@"
 #define VIPER4LINUX_DEV_VERSION "@V4L_DEV_VERSION@"
 #define VIPER4LINUX_VIPERDSP_REVISION "6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933"
+// Source GUI development can restart its own checkout, not a separately installed package.
+#define VIPER4LINUX_SOURCE_LAUNCHER "@CMAKE_CURRENT_SOURCE_DIR@/src/viper_launcher.py"
