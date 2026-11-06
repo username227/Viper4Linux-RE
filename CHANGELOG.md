@@ -23,7 +23,11 @@ section when a release is approved.
   backend and its Audio Output monitor while keeping the GUI open. The restart
   verifies a fresh monitor heartbeat and reconnects the interface; it does
   **not** restart the system PipeWire daemon. The existing launcher also
-  supports the command `viper4linux --restart-audio`.
+  supports the command `viper4linux --restart-audio`. The compact footer
+  layout ([PR #8](https://github.com/username227/Viper4Linux-RE/pull/8))
+  positions Restart Backend to the left of Presets and adds a subtle divider
+  above the buttons that stays anchored across all six tabs. The original
+  window width and resizing behavior are preserved.
 
 ## v1.1.1 — release baseline
 
