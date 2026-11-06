@@ -73,6 +73,8 @@ like to see what the community can make of it.
 > primary tested environment; KDE Plasma tray integration and other Linux
 > environments need further testing. See [Current limitations](#current-limitations).
 
+**Since the last release:** See the [changelog](CHANGELOG.md) for user-facing changes merged after v1.1.1 that are not yet released.
+
 **For contributors:** `main` uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [developer guide](docs/DEVELOPMENT.md) and [Arch packaging guide](docs/ARCH-PACKAGING.md). This was a build and packaging modernization, not a user-facing DSP or GUI feature change.
 
 ## What it offers
