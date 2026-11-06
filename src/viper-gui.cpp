@@ -23,6 +23,7 @@
 #include "gui-single-instance.h"
 #include "gui-startup-notification.h"
 #include <QApplication>
+#include <QCoreApplication>
 #include <QAction>
 #include <QButtonGroup>
 #include <QDialogButtonBox>
@@ -157,7 +158,7 @@ public:
         menuButton->setObjectName("viperApplicationMenuButton");
         menuButton->setText(QString::fromUtf8("☰"));
         menuButton->setAccessibleName("Application menu");
-        menuButton->setToolTip("Preferences, library, help, and quit");
+        menuButton->setToolTip("Restart audio, preferences, library, help, and quit");
         menuButton->setFixedWidth(34);
         menuButton->setPopupMode(QToolButton::InstantPopup);
         menuButton->setMenu(makeApplicationMenu(menuButton));
@@ -654,8 +655,14 @@ public:
         auto* footer = new QHBoxLayout();
         footer->setContentsMargins(0, 0, 0, 0);
         footer->addWidget(status_, 1);
-        // About is available from the application menu; the footer now only
-        // displays live backend connection status.
+        audio_restart_button_ = new QPushButton("Restart Audio", central);
+        audio_restart_button_->setObjectName("viperRestartAudioButton");
+        audio_restart_button_->setToolTip(
+            "Restart the ViPER backend and Audio Output monitor without closing the GUI.");
+        footer->addWidget(audio_restart_button_);
+        connect(audio_restart_button_, &QPushButton::clicked, this,
+                [this] { restartAudioEngine(); });
+        // Both this button and the application-menu action use one restart handler.
         layout->addLayout(footer);
         setCentralWidget(central);
 
@@ -667,6 +674,7 @@ public:
         connectEffectSignals(eq_reset, deq_spread);
         auto* timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, [this]{
+            if (audio_restart_process_) return;
             updateAudioOutputDisplay();
             pollBackend();
         });
@@ -776,6 +784,10 @@ private:
 #include "window/window-dynamics.inc"
     void push() {
         persistCurrentSettings();
+        if (audio_restart_process_) {
+            pending_edit_ = true; // Send edits to the new backend, never the dying one.
+            return;
+        }
         publishToBackend();
     }
 #include "window/window-effect-actions.inc"
@@ -790,6 +802,9 @@ private:
     viperbass::AudioActivityTracker audio_activity_;
     QSystemTrayIcon* tray_icon_{};
     QAction* tray_processing_action_{};
+    QAction* audio_restart_action_{};
+    QPushButton* audio_restart_button_{};
+    QProcess* audio_restart_process_{};
     bool force_taskbar_minimize_ = false;
     bool tray_restore_maximized_ = false;
     QString theme_muted_color_ = "#536a74";
