@@ -158,7 +158,7 @@ public:
         menuButton->setObjectName("viperApplicationMenuButton");
         menuButton->setText(QString::fromUtf8("☰"));
         menuButton->setAccessibleName("Application menu");
-        menuButton->setToolTip("Restart audio, preferences, library, help, and quit");
+        menuButton->setToolTip("Restart backend, preferences, library, help, and quit");
         menuButton->setFixedWidth(34);
         menuButton->setPopupMode(QToolButton::InstantPopup);
         menuButton->setMenu(makeApplicationMenu(menuButton));
@@ -652,11 +652,11 @@ public:
                 tabs_->tabText(index) == "EQ && Tone" ? "EQ & Tone" : tabs_->tabText(index));
         });
         status_ = new QLabel("Checking backend...", central);
-        status_->setWordWrap(true); // Keep connection text readable next to Restart Audio.
+        status_->setWordWrap(true); // Keep connection text readable next to Restart Backend.
         auto* footer = new QHBoxLayout();
         footer->setContentsMargins(0, 0, 0, 0);
         footer->addWidget(status_, 1);
-        audio_restart_button_ = new QPushButton("Restart Audio", central);
+        audio_restart_button_ = new QPushButton("Restart Backend", central);
         audio_restart_button_->setObjectName("viperRestartAudioButton");
         audio_restart_button_->setToolTip(
             "Restart the ViPER backend and Audio Output monitor without closing the GUI.");
