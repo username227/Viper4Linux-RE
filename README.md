@@ -2,6 +2,8 @@
 
 **Bringing ViPER back to Linux.**
 
+ViPER4Linux-RE is a native Linux audio effects processor built around ViPERDSP, PipeWire and a Qt6 desktop interface. It provides graphic and dynamic equalization, bass enhancement, surround sound, convolution, presets and automatic audio-output routing.
+
 I've always wanted a modern, working version of ViPER for Linux. The older
 ViPER4Linux project hadn't been updated in years and no longer worked smoothly
 for me, so I decided to see whether something new could be built.
