@@ -122,6 +122,23 @@ int main(int argc, char** argv) {
     assert(settings.value("ddc_profile").toString() == ddc);
     assert(settings.value("convolver_kernel").toString() == ir);
 
+    // PR #13 bumped the IPC version 26 -> 27 only to add a transient
+    // input-signal counter; saved effect parameters remained identical.
+    // A real saved version-26 snapshot must restore under the version-27 DSP.
+    auto version26 = saved;
+    version26.insert("control_version", 26);
+    assert(validateState(version26));
+    c->bass_mode.store(0);
+    c->eq_levels_hundredths[0].store(0);
+    c->deq_bands[2].gain_hundredths.store(0);
+    assert(restoreState(*c, version26, settings));
+    assert(c->bass_mode.load() == 2);
+    assert(c->eq_levels_hundredths[0].load() == -145);
+    assert(c->deq_bands[2].gain_hundredths.load() == 350);
+    // Fresh captures carry the new version, so the monitor can eventually
+    // overwrite older stored profiles without losing their actual settings.
+    assert(captureState(*c, settings).value("control_version").toInt() == 27);
+
     // Old saved outputs must still restore safely, defaulting to Custom.
     auto legacy = saved;
     auto legacyUi = legacy.value("ui").toObject();
@@ -136,6 +153,14 @@ int main(int argc, char** argv) {
     auto invalid = saved;
     invalid.insert("control_version", 25);
     c->bass_mode.store(1);
+    assert(!restoreState(*c, invalid, settings));
+    assert(c->bass_mode.load() == 1);
+    invalid = saved;
+    invalid.insert("control_version", 28);  // Future incompatible IPC version
+    assert(!restoreState(*c, invalid, settings));
+    assert(c->bass_mode.load() == 1);
+    invalid = saved;
+    invalid.insert("control_version", "26"); // String spoof of compatible number
     assert(!restoreState(*c, invalid, settings));
     assert(c->bass_mode.load() == 1);
     invalid = saved;
@@ -157,7 +182,8 @@ int main(int argc, char** argv) {
     assert(!restoreState(*c, invalid, settings));
 
     server.stop_server();
-    std::cout << "PASS: native output snapshots include EQ labels, DEQ, compressors, "
+    std::cout << "PASS: native output snapshots accept IPC v26 under v27, reject unknown versions, "
+                 "include EQ labels, DEQ, compressors, "
                  "native rebuild triggers and IRS/DDC reloads, "
                  "full restored IPC and invalid-state rejection\n";
 }

@@ -10,6 +10,12 @@ section when a release is approved.
 
 ### Fixed
 
+- **Audio Output snapshot compatibility** ([PR #15](https://github.com/username227/Viper4Linux-RE/pull/15)):
+  Saved per-device DSP settings from control version 26 can now be restored
+  with version 27, whose new audio-activity counter does not change stored
+  effect parameters. Unknown control versions and invalid settings remain
+  rejected before modification.
+
 - **Accurate audio-activity status** ([PR #13](https://github.com/username227/Viper4Linux-RE/pull/13)):
   The GUI now distinguishes incoming audio from silent DSP callbacks. When a
   player such as Elisa is paused, the footer changes from green **Processing
