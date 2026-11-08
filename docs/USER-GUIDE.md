@@ -26,6 +26,8 @@ Open **☰ → Preferences** to configure:
   stop the backend. This setting also applies to the menu and tray **Quit GUI**.
 - Optional login autostart using the user's XDG autostart directory.
 
+Preferences are grouped into **Startup**, **Window & tray behavior**, **GUI exit & audio backend**, and **Audio Output memory**. The dialog can be resized and remembers its size on OK or Cancel. On shorter screens, settings scroll while the action buttons remain visible. **Restore Defaults** resets the dialog's selections to their defaults; changes are applied only after OK, and existing Audio Output snapshots and named presets are not deleted.
+
 The tray menu provides Show/Hide, the Master processing toggle, Preferences,
 and Quit GUI. The tray click action toggles window visibility. If Qt reports
 no usable system tray, the application should keep its window accessible rather

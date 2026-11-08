@@ -30,6 +30,17 @@ section when a release is approved.
   forwarding on native Wayland. This does not resolve the separate native
   Cinnamon Wayland menu, popup, or decoration issues.
 
+### Changed
+
+- **Organized, resizable Preferences:** Startup, window/tray behavior, GUI
+  exit/backend and Audio Output memory are grouped in a clearer, scrollable
+  dialog. The dialog remembers its size, including after Cancel. Full Audio
+  Output explanatory text is visible instead of clipped; the redundant
+  tray-availability note is removed. Restore Defaults resets displayed
+  choices without deleting saved Audio Output snapshots or named presets.
+  Each section now has a bold heading and theme-accented, font-independent
+  icon for clearer visual hierarchy.
+
 ### Added
 
 - **Age-based diagnostic log retention and unified log** ([PR #14](https://github.com/username227/Viper4Linux-RE/pull/14)):

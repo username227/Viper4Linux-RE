@@ -60,7 +60,26 @@ protected:
             w.cubicTo(21, y+amplitude, 22, y+amplitude, 23, y);
             p.drawPath(w);
         };
-        if (kind_ == "bass") {
+        if (kind_ == "prefs_startup") {
+            // Startup: power button.
+            p.drawArc(QRectF(3,3,18,18), 140*16, 260*16);
+            line(12,1,12,11);
+        } else if (kind_ == "prefs_window") {
+            // Window and tray: a desktop display.
+            p.drawRoundedRect(QRectF(2,4,20,14),2,2);
+            line(12,18,12,21); line(7,21,17,21);
+        } else if (kind_ == "prefs_backend") {
+            // Independent audio backend: a speaker and wave.
+            p.drawRect(QRectF(2,9,6,7));
+            line(8,9,14,4); line(14,4,14,20); line(14,20,8,16);
+            p.drawArc(QRectF(12,5,10,14),-70*16,140*16);
+        } else if (kind_ == "prefs_memory") {
+            // Saved Audio Output device profile.
+            p.drawRoundedRect(QRectF(2,4,20,17),2.5,2.5);
+            p.drawEllipse(QPointF(12,12),5,5);
+            p.setBrush(color_); p.drawEllipse(QPointF(12,12),1.5,1.5);
+            p.setBrush(Qt::NoBrush);
+        } else if (kind_ == "bass") {
             wave(9, 7); wave(16, 4);
         } else if (kind_ == "bass_mono") {
             wave(12, 7); line(12,2,12,5); line(12,19,12,22);
