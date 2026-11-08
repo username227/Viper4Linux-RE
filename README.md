@@ -159,9 +159,10 @@ environment; broader desktop and distribution compatibility needs more testing.
 
 Download native packages, the pinned unified-source archive, and checksums from
 the [latest GitHub release](https://github.com/username227/Viper4Linux-RE/releases/latest).
-Choose the package built for your distribution. For package-specific details,
-see [Arch packaging](docs/ARCH-PACKAGING.md) or
-[Debian-family packaging](docs/DEB-PACKAGING.md).
+Choose the package built for your distribution. For installation, updates,
+and removal, see the [installation guide](docs/INSTALLATION.md). Packaging
+internals are covered in the [Arch packaging](docs/ARCH-PACKAGING.md) and
+[Debian-family packaging](docs/DEB-PACKAGING.md) guides.
 
 ### Building from source (Arch Linux)
 
@@ -266,6 +267,7 @@ changes. Releases and subsequent improvements will be documented in this reposit
 
 | Guide | Covers |
 | --- | --- |
+| [Installation guide](docs/INSTALLATION.md) | Distribution packages, source builds, upgrades, and removal |
 | [User guide](docs/USER-GUIDE.md) | Running the app, routing, tray, settings, troubleshooting |
 | [Effects reference](docs/EFFECTS.md) | All 24 effect groups, parameters and cautions |
 | [Presets and libraries](docs/PRESETS-AND-LIBRARIES.md) | Named presets, IRS, VDC, file locations |
