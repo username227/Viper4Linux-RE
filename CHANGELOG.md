@@ -38,6 +38,8 @@ section when a release is approved.
   Output explanatory text is visible instead of clipped; the redundant
   tray-availability note is removed. Restore Defaults resets displayed
   choices without deleting saved Audio Output snapshots or named presets.
+  Each section now has a bold heading and theme-accented, font-independent
+  icon for clearer visual hierarchy.
 
 ### Added
 

@@ -318,16 +318,36 @@
                 layout->addLayout(row);
             }
         };
-        auto configureSection = [](QGroupBox* group) {
+        // Native group titles lack visual hierarchy under some GTK/Qt themes.
+        // Use a real bold heading plus a monochrome, theme-accented glyph.
+        auto configureSection = [&dialog](QGroupBox* group, const QString& title,
+                                          const QString& glyphKind) {
             group->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
             auto* layout = new QVBoxLayout(group);
-            layout->setContentsMargins(16, 20, 16, 14);
+            layout->setContentsMargins(16, 12, 16, 14);
             layout->setSpacing(8);
+            auto* header = new QHBoxLayout;
+            header->setSpacing(9);
+            auto* glyph = new EffectGlyph(glyphKind, group);
+            glyph->setAccessibleName(QString()); // Decorative: heading contains the label.
+            glyph->setColor(dialog.palette().color(QPalette::Highlight));
+            auto* heading = new QLabel(title, group);
+            heading->setObjectName("preferencesSectionHeading");
+            QFont headingFont = heading->font();
+            headingFont.setBold(true);
+            if (headingFont.pointSizeF() > 0)
+                headingFont.setPointSizeF(headingFont.pointSizeF() + 1);
+            heading->setFont(headingFont);
+            header->addWidget(glyph);
+            header->addWidget(heading);
+            header->addStretch(1);
+            layout->addLayout(header);
+            layout->addSpacing(3);
             return layout;
         };
 
-        auto* startup = new QGroupBox("Startup", page);
-        auto* startLayout = configureSection(startup);
+        auto* startup = new QGroupBox(page);
+        auto* startLayout = configureSection(startup, "Startup", "prefs_startup");
         auto* autostart = new QCheckBox("Launch automatically when I log in", startup);
         autostart->setChecked(QFile::exists(autostartFile()));
         startLayout->addWidget(autostart);
@@ -346,8 +366,8 @@
         else startNormal->setChecked(true);
         sections->addWidget(startup);
 
-        auto* windowBox = new QGroupBox("Window && tray behavior", page);
-        auto* windowLayout = configureSection(windowBox);
+        auto* windowBox = new QGroupBox(page);
+        auto* windowLayout = configureSection(windowBox, "Window & tray behavior", "prefs_window");
         auto* minimize = new QCheckBox("Minimize to tray instead of taskbar", windowBox);
         minimize->setChecked(settings_.value("ui/minimizeToTray", false).toBool());
         windowLayout->addWidget(minimize);
@@ -366,8 +386,8 @@
         else closeQuit->setChecked(true);
         sections->addWidget(windowBox);
 
-        auto* exitBox = new QGroupBox("GUI exit && audio backend", page);
-        auto* exitLayout = configureSection(exitBox);
+        auto* exitBox = new QGroupBox(page);
+        auto* exitLayout = configureSection(exitBox, "GUI exit & audio backend", "prefs_backend");
         exitLayout->addWidget(new QLabel("When quitting the GUI (menu, tray or close X):", exitBox));
         auto* exitGroup = new QButtonGroup(&dialog);
         auto* exitAsk = new QRadioButton("Ask every time", exitBox);
@@ -389,8 +409,8 @@
         exitLayout->addWidget(exitExplanation);
         sections->addWidget(exitBox);
 
-        auto* memoryGroup = new QGroupBox("Audio Output memory", page);
-        auto* memoryLayout = configureSection(memoryGroup);
+        auto* memoryGroup = new QGroupBox(page);
+        auto* memoryLayout = configureSection(memoryGroup, "Audio Output memory", "prefs_memory");
         auto* rememberOutputs = new QCheckBox("Remember effects separately for each Audio Output",
                                               memoryGroup);
         rememberOutputs->setChecked(outputMemoryEnabled());
