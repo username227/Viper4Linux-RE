@@ -288,10 +288,50 @@
     void showPreferences() {
         QDialog dialog(this);
         dialog.setWindowTitle("Viper4Linux — Preferences");
-        dialog.setMinimumWidth(395);
+        const QSize screenSize = dialog.screen()
+            ? dialog.screen()->availableGeometry().size() : QSize(1280, 900);
+        // Stack radio choices on narrow screens, scroll on shorter screens.
+        const bool compact = screenSize.width() < 1000;
+        dialog.setMinimumSize(compact ? QSize(500, 420) : QSize(760, 420));
         auto* body = new QVBoxLayout(&dialog);
-        auto* startup = new QGroupBox("When Viper4Linux starts", &dialog);
-        auto* startLayout = new QVBoxLayout(startup);
+        body->setContentsMargins(12, 12, 12, 12);
+        body->setSpacing(10);
+        auto* scroll = new QScrollArea(&dialog);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setWidgetResizable(true);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        auto* page = new QWidget(scroll);
+        auto* sections = new QVBoxLayout(page);
+        sections->setContentsMargins(8, 4, 8, 4);
+        sections->setSpacing(12);
+        sections->setSizeConstraint(QLayout::SetMinAndMaxSize);
+        // Horizontal, like the approved mockup, unless the display is narrow.
+        auto addChoices = [compact](QVBoxLayout* layout,
+                                    std::initializer_list<QRadioButton*> choices) {
+            if (compact) {
+                for (auto* option : choices) layout->addWidget(option);
+            } else {
+                auto* row = new QHBoxLayout;
+                row->setSpacing(14);
+                for (auto* option : choices) row->addWidget(option);
+                row->addStretch();
+                layout->addLayout(row);
+            }
+        };
+        auto configureSection = [](QGroupBox* group) {
+            group->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+            auto* layout = new QVBoxLayout(group);
+            layout->setContentsMargins(16, 20, 16, 14);
+            layout->setSpacing(8);
+            return layout;
+        };
+
+        auto* startup = new QGroupBox("Startup", page);
+        auto* startLayout = configureSection(startup);
+        auto* autostart = new QCheckBox("Launch automatically when I log in", startup);
+        autostart->setChecked(QFile::exists(autostartFile()));
+        startLayout->addWidget(autostart);
+        startLayout->addWidget(new QLabel("When Viper4Linux starts:", startup));
         auto* startGroup = new QButtonGroup(&dialog);
         auto* startNormal = new QRadioButton("Show main window", startup);
         auto* startMin = new QRadioButton("Start minimized to taskbar", startup);
@@ -299,35 +339,36 @@
         startGroup->addButton(startNormal, 0);
         startGroup->addButton(startMin, 1);
         startGroup->addButton(startTray, 2);
-        for (auto* item : {startNormal, startMin, startTray}) startLayout->addWidget(item);
+        addChoices(startLayout, {startNormal, startMin, startTray});
         const QString initial = settings_.value("ui/startupBehavior", "show").toString();
         if (initial == "minimized") startMin->setChecked(true);
         else if (initial == "tray") startTray->setChecked(true);
         else startNormal->setChecked(true);
-        body->addWidget(startup);
+        sections->addWidget(startup);
 
-        auto* minimize = new QCheckBox("Minimize to tray instead of taskbar", &dialog);
+        auto* windowBox = new QGroupBox("Window && tray behavior", page);
+        auto* windowLayout = configureSection(windowBox);
+        auto* minimize = new QCheckBox("Minimize to tray instead of taskbar", windowBox);
         minimize->setChecked(settings_.value("ui/minimizeToTray", false).toBool());
-        body->addWidget(minimize);
-
-        auto* closeBox = new QGroupBox("When the close (X) button is clicked", &dialog);
-        auto* closeLayout = new QVBoxLayout(closeBox);
+        windowLayout->addWidget(minimize);
+        windowLayout->addWidget(new QLabel("When the close (X) button is clicked:", windowBox));
         auto* closeGroup = new QButtonGroup(&dialog);
-        auto* closeQuit = new QRadioButton("Quit GUI (use backend exit preference)", closeBox);
-        auto* closeMin = new QRadioButton("Minimize to taskbar", closeBox);
-        auto* closeTray = new QRadioButton("Hide to system tray", closeBox);
+        auto* closeQuit = new QRadioButton("Quit GUI (use backend exit preference)", windowBox);
+        auto* closeMin = new QRadioButton("Minimize to taskbar", windowBox);
+        auto* closeTray = new QRadioButton("Hide to system tray", windowBox);
         closeGroup->addButton(closeQuit, 0);
         closeGroup->addButton(closeMin, 1);
         closeGroup->addButton(closeTray, 2);
-        for (auto* item : {closeQuit, closeMin, closeTray}) closeLayout->addWidget(item);
+        addChoices(windowLayout, {closeQuit, closeMin, closeTray});
         const QString ending = settings_.value("ui/closeBehavior", "quit").toString();
         if (ending == "minimized") closeMin->setChecked(true);
         else if (ending == "tray") closeTray->setChecked(true);
         else closeQuit->setChecked(true);
-        body->addWidget(closeBox);
+        sections->addWidget(windowBox);
 
-        auto* exitBox = new QGroupBox("When quitting the GUI (menu, tray or close X)", &dialog);
-        auto* exitLayout = new QVBoxLayout(exitBox);
+        auto* exitBox = new QGroupBox("GUI exit && audio backend", page);
+        auto* exitLayout = configureSection(exitBox);
+        exitLayout->addWidget(new QLabel("When quitting the GUI (menu, tray or close X):", exitBox));
         auto* exitGroup = new QButtonGroup(&dialog);
         auto* exitAsk = new QRadioButton("Ask every time", exitBox);
         auto* exitKeep = new QRadioButton("Keep audio backend running", exitBox);
@@ -335,20 +376,23 @@
         exitGroup->addButton(exitAsk, 0);
         exitGroup->addButton(exitKeep, 1);
         exitGroup->addButton(exitStop, 2);
-        for (auto* item : {exitAsk, exitKeep, exitStop}) exitLayout->addWidget(item);
+        addChoices(exitLayout, {exitAsk, exitKeep, exitStop});
         const QString backendExit = settings_.value("ui/backendOnExit", "ask").toString();
         if (backendExit == "keep") exitKeep->setChecked(true);
         else if (backendExit == "stop") exitStop->setChecked(true);
         else exitAsk->setChecked(true);
-        body->addWidget(exitBox);
+        auto* exitExplanation = new QLabel(
+            "The audio backend can continue processing when the GUI is closed. "
+            "Choosing Stop affects only the ViPER audio engine, not PipeWire.",
+            exitBox);
+        exitExplanation->setWordWrap(true);
+        exitLayout->addWidget(exitExplanation);
+        sections->addWidget(exitBox);
 
-        auto* autostart = new QCheckBox("Launch automatically when I log in", &dialog);
-        autostart->setChecked(QFile::exists(autostartFile()));
-        body->addWidget(autostart);
-        auto* memoryGroup = new QGroupBox("Audio Output", &dialog);
-        auto* memoryLayout = new QVBoxLayout(memoryGroup);
+        auto* memoryGroup = new QGroupBox("Audio Output memory", page);
+        auto* memoryLayout = configureSection(memoryGroup);
         auto* rememberOutputs = new QCheckBox("Remember effects separately for each Audio Output",
-                                             memoryGroup);
+                                              memoryGroup);
         rememberOutputs->setChecked(outputMemoryEnabled());
         memoryLayout->addWidget(rememberOutputs);
         auto* memoryExplanation = new QLabel(
@@ -358,17 +402,38 @@
             memoryGroup);
         memoryExplanation->setWordWrap(true);
         memoryLayout->addWidget(memoryExplanation);
-        body->addWidget(memoryGroup);
-        auto* notice = new QLabel(
-            "If the desktop tray is unavailable, Viper4Linux stays accessible\n"
-            "as an ordinary window or taskbar application.", &dialog);
-        notice->setWordWrap(true);
-        body->addWidget(notice);
+        sections->addWidget(memoryGroup);
+        sections->addStretch();
+        scroll->setWidget(page);
+        body->addWidget(scroll, 1);
+
         auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        auto* defaults = buttons->addButton("Restore Defaults", QDialogButtonBox::ResetRole);
+        // Only change dialog controls until OK. Never delete output snapshots.
+        connect(defaults, &QPushButton::clicked, &dialog, [=] {
+            startNormal->setChecked(true);
+            autostart->setChecked(false);
+            minimize->setChecked(false);
+            closeQuit->setChecked(true);
+            exitAsk->setChecked(true);
+            rememberOutputs->setChecked(false);
+        });
         connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
         body->addWidget(buttons);
-        if (dialog.exec() != QDialog::Accepted) return;
+
+        QSize preferred = settings_.value("ui/preferencesDialogSize", QSize(940, 680)).toSize();
+        if (preferred.width() < 500 || preferred.height() < 400)
+            preferred = QSize(940, 680);
+        const QSize available(std::max(500, screenSize.width() - 64),
+                              std::max(420, screenSize.height() - 80));
+        dialog.resize(preferred.expandedTo(dialog.minimumSize()).boundedTo(available));
+
+        const int outcome = dialog.exec();
+        // Save size even on Cancel and title-bar close. Nothing else changes.
+        settings_.setValue("ui/preferencesDialogSize", dialog.size());
+        settings_.sync();
+        if (outcome != QDialog::Accepted) return;
         settings_.setValue("ui/startupBehavior",
             startGroup->checkedId() == 2 ? "tray" : startGroup->checkedId() == 1 ? "minimized" : "show");
         settings_.setValue("ui/minimizeToTray", minimize->isChecked());

@@ -19,6 +19,24 @@ assert 'Start hidden in system tray' in s
 assert 'Start minimized to taskbar' in s
 assert 'Minimize to tray instead of taskbar' in s
 assert 'Hide to system tray' in s
+# Preferences geometry and layout contracts. Cancel only saves dialog size.
+prefs = s[s.index('    void showPreferences() {'):s.index('    QString logRetentionHelper() const {')]
+for title in ('"Startup"', '"Window && tray behavior"',
+              '"GUI exit && audio backend"', '"Audio Output memory"'):
+    assert title in prefs, title
+assert prefs.index('"Startup"') < prefs.index('"Window && tray behavior"')
+assert prefs.index('"Window && tray behavior"') < prefs.index('"GUI exit && audio backend"')
+assert prefs.index('"GUI exit && audio backend"') < prefs.index('"Audio Output memory"')
+for token in ('QScrollArea', 'setWidgetResizable(true)', 'Qt::ScrollBarAlwaysOff',
+              'QDialogButtonBox::ResetRole', '"Restore Defaults"',
+              'ui/preferencesDialogSize',
+              'settings_.setValue("ui/preferencesDialogSize", dialog.size());',
+              'if (outcome != QDialog::Accepted) return;'):
+    assert token in prefs, token
+assert prefs.index('settings_.setValue("ui/preferencesDialogSize", dialog.size());') < prefs.index('if (outcome != QDialog::Accepted) return;')
+assert prefs.index('if (outcome != QDialog::Accepted) return;') < prefs.index('settings_.setValue("ui/startupBehavior"')
+assert 'If the desktop tray is unavailable' not in prefs
+assert all(x in prefs for x in ('addChoices(startLayout', 'addChoices(windowLayout', 'addChoices(exitLayout'))
 assert 'QSystemTrayIcon::isSystemTrayAvailable()' in s
 assert 'if (!trayAvailable()) return;' in s
 assert 'System tray unavailable; the window stays open.' in s
