@@ -551,16 +551,23 @@
             // modifications made with the command-line control utility.
             readBackend();
         }
-        // Merely having shared memory does not mean the DSP is receiving audio.
-        // Compare two consecutive 500ms polls without touching the audio thread.
+        // Compare callback and non-silent input-block counters across 500ms
+        // polls; always-process callbacks can continue with silent input.
         const auto* control = mapping_.get();
         const auto state = audio_activity_.sample(
             static_cast<pid_t>(control->owner_pid.load(std::memory_order_relaxed)),
-            control->audio_callbacks.load(std::memory_order_relaxed));
+            control->audio_callbacks.load(std::memory_order_relaxed),
+            control->input_signal_blocks.load(std::memory_order_relaxed));
         switch (state) {
         case viperbass::BackendAudioActivity::Active:
-            status_->setText("● Processing audio — DSP callbacks active");
+            status_->setText("● Processing audio — input signal detected");
             status_->setStyleSheet("color: #209454;");
+            break;
+        case viperbass::BackendAudioActivity::NoSignal:
+            status_->setText("○ Connected — no audio signal (DSP ready)");
+            // Blue distinguishes connected silence from green input activity and muted idle.
+            status_->setStyleSheet(palette().color(QPalette::Window).lightness() < 130
+                ? "color: #75B9F4;" : "color: #2B75B8;");
             break;
         case viperbass::BackendAudioActivity::Idle:
             status_->setText("○ Connected — idle (effects processor ready)");

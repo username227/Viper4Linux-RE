@@ -65,13 +65,18 @@ man viper4linux-ctl
 
 Backend status distinguishes the following conditions:
 
-- **Processing audio (GUI):** the backend control channel is present and its
-  `audio_callbacks` counter advances between 500ms GUI polls. This proves DSP
-  callbacks are running, **not** that non-silent music is audible.
+- **Processing audio (GUI):** DSP callbacks are active and the incoming
+  audio signal exceeded about -80 dBFS in recent blocks. This detects real
+  input samples, **not** necessarily audible output (muting or output routing
+  can still prevent sound). A short ~1.5-second grace reduces flicker during rests.
+- **Connected — no audio signal (GUI):** DSP callbacks continue under
+  `node.always-process = true`, but no input above the detection floor was
+  seen recently. Paused Elisa or other silent players should reach this state.
 - **Connected — idle (GUI):** the DSP channel is present but its audio callback
   counter has not advanced since the previous GUI poll; effects are ready.
 - **Connected — checking audio activity (GUI):** the first sample after attaching
-  or restarting the DSP. A second sample is needed to classify active versus idle.
+  or restarting the DSP. A second sample is needed to classify signal versus
+  no signal.
 
 - **Ready to process audio:** the dedicated, marked PipeWire backend process is
   running, but its DSP control channel has not appeared yet. The smart filter
@@ -86,6 +91,7 @@ Backend status distinguishes the following conditions:
 counter rather than claiming active/idle from a single sample. Run it twice
 if you need to check whether the number is increasing. The GUI observes changes
 automatically. Closing a music player does not unload or restart the DSP.
+Other applications can still supply input to ViPER when Elisa is paused.
 
 If audio is playing but the status remains **Ready to process audio**, inspect
 routing and the backend log: a process can be alive without a working DSP.

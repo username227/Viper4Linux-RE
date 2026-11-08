@@ -97,10 +97,11 @@ inline pid_t detected_backend_pid() {
 #endif
     return running_backend_pid();
 }
-// A GUI-local sampler of the already-published DSP callback counter.
-// No added shared-memory fields or audio-thread work is required.
-// "Active" means callbacks are advancing; a callback may process silence.
-enum class BackendAudioActivity { Checking, Active, Idle };
+// A GUI-local sampler of real-time input activity. Always-process DSP callbacks
+// continue during silence, so their counter alone cannot identify a signal.
+// Keep a short two-poll grace after the last detected input to avoid flicker
+// during musical rests; callbacks with no signal eventually report NoSignal.
+enum class BackendAudioActivity { Checking, Active, NoSignal, Idle };
 
 class AudioActivityTracker {
 public:
@@ -108,9 +109,13 @@ public:
         have_sample_ = false;
         backend_pid_ = 0;
         last_callbacks_ = 0;
+        last_signal_blocks_ = 0;
+        quiet_polls_ = 0;
+        recent_signal_ = false;
     }
 
-    BackendAudioActivity sample(pid_t pid, std::uint32_t callbacks) noexcept {
+    BackendAudioActivity sample(pid_t pid, std::uint32_t callbacks,
+                                std::uint32_t signal_blocks) noexcept {
         if (pid <= 0) {
             reset();
             return BackendAudioActivity::Checking;
@@ -119,17 +124,37 @@ public:
             have_sample_ = true;
             backend_pid_ = pid;
             last_callbacks_ = callbacks;
+            last_signal_blocks_ = signal_blocks;
+            quiet_polls_ = 0;
+            recent_signal_ = false;
             return BackendAudioActivity::Checking;
         }
-        const auto result = callbacks != last_callbacks_
-            ? BackendAudioActivity::Active : BackendAudioActivity::Idle;
+        const bool callbacks_advanced = callbacks != last_callbacks_;
+        const bool signal_advanced = signal_blocks != last_signal_blocks_;
         last_callbacks_ = callbacks;
-        return result;
+        last_signal_blocks_ = signal_blocks;
+        if (!callbacks_advanced) {
+            recent_signal_ = false;
+            quiet_polls_ = 0;
+            return BackendAudioActivity::Idle;
+        }
+        if (signal_advanced) {
+            recent_signal_ = true;
+            quiet_polls_ = 0;
+            return BackendAudioActivity::Active;
+        }
+        if (recent_signal_ && ++quiet_polls_ <= 2)
+            return BackendAudioActivity::Active;
+        recent_signal_ = false;
+        return BackendAudioActivity::NoSignal;
     }
 
 private:
     pid_t backend_pid_ = 0;
     std::uint32_t last_callbacks_ = 0;
+    std::uint32_t last_signal_blocks_ = 0;
+    unsigned quiet_polls_ = 0;
+    bool recent_signal_ = false;
     bool have_sample_ = false;
 };
 } // namespace viperbass

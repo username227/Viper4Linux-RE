@@ -1,5 +1,11 @@
     void run(unsigned long frames) {
-        if (controls) controls->audio_callbacks.fetch_add(1, std::memory_order_relaxed);
+        if (controls) {
+            controls->audio_callbacks.fetch_add(1, std::memory_order_relaxed);
+            // Observe sanitized-input activity even during a temporary wet-engine
+            // lock miss. This never changes samples or the always-process policy.
+            if (viperbass::hasInputSignal(ports[InputLeft], ports[InputRight], frames))
+                controls->input_signal_blocks.fetch_add(1, std::memory_order_relaxed);
+        }
         std::unique_lock<std::mutex> wet_guard(wet_mutex, std::try_to_lock);
         if (!wet_guard.owns_lock()) {
             // Never block PipeWire while the background loader constructs FFT kernels.

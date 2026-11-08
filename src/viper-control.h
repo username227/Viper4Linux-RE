@@ -17,7 +17,7 @@
 
 namespace viperbass {
 constexpr std::uint32_t kMagic = 0x56434C31; // VBPC
-constexpr std::uint32_t kVersion = 26;
+constexpr std::uint32_t kVersion = 27;
 struct alignas(64) Controls {
     std::uint32_t magic = kMagic;
     std::uint32_t version = kVersion;
@@ -183,6 +183,8 @@ struct alignas(64) Controls {
     std::atomic<std::int32_t> convolver_ready{0}; // native kernel successfully loaded
     std::atomic<std::int32_t> convolver_status{0}; // 0 none, 1 ready, -1 invalid, -2 rate mismatch
     std::atomic<std::int32_t> sample_rate_hz{0}; // actual LADSPA sample rate for GUI diagnostics
+    // RT-safe input-signal counter for distinguishing audio from always-process silence.
+    std::atomic<std::uint32_t> input_signal_blocks{0};
 };
 static_assert(std::atomic<std::int32_t>::is_always_lock_free,
               "The IPC prototype needs lock-free 32-bit atomics");

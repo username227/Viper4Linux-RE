@@ -14,6 +14,14 @@ run_mock() {
 }
 
 run_contracts() {
+    # Compile and execute the isolated GUI signal classifier without Qt/PipeWire.
+    (
+        work=$(mktemp -d)
+        trap 'rm -rf -- "$work"' EXIT
+        "${CXX:-g++}" -std=c++17 -O2 -Wall -Wextra -Werror -Isrc \
+          tests/check-audio-activity.cpp -o "$work/check-audio-activity"
+        "$work/check-audio-activity"
+    )
     python3 tests/check-native-state-contract.py
     python3 tests/check-precision-persistence-contract.py
     python3 tests/check-gui-sync-contract.py

@@ -778,6 +778,19 @@ int main(int argc, char** argv) {
     assert(p->mb_applied_serial.load() == mb_serial);
     d->run(h, 2048);
     near(ol[2047], compressor_baseline);
+    // Meter must detect incoming audio, not perpetual always-process callbacks.
+    const auto signal_before = p->input_signal_blocks.load();
+    for (auto& sample : l) sample = 0.0f;
+    for (auto& sample : r) sample = 0.0f;
+    d->run(h, 2048);
+    assert(p->input_signal_blocks.load() == signal_before);
+    l[0] = 0.002f;
+    d->run(h, 2048);
+    assert(p->input_signal_blocks.load() == signal_before + 1);
+    l[0] = 0.0f;
+    r[0] = -0.002f;
+    d->run(h, 2048);
+    assert(p->input_signal_blocks.load() == signal_before + 2);
     d->cleanup(h);
     page.close();
 

@@ -329,6 +329,7 @@ inline void printCliReport(std::ostream& out, const Controls& c,
     out << "\nBackend\n" << std::string(58, '-') << '\n';
     out << "  Processing rate: " << c.sample_rate_hz.load() << " Hz\n"
         << "  Backend PID:     " << c.owner_pid.load() << '\n'
-        << "  Audio blocks:    " << c.audio_callbacks.load() << '\n';
+        << "  Audio blocks:    " << c.audio_callbacks.load() << '\n'
+        << "  Input blocks:    " << c.input_signal_blocks.load() << " (signal above -80 dBFS)\n";
 }
 } // namespace viperbass
