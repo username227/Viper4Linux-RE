@@ -153,8 +153,8 @@ environment; broader desktop and distribution compatibility needs more testing.
 | Distribution | Installation |
 | --- | --- |
 | **Arch Linux** | [Stable AUR](https://aur.archlinux.org/packages/viper4linux-re), [development AUR](https://aur.archlinux.org/packages/viper4linux-re-git), or prebuilt Arch package |
-| **Ubuntu 24.04 / Linux Mint 22.x** | Native Ubuntu/Mint `.deb` package |
-| **Debian 13 / LMDE 7** | Native Debian/LMDE `.deb` package |
+| **Ubuntu 24.04 / Linux Mint 22.x** | Download the native Ubuntu/Mint `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page |
+| **Debian 13 / LMDE 7** | Download the native Debian/LMDE `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page |
 | **Other distributions** | Build from source; compatibility is not yet established |
 
 Download native packages, the pinned unified-source archive, and checksums from
@@ -170,7 +170,7 @@ sudo pacman -S --needed base-devel cmake git pkgconf ladspa pipewire qt6-base py
 git clone --recurse-submodules https://github.com/username227/Viper4Linux-RE.git
 cd Viper4Linux-RE
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 4
+cmake --build build
 cmake --build build --target viper_source_check
 ```
 
