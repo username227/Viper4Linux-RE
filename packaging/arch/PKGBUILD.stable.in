@@ -27,7 +27,7 @@ build() {
         -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
         -DVIPER_SYSTEM_INSTALL_LAYOUT=arch \
         -DVIPER_SYSTEM_PACKAGE_NAME="$pkgname"
-    cmake --build "$built" --parallel "$(nproc)"
+    cmake --build "$built"
 }
 
 check() {

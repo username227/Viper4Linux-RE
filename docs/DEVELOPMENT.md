@@ -35,7 +35,7 @@ patches or routing configuration:
 ```sh
 git submodule update --init --checkout third_party/ViPERDSP
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 4
+cmake --build build
 cmake --build build --target viper_source_check
 ```
 
@@ -247,7 +247,7 @@ the precision keys to prevent values from leaking between devices.
 Development on Arch Linux requires C++17, CMake, Qt6 Widgets, PipeWire,
 LADSPA headers and pinned upstream ViPERDSP. For a direct source build,
 initialize the submodule, run `cmake -S . -B build`,
-`cmake --build build --parallel 4` and
+`cmake --build build` and
 `cmake --build build --target viper_source_check`. The last target checks
 the native LADSPA symbol and source routing without launching audio.
 Before a live source launch, run `./viper4linux --preflight` from the

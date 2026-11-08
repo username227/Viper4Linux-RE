@@ -46,7 +46,7 @@ runuser -u builder -- bash -c '
         cmake -S "$source_tree" -B "$source_tree/build" \
             -DCMAKE_BUILD_TYPE=Release \
             -DVIPER_BUILD_DEVELOPER_TESTS=OFF
-        cmake --build "$source_tree/build" --target viper_source_check --parallel 4
+        cmake --build "$source_tree/build" --target viper_source_check
         test -r "$source_tree/build/routing-config/filter-chain.conf"
         test -r "$source_tree/build/routing-config/filter-chain.conf.d/99-viper-smart.conf"
         (cd "$source_tree" && python3 src/viper_launcher.py --fingerprint >/dev/null)

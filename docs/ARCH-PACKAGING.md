@@ -4,7 +4,7 @@ There are three supported paths; they do **not** share a PKGBUILD:
 
 - **Direct source build:** initialize the pinned ViPERDSP submodule,
   then `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release`,
-  `cmake --build build --parallel 4`, and
+  `cmake --build build`, and
   `cmake --build build --target viper_source_check`.
   CMake prepares the private DSP dependency, generates the build-local routing
   configuration and verifies the native LADSPA export. This does not invoke
