@@ -291,9 +291,20 @@ static QJsonObject captureState(const Controls& controls, QSettings& settings) {
     result.insert("ui", ui);
     return result;
 }
+// The 26 -> 27 IPC change added only the transient input-signal counter
+// (PR #13), without changing serialized effect fields. This exception is
+// intentionally version-specific: re-audit snapshots on the next IPC bump.
+static_assert(viperbass::kVersion == 27,
+              "Review native Audio Output snapshot compatibility after IPC version changes");
+static bool compatibleSnapshotControlVersion(const QJsonValue& value) {
+    if (!value.isDouble()) return false;
+    const int version = value.toInt(-1);
+    return version == 26 || version == static_cast<int>(viperbass::kVersion);
+}
+
 static bool validateState(const QJsonObject& state) {
     if (state.value("format").toInt() != 1 ||
-        state.value("control_version").toInt() != static_cast<int>(viperbass::kVersion)) return false;
+        !compatibleSnapshotControlVersion(state.value("control_version"))) return false;
     if (!state.value("values").isObject() ||
         !validateFields(state.value("values").toObject(), fields)) return false;
     const int n = state.value("values").toObject().value("eq_band_count").toInt();
