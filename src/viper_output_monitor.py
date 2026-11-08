@@ -8,6 +8,7 @@ automation, and no audio-thread callbacks are involved.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from dataclasses import asdict
 import fcntl
 import json
@@ -26,6 +27,12 @@ from viper_output_memory import OutputMemory
 INSTANCE = b'VIPER_CLEAN_INSTANCE=viperlinux-unified-v1'
 STOP = False
 STATUS_FILE = 'viper4linux-output-status.json'
+
+def log_message(message: str) -> None:
+    timestamp = datetime.now().astimezone().isoformat(timespec='seconds')
+    print(f'[{timestamp}] [output-monitor pid={os.getpid()}] {message}',
+          file=sys.stderr, flush=True)
+
 
 def runtime_dir() -> Path:
     return Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
@@ -177,7 +184,7 @@ def process_assignments(runtime: Path, store: OutputStore, effects: NativeEffect
             try:
                 write_status(response, result)
             except OSError as exc:
-                print('Preset assignment acknowledgment failed: ' + str(exc), file=sys.stderr)
+                log_message('Preset assignment acknowledgment failed: ' + str(exc))
             request.unlink(missing_ok=True)
     return active_applied
 
@@ -253,7 +260,7 @@ def service(graph: PipeWireGraph, store: OutputStore, effects: NativeEffects,
                 # gets a real restore rather than overwriting the saved sound.
                 memory.current = None
                 last_action, error = 'pending', str(exc)[:280]
-                print('Audio Output memory: ' + error, file=sys.stderr, flush=True)
+                log_message('Audio Output memory: ' + error)
         elif not enabled:
             last_action = 'disabled'
         if process_assignments(path.parent, store, effects, memory, active,
@@ -264,7 +271,7 @@ def service(graph: PipeWireGraph, store: OutputStore, effects: NativeEffects,
             write_status(path, status_for(graph, store, backend_pid,
                         action=last_action, revision=revision, error=error))
         except (OSError, ValueError) as exc:
-            print(f'Audio Output status error: {exc}', file=sys.stderr, flush=True)
+            log_message(f'Audio Output status error: {exc}')
         last_status = now
 
 def main() -> int:
@@ -273,7 +280,7 @@ def main() -> int:
     args = parser.parse_args()
     runtime = runtime_dir()
     if not runtime.is_dir() or runtime.stat().st_uid != os.getuid():
-        print(f'Invalid PipeWire runtime directory: {runtime}', file=sys.stderr)
+        log_message(f'Invalid PipeWire runtime directory: {runtime}')
         return 1
     fd = os.open(runtime / 'viper4linux-output-monitor.lock',
                  os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
@@ -283,8 +290,9 @@ def main() -> int:
         except BlockingIOError:
             return 0
         if not backend_alive(args.backend_pid):
-            print('DSP backend not running', file=sys.stderr)
+            log_message(f'DSP backend pid={args.backend_pid} not running at monitor startup')
             return 1
+        log_message(f'Started; tracking backend pid={args.backend_pid}')
         signal.signal(signal.SIGTERM, stop_handler)
         signal.signal(signal.SIGINT, stop_handler)
         graph, store = PipeWireGraph(), OutputStore()
@@ -295,6 +303,12 @@ def main() -> int:
         try:
             service(graph, store, NativeEffects(helper_path()), args.backend_pid, path, proc)
         finally:
+            if STOP:
+                log_message(f'Stopping after termination signal; backend pid={args.backend_pid}')
+            elif not backend_alive(args.backend_pid):
+                log_message(f'Backend no longer detected: pid={args.backend_pid}; monitor stopping')
+            else:
+                log_message(f'Monitor stopping while backend pid={args.backend_pid} is still running')
             if proc.poll() is None:
                 proc.terminate()
                 try:
@@ -316,5 +330,5 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except (OSError, ValueError, RuntimeError) as exc:
-        print(f'Audio Output monitor: {exc}', file=sys.stderr)
+        log_message(f'Audio Output monitor: {exc}')
         sys.exit(1)
