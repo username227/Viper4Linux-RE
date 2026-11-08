@@ -1,11 +1,9 @@
 # Changelog
 
-This file summarizes user-facing changes merged into `main` since the
-latest stable release. **Unreleased** changes are not yet part of a tagged
-release. Internal build, CI and documentation-only maintenance is generally
-excluded from the user-facing notes.
+This file summarizes the user-facing changes in each release. Internal build,
+CI and documentation-only maintenance is generally excluded from these notes.
 
-## Unreleased — since v1.1.1 (proposed for v1.1.2)
+## v1.1.2
 
 ### Added
 
@@ -78,8 +76,7 @@ excluded from the user-facing notes.
   on native Wayland, but this does **not** resolve its separate menu, popup
   and window-decoration compatibility problems.
 
-## v1.1.1 — release baseline
+## v1.1.1 — previous release
 
-The `v1.1.1` tag is the baseline for the unreleased changes above.
 Earlier development history and technical notes are preserved in
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and Git history.
