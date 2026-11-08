@@ -145,56 +145,44 @@ See the [user guide](docs/USER-GUIDE.md) for routing, tray settings, and
 troubleshooting, and the [developer guide](docs/DEVELOPMENT.md) for the
 architecture and source layout.
 
-## Building and running
+## Installation
 
-**Current platform:** Arch Linux, with PipeWire and Qt6 Widgets. These
-instructions build directly from source; see the [Arch packaging guide](docs/ARCH-PACKAGING.md)
-for system package installation.
+**Requires PipeWire.** Arch Linux with Cinnamon/X11 is the primary tested
+environment; broader desktop and distribution compatibility needs more testing.
 
-Install the build dependencies on Arch:
+| Distribution | Installation |
+| --- | --- |
+| **Arch Linux** | [Stable AUR](https://aur.archlinux.org/packages/viper4linux-re), [development AUR](https://aur.archlinux.org/packages/viper4linux-re-git), or prebuilt Arch package |
+| **Ubuntu 24.04 / Linux Mint 22.x** | Native Ubuntu/Mint `.deb` package |
+| **Debian 13 / LMDE 7** | Native Debian/LMDE `.deb` package |
+| **Other distributions** | Build from source; compatibility is not yet established |
+
+Download native packages, the pinned unified-source archive, and checksums from
+the [latest GitHub release](https://github.com/username227/Viper4Linux-RE/releases/latest).
+Choose the package built for your distribution. For package-specific details,
+see [Arch packaging](docs/ARCH-PACKAGING.md) or
+[Debian-family packaging](docs/DEB-PACKAGING.md).
+
+### Building from source (Arch Linux)
 
 ```bash
 sudo pacman -S --needed base-devel cmake git pkgconf ladspa pipewire qt6-base python
-```
-
-Clone the application and its pinned ViPERDSP submodule, then build:
-
-```bash
-git clone --recurse-submodules https://github.com/username227/viper4linux-re.git
-cd viper4linux-re
+git clone --recurse-submodules https://github.com/username227/Viper4Linux-RE.git
+cd Viper4Linux-RE
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 4
 cmake --build build --target viper_source_check
 ```
 
-These commands apply to the current **`main` branch**. In an existing
-checkout, initialize the recorded submodule with
-`git submodule update --init --checkout third_party/ViPERDSP` before CMake.
-CMake verifies that revision and applies the three real-time compatibility
-patches to a **private build copy** without editing upstream sources.
-It generates source routing files under `build/routing-config/` and supports
-incremental rebuilds. `viper_source_check` verifies binaries, LADSPA export,
-and routing files without starting audio. Run `./viper4linux` only when
-you intend to launch the source version (which may replace an existing backend).
+For an existing checkout, initialize the recorded dependency with
+`git submodule update --init --checkout third_party/ViPERDSP`. These commands
+build and verify a source checkout; they do not install a system package.
+Launching `./viper4linux` can replace a running packaged ViPER backend.
+See the [developer guide](docs/DEVELOPMENT.md) for build and test details.
 
-The optional developer-only `viper_source_links` CMake target can create
-private shortcuts but never runs during a normal build. See the
-[developer guide](docs/DEVELOPMENT.md). For builds managed by pacman, see
-[Arch packaging](docs/ARCH-PACKAGING.md). 
-
-Once installed as a system package, run `viper4linux` from the application
-menu or a terminal. For example:
-
-```bash
-viper4linux-ctl status
-viper4linux-ctl --help
-```
-
-The effects CLI does not expose every GUI setting or manage complete named
-presets; the separate `viper4linux-output` utility supports per-output preset
-assignment. The
-installed man pages (`man viper4linux` and `man viper4linux-ctl`) document
-the supported commands.
+Once installed, launch `viper4linux` from the application menu or terminal.
+For command-line controls, use `viper4linux-ctl --help` or `v4l-cli --help`;
+see the [user guide](docs/USER-GUIDE.md) for operation and troubleshooting.
 
 ## Presets, profiles, and settings
 
