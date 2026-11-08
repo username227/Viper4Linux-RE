@@ -1,76 +1,82 @@
 # Changelog
 
-This file tracks user-facing changes merged into `main` after the most recent
-stable release. **Unreleased** entries are release-note candidates, not a
-release announcement or a commitment to a particular version number.
-Record new entries here when their changes merge; move them into a versioned
-section when a release is approved.
+This file summarizes the user-facing changes in each release. Internal build,
+CI and documentation-only maintenance is generally excluded from these notes.
 
-## Unreleased — since v1.1.1
-
-### Fixed
-
-- **Audio Output snapshot compatibility** ([PR #15](https://github.com/username227/Viper4Linux-RE/pull/15)):
-  Saved per-device DSP settings from control version 26 can now be restored
-  with version 27, whose new audio-activity counter does not change stored
-  effect parameters. Unknown control versions and invalid settings remain
-  rejected before modification.
-
-- **Accurate audio-activity status** ([PR #13](https://github.com/username227/Viper4Linux-RE/pull/13)):
-  The GUI now distinguishes incoming audio from silent DSP callbacks. When a
-  player such as Elisa is paused, the footer changes from green **Processing
-  audio** to blue **Connected — no audio signal (DSP ready)**, with separate
-  colors for light and dark themes. A short grace period avoids flicker during
-  musical rests. The existing DSP idle/offline states, effects and Audio Output
-  memory remain unchanged. Signal detection is not proof of audible output.
-
-- **Desktop startup and window activation** ([PR #6](https://github.com/username227/Viper4Linux-RE/pull/6)):
-  Fixed Cinnamon/X11's lingering busy cursor on repeated GUI launches and
-  start-hidden-in-tray launches. Improved desktop identity and activation-token
-  forwarding on native Wayland. This does not resolve the separate native
-  Cinnamon Wayland menu, popup, or decoration issues.
-
-### Changed
-
-- **Organized, resizable Preferences:** Startup, window/tray behavior, GUI
-  exit/backend and Audio Output memory are grouped in a clearer, scrollable
-  dialog. The dialog remembers its size, including after Cancel. Full Audio
-  Output explanatory text is visible instead of clipped; the redundant
-  tray-availability note is removed. Restore Defaults resets displayed
-  choices without deleting saved Audio Output snapshots or named presets.
-  Each section now has a bold heading and theme-accented, font-independent
-  icon for clearer visual hierarchy.
+## v1.1.2
 
 ### Added
 
-- **Age-based diagnostic log retention and unified log** ([PR #14](https://github.com/username227/Viper4Linux-RE/pull/14)):
-  The application menu now groups **View ViPER Log** with **Log Retention…**.
-  Logs are kept for seven days by default, or for a user-selected number of
-  days (0 means unlimited retention). Backend, launcher and Audio Output
-  monitor messages now share one timestamped log with distinct source/PID
-  labels for easier troubleshooting; older monitor history is imported.
-  The backend keeps running during cleanup.
+- **Restart the ViPER audio backend without closing the GUI**
+  ([PR #7](https://github.com/username227/Viper4Linux-RE/pull/7)):
+  A **Restart Backend** button and application-menu action restart the ViPER
+  DSP backend and Audio Output monitor, then reconnect the open GUI after
+  verifying the new monitor is running. The launcher also supports
+  `viper4linux --restart-audio`. This restarts **only ViPER's components**,
+  not the system PipeWire service; audio may pause briefly during the restart.
 
-- **Timestamped backend diagnostics** ([PR #12](https://github.com/username227/Viper4Linux-RE/pull/12)):
-  New backend and Audio Output monitor log messages include local timestamps
-  with timezone offsets and process identifiers. The launcher also records
-  backend start, stop and readiness transitions, making intermittent audio
-  interruptions easier to investigate. Existing historical log entries are
-  preserved.
+- **Manage diagnostic log retention**
+  ([PR #14](https://github.com/username227/Viper4Linux-RE/pull/14)):
+  The application menu provides **View ViPER Log** and **Log Retention…**.
+  Logs are retained for **seven days by default**; users can choose another
+  period or **0** to keep them indefinitely. Retention changes take effect
+  immediately, and background cleanup runs periodically while the monitor
+  is active. The cleanup is designed not to interrupt the audio backend.
 
-- **Restart Backend** ([PR #7](https://github.com/username227/Viper4Linux-RE/pull/7)):
-  Added a footer button and application-menu action to restart the ViPER audio
-  backend and its Audio Output monitor while keeping the GUI open. The restart
-  verifies a fresh monitor heartbeat and reconnects the interface; it does
-  **not** restart the system PipeWire daemon. The existing launcher also
-  supports the command `viper4linux --restart-audio`. The compact footer
-  layout ([PR #8](https://github.com/username227/Viper4Linux-RE/pull/8))
-  positions Restart Backend to the left of Presets and adds a subtle divider
-  above the buttons that stays anchored across all six tabs. The original
-  window width and resizing behavior are preserved.
+- **Combined, timestamped troubleshooting log**
+  ([PR #12](https://github.com/username227/Viper4Linux-RE/pull/12),
+  [PR #14](https://github.com/username227/Viper4Linux-RE/pull/14)):
+  Backend, launcher and Audio Output monitor diagnostics now appear in a
+  single `backend.log`, with timestamps, source labels and process IDs to
+  help investigate startup, restarts and unexpected interruptions. Existing
+  history from the previous separate monitor log is imported rather than
+  discarded. Log records help with diagnosis but do not, by themselves,
+  establish why a process exited.
 
-## v1.1.1 — release baseline
+### Changed
 
-The `v1.1.1` tag is the baseline for the **Unreleased** section above.
-Earlier development history and implementation notes are preserved in
+- **Clearer Preferences dialog**
+  ([PR #16](https://github.com/username227/Viper4Linux-RE/pull/16)):
+  Startup, window/tray behavior, GUI-exit/backend behavior and Audio Output
+  memory now have distinct, labeled sections with theme-accented icons.
+  The dialog can be resized and remembers its size even when dismissed with
+  **Cancel**. On smaller displays, its contents scroll while **Restore
+  Defaults**, **Cancel** and **OK** remain accessible. **Restore Defaults**
+  changes the pending preferences only until **OK** is pressed and does not
+  delete named effect presets or saved Audio Output snapshots.
+
+- **More useful playback status**
+  ([PR #13](https://github.com/username227/Viper4Linux-RE/pull/13)):
+  The GUI now distinguishes detected incoming audio from silent processing
+  callbacks. Pausing playback changes the footer from **Processing audio**
+  to **Connected — no audio signal (DSP ready)** after a short grace period,
+  reducing misleading activity indications and flicker during quiet passages.
+  The separate idle/offline states remain. Signal detection is not a
+  measurement of audible output.
+
+- **Tidier footer layout**
+  ([PR #8](https://github.com/username227/Viper4Linux-RE/pull/8)):
+  **Restart Backend** sits to the left of **Presets**, with a subtle divider
+  above the control row across all six effect tabs. Existing window sizing
+  behavior is preserved.
+
+### Fixed
+
+- **Restore older Audio Output memories after the DSP control update**
+  ([PR #15](https://github.com/username227/Viper4Linux-RE/pull/15)):
+  Per-device settings saved using control version 26 can be restored by the
+  version-27 backend. The new audio-activity counter does not alter stored
+  DSP settings. Unknown versions and malformed snapshots remain rejected.
+
+- **Cinnamon/X11 startup and repeat-launch busy cursor**
+  ([PR #6](https://github.com/username227/Viper4Linux-RE/pull/6)):
+  Starting directly into the system tray or opening ViPER again to activate
+  an existing GUI no longer leaves Cinnamon showing an unnecessary busy
+  cursor. Desktop identity and activation-token handling were also improved
+  on native Wayland, but this does **not** resolve its separate menu, popup
+  and window-decoration compatibility problems.
+
+## v1.1.1 — previous release
+
+Earlier development history and technical notes are preserved in
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and Git history.
