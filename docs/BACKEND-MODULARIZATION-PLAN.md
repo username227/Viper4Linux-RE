@@ -149,7 +149,7 @@ The maintainer ran, in the fresh source checkout:
 ~~~bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DVIPER_BUILD_DEVELOPER_TESTS=ON
-cmake --build build --parallel 4
+cmake --build build
 ctest --test-dir build --output-on-failure
 bash tests/check-developer.sh
 cmake --build build --target viper_source_check
@@ -277,7 +277,7 @@ developer and live-audio acceptance remain later gates.
 **Maintainer executed after a clean fast-forward pull:**
 
 ~~~bash
-cmake --build build --parallel 4
+cmake --build build
 ctest --test-dir build --output-on-failure
 bash tests/check-developer.sh
 git status --short
@@ -325,7 +325,7 @@ tests. Real-device auditory equivalence remains a later maintainer gate.
 git pull --ff-only
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DVIPER_BUILD_DEVELOPER_TESTS=ON
-cmake --build build --parallel 4
+cmake --build build
 ctest --test-dir build --output-on-failure
 bash tests/check-developer.sh
 nm -D build/viper_dsp_ladspa.so | grep ' ladspa_descriptor$'
@@ -388,7 +388,7 @@ currently justified merely to reduce file size.
 git pull --ff-only
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DVIPER_BUILD_DEVELOPER_TESTS=ON
-cmake --build build --parallel 4
+cmake --build build
 ctest --test-dir build --output-on-failure
 bash tests/check-developer.sh
 nm -D build/viper_dsp_ladspa.so | grep ' ladspa_descriptor$'

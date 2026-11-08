@@ -54,7 +54,7 @@ cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
     -DVIPER_SYSTEM_INSTALL_LAYOUT=debian
-cmake --build "$built" --parallel 3
+cmake --build "$built"
 for program in viper-gui viper-ctl viper_dsp_ladspa.so; do
     [[ -s "$built/$program" ]] || { echo "Missing compiled file: $program" >&2; exit 1; }
 done

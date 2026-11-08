@@ -37,7 +37,7 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DVIPER_SOURCE_PREPARE_ROUTING=OFF
-          cmake --build build --target viper-gui --parallel 2
+          cmake --build build --target viper-gui
 
       - name: Test one-GUI ownership, activation-token IPC and packaging contracts
         run: |
