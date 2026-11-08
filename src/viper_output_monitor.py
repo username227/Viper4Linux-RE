@@ -23,6 +23,7 @@ import time
 from viper_output_graph import JsonArrayStream, PipeWireGraph
 from viper_output_store import OutputStore
 from viper_output_memory import OutputMemory
+import viper_log_retention as log_retention
 
 INSTANCE = b'VIPER_CLEAN_INSTANCE=viperlinux-unified-v1'
 STOP = False
@@ -213,6 +214,7 @@ def service(graph: PipeWireGraph, store: OutputStore, effects: NativeEffects,
             for batch in stream.feed(chunk):
                 graph.update(batch)
         now = time.monotonic()
+        log_retention.maybe_prune()  # hourly even when neither log receives lines
         if now - last_status < 1.0:
             continue
         # Keep disconnected outputs available for preset assignment later.

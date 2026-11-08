@@ -17,6 +17,7 @@ import signal
 import subprocess
 import sys
 import time
+import viper_log_retention as log_retention
 
 INSTANCE = b"VIPER_CLEAN_INSTANCE=viperlinux-unified-v1"
 FINGERPRINT_ENV = b"VIPER_BACKEND_FINGERPRINT="
@@ -36,8 +37,7 @@ def record_backend_event(message: str) -> None:
     try:
         directory.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().astimezone().isoformat(timespec='seconds')
-        with (directory / 'backend.log').open('a', encoding='utf-8') as log:
-            log.write(f'[{timestamp}] [launcher] {message}\n')
+        log_retention.append_line('backend', f'[{timestamp}] [launcher] {message}')
     except OSError as exc:
         # Diagnostics must not prevent audio from starting or stopping.
         print(f'viper4linux: unable to append backend lifecycle log: {exc}', file=sys.stderr)
@@ -142,6 +142,9 @@ def ensure_backend(root: Path = ROOT, *, force_restart: bool = False) -> int:
                 record_backend_event('stop timed out; refusing duplicate backend')
                 raise RuntimeError('Old Viper4Linux backend did not stop. Refusing to start a duplicate.')
 
+        # The previous backend has now exited. Do not replace the log inode
+        # while an older directly-logged PipeWire process still owns its fd.
+        log_retention.maybe_prune()
         state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'viper4linux'
         state.mkdir(parents=True, exist_ok=True)
         log_path = state / 'backend.log'
@@ -274,15 +277,36 @@ def ensure_output_monitor(backend_pid: int, root: Path = ROOT,
                 raise RuntimeError('Previous Audio Output monitor did not stop')
         log_dir = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'viper4linux'
         log_dir.mkdir(parents=True, exist_ok=True)
+        # Previous releases wrote monitor diagnostics into a different file.
+        # All old monitor processes are stopped above, so import that history
+        # once before routing fresh monitor output into the combined log.
+        try:
+            log_retention.migrate_legacy_monitor()
+        except OSError as exc:
+            record_backend_event(f'legacy monitor log import failed: {exc}')
         env = os.environ.copy()
         env['VIPER_AUDIO_OUTPUT_MANAGER_SHA'] = desired
-        with (log_dir / 'output-monitor.log').open('ab') as log:
+        # The writer keeps the monitor's timestamped stderr/tracebacks
+        # in the retained log without pinning an old file descriptor.
+        # If Python/logging initialization fails, the shell keeps draining
+        # monitor stderr rather than allowing SIGPIPE to terminate the monitor.
+        writer = subprocess.Popen(
+            ['/bin/bash', '-c',
+             '"$1" "$2" stream output-monitor || cat >/dev/null',
+             'viper-monitor-log-writer', sys.executable,
+             str(script.with_name('viper_log_retention.py'))],
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
+        try:
             proc = subprocess.Popen([sys.executable, str(script), '--backend-pid', str(backend_pid)],
-                                    env=env, stdin=subprocess.DEVNULL, stdout=log,
+                                    env=env, stdin=subprocess.DEVNULL, stdout=writer.stdin,
                                     stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
+        finally:
+            if writer.stdin:
+                writer.stdin.close()
         time.sleep(0.25)
         if proc.poll() is not None:
-            raise RuntimeError(f'Audio Output monitor exited ({proc.returncode}); see {log_dir / "output-monitor.log"}')
+            raise RuntimeError(f'Audio Output monitor exited ({proc.returncode}); see {log_dir / "backend.log"}')
         return proc.pid
 
 
@@ -306,10 +330,10 @@ def wait_for_output_status(backend_pid: int, manager_pid: int,
             pass
         if manager_pid not in running_output_managers(script):
             raise RuntimeError('Audio Output monitor exited before publishing a fresh status. '
-                               'See output-monitor.log.')
+                               'See backend.log.')
         time.sleep(0.1)
     raise RuntimeError('Audio Output monitor did not publish a fresh status after restart. '
-                       'See output-monitor.log.')
+                       'See backend.log.')
 
 
 def restart_audio_engine() -> None:

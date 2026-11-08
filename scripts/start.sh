@@ -28,17 +28,19 @@ if ! flock -n 9; then
   exit 1
 fi
 # Timestamp backend stdout/stderr without wrapping or replacing its PipeWire PID.
-# The background Bash reader inherits the original log fd, not the DSP pipe.
+# The Bash reader sends timestamped lines into the coordinated retention writer.
 # Close the instance lock in that reader so it cannot delay a subsequent launch.
 backend_pid=$$
 exec > >(
   exec 9>&-
-  while IFS= read -r line || [[ -n "$line" ]]; do
+  {
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      printf -v timestamp '%(%Y-%m-%dT%H:%M:%S%z)T' -1
+      printf '[%s:%s] [backend pid=%s] %s\n' "${timestamp:0:-2}" "${timestamp: -2}" "$backend_pid" "$line"
+    done
     printf -v timestamp '%(%Y-%m-%dT%H:%M:%S%z)T' -1
-    printf '[%s:%s] [backend pid=%s] %s\n' "${timestamp:0:-2}" "${timestamp: -2}" "$backend_pid" "$line"
-  done
-  printf -v timestamp '%(%Y-%m-%dT%H:%M:%S%z)T' -1
-  printf '[%s:%s] [backend pid=%s] output stream closed\n' "${timestamp:0:-2}" "${timestamp: -2}" "$backend_pid"
+    printf '[%s:%s] [backend pid=%s] output stream closed\n' "${timestamp:0:-2}" "${timestamp: -2}" "$backend_pid"
+  } | { python3 src/viper_log_retention.py stream backend || cat >/dev/null; }
 ) 2>&1
 
 printf 'Running ViPER for Linux smart filter (one foreground client, current default physical output).\n'

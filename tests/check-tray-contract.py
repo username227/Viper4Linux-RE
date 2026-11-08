@@ -9,9 +9,10 @@ assert 'menuButton->setMenu(makeApplicationMenu(menuButton));' in s
 assert 'QToolButton::InstantPopup' in s
 assert 'viperAboutButton' not in s
 for entry in ('Preferences…', 'Open Library', 'IRS impulse responses',
-              'VDC correction profiles', 'View Backend Log', 'Effect Guide',
+              'VDC correction profiles', 'View ViPER Log', 'Log Retention…', 'Effect Guide',
               'About Viper4Linux', 'Quit GUI'):
     assert entry in s, entry
+assert s.index('View ViPER Log') < s.index('Log Retention…') < s.index('Effect Guide')
 for key in ('ui/startupBehavior', 'ui/minimizeToTray', 'ui/closeBehavior'):
     assert key in s, key
 assert 'Start hidden in system tray' in s
