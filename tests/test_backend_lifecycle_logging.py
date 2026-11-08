@@ -8,6 +8,7 @@ import io
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -56,20 +57,29 @@ class BackendLifecycleLogTests(unittest.TestCase):
                 match = LOGGER.search(source)
                 self.assertIsNotNone(match, "Missing backend log stream timestamp block")
                 with tempfile.TemporaryDirectory() as tmp:
-                    log = Path(tmp) / "backend.log"
+                    log = Path(tmp) / "viper4linux/backend.log"
+                    source_block = match.group(0)
+                    # Installed and source scripts share the same helper, but
+                    # the installed absolute path is absent in this isolated test.
+                    for name in ("src/viper_log_retention.py",
+                                 "/usr/lib/viper4linux/viper_log_retention.py"):
+                        source_block = source_block.replace(
+                            "python3 " + name,
+                            "python3 " + shlex.quote(str(ROOT / "src/viper_log_retention.py")))
                     # Exercise only the logging block with a dummy process. Never
                     # launch PipeWire or touch the user's running backend.
                     command = ("set -euo pipefail\n"
                                "exec 9>" + subprocess.list2cmdline([str(Path(tmp) / 'backend.lock')]) + "\n"
-                               "flock -n 9\n" + match.group(0) + "\n"
+                               "flock -n 9\n" + source_block + "\n"
                                "echo 'dummy startup'\n"
                                "echo 'dummy stderr' >&2\n"
                                "exec bash -c 'echo dummy pipewire; sleep 0.05'\n")
-                    with log.open("wb") as sink:
-                        result = subprocess.run(["bash", "-c", command],
-                                                stdin=subprocess.DEVNULL,
-                                                stdout=sink, stderr=subprocess.STDOUT,
-                                                timeout=5, check=False)
+                    env = {**os.environ, "XDG_STATE_HOME": tmp,
+                           "XDG_CONFIG_HOME": tmp}
+                    result = subprocess.run(["bash", "-c", command],
+                                            stdin=subprocess.DEVNULL,
+                                            stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
+                                            env=env, timeout=5, check=False)
                     self.assertEqual(result.returncode, 0)
                     deadline = time.monotonic() + 2
                     while time.monotonic() < deadline:

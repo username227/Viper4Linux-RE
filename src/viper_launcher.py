@@ -17,6 +17,7 @@ import signal
 import subprocess
 import sys
 import time
+import viper_log_retention as log_retention
 
 INSTANCE = b"VIPER_CLEAN_INSTANCE=viperlinux-unified-v1"
 FINGERPRINT_ENV = b"VIPER_BACKEND_FINGERPRINT="
@@ -36,8 +37,8 @@ def record_backend_event(message: str) -> None:
     try:
         directory.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().astimezone().isoformat(timespec='seconds')
-        with (directory / 'backend.log').open('a', encoding='utf-8') as log:
-            log.write(f'[{timestamp}] [launcher] {message}\n')
+        log_retention.append_line('backend', f'[{timestamp}] [launcher] {message}')
+        log_retention.maybe_prune()
     except OSError as exc:
         # Diagnostics must not prevent audio from starting or stopping.
         print(f'viper4linux: unable to append backend lifecycle log: {exc}', file=sys.stderr)
@@ -276,10 +277,20 @@ def ensure_output_monitor(backend_pid: int, root: Path = ROOT,
         log_dir.mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
         env['VIPER_AUDIO_OUTPUT_MANAGER_SHA'] = desired
-        with (log_dir / 'output-monitor.log').open('ab') as log:
+        # The writer keeps the monitor's timestamped stderr/tracebacks
+        # in the retained log without pinning an old file descriptor.
+        writer = subprocess.Popen(
+            [sys.executable, str(script.with_name('viper_log_retention.py')),
+             'stream', 'output-monitor'],
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
+        try:
             proc = subprocess.Popen([sys.executable, str(script), '--backend-pid', str(backend_pid)],
-                                    env=env, stdin=subprocess.DEVNULL, stdout=log,
+                                    env=env, stdin=subprocess.DEVNULL, stdout=writer.stdin,
                                     stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
+        finally:
+            if writer.stdin:
+                writer.stdin.close()
         time.sleep(0.25)
         if proc.poll() is not None:
             raise RuntimeError(f'Audio Output monitor exited ({proc.returncode}); see {log_dir / "output-monitor.log"}')

@@ -395,6 +395,36 @@
             }
         }
     }
+    QString logRetentionHelper() const {
+        // Match the package/developer launcher selection; no PATH ambiguity.
+        return QCoreApplication::applicationFilePath() ==
+                QStringLiteral("/usr/bin/viper4linux-gui")
+            ? QStringLiteral("/usr/lib/viper4linux/viper_log_retention.py")
+            : QFileInfo(QString::fromUtf8(VIPER4LINUX_SOURCE_LAUNCHER))
+                  .dir().filePath("viper_log_retention.py");
+    }
+    void showLogRetention() {
+        const QString path = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+                           + "/viper4linux/log-retention.json";
+        int currentDays = 7;
+        QFile settingsFile(path);
+        if (settingsFile.open(QIODevice::ReadOnly)) {
+            const QJsonObject stored = QJsonDocument::fromJson(settingsFile.readAll()).object();
+            const int days = stored.value("days").toInt(-1);
+            if (days >= 0 && days <= 3650) currentDays = days;
+        }
+        bool accepted = false;
+        const int days = QInputDialog::getInt(this, "Log Retention",
+            "Keep backend and Audio Output monitor logs for how many days?\n"
+            "(0 = keep indefinitely)", currentDays, 0, 3650, 1, &accepted);
+        if (!accepted) return;
+        const int result = QProcess::execute(QStringLiteral("/usr/bin/python3"),
+            {logRetentionHelper(), "set-days", QString::number(days)});
+        if (result != 0)
+            QMessageBox::warning(this, "Log Retention",
+                "Could not save the retention period or clean the logs. "
+                "Check that the ViPER installation is complete.");
+    }
     QMenu* makeApplicationMenu(QWidget* parent) {
         auto* menu = new QMenu(parent);
         auto* preferences = menu->addAction("Preferences…");
@@ -423,6 +453,9 @@
         });
         auto* logAction = menu->addAction("View Backend Log");
         connect(logAction, &QAction::triggered, this, [this] {
+            // Apply retention even if no monitor is running when the log is opened.
+            QProcess::execute(QStringLiteral("/usr/bin/python3"),
+                {logRetentionHelper(), "prune"});
             const QString state = qEnvironmentVariable("XDG_STATE_HOME", QDir::homePath() + "/.local/state");
             const QString path = state + "/viper4linux/backend.log";
             QFile log(path);
@@ -445,6 +478,9 @@
             layout->addWidget(close);
             viewer.exec();
         });
+        auto* retentionAction = menu->addAction("Log Retention…");
+        connect(retentionAction, &QAction::triggered, this,
+                [this] { showLogRetention(); });
         menu->addSeparator();
         auto* guide = menu->addAction("Effect Guide");
         connect(guide, &QAction::triggered, this, [this] { showHelp(); });

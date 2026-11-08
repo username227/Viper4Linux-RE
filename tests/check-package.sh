@@ -10,5 +10,6 @@ python3 tests/check-audio-restart.py
 python3 tests/check-arch-install.py
 python3 tests/check-cmake-source-checkout.py
 python3 -m unittest discover -s tests -p 'test_output_*.py' -v
+python3 -m unittest discover -s tests -p 'test_log_retention.py' -v
 
 echo 'PASS: package smoke checks (launcher, staging, per-output logic)'

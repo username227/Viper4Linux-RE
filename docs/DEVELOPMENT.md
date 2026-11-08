@@ -312,6 +312,21 @@ the reader; they do not prove when a buffered upstream message was generated.
 Run `python3 tests/test_backend_lifecycle_logging.py` for a non-audio smoke
 test of both launcher logging streams and the monitor/launcher message format.
 
+### Log retention
+
+`src/viper_log_retention.py` implements user-selectable age retention for the
+two live session logs (default seven days, zero means keep indefinitely). The
+application menu offers **Log Retention…** adjacent to **View Backend Log**.
+The setting is saved in `$XDG_CONFIG_HOME/viper4linux/log-retention.json`.
+The backend log reader and Audio Output monitor write through short-lived file
+opens guarded by stable `.log.lock` sidecars. Pruning uses atomic file
+replacement under those locks; it does not truncate or rename a descriptor
+still held for writes. The monitor checks periodically even with no diagnostics.
+Legacy entries without timestamps use the first later timestamp as a
+conservative fallback until that date expires. Install both logger scripts and
+restart the ViPER backend after upgrading from the earlier direct-file logger.
+
+
 ## Post-merge compatibility checks (not GUI refactor blockers)
 
 The GUI modularization work was accepted and merged in PR #1 on
