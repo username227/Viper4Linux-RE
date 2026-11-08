@@ -415,7 +415,7 @@
         }
         bool accepted = false;
         const int days = QInputDialog::getInt(this, "Log Retention",
-            "Keep backend and Audio Output monitor logs for how many days?\n"
+            "Keep ViPER diagnostic logs for how many days?\n"
             "(0 = keep indefinitely)", currentDays, 0, 3650, 1, &accepted);
         if (!accepted) return;
         const int result = QProcess::execute(QStringLiteral("/usr/bin/python3"),
@@ -451,7 +451,7 @@
             openFolder(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
                        + "/viper4linux/VDC");
         });
-        auto* logAction = menu->addAction("View Backend Log");
+        auto* logAction = menu->addAction("View ViPER Log");
         connect(logAction, &QAction::triggered, this, [this] {
             // Apply retention even if no monitor is running when the log is opened.
             QProcess::execute(QStringLiteral("/usr/bin/python3"),
@@ -460,13 +460,13 @@
             const QString path = state + "/viper4linux/backend.log";
             QFile log(path);
             if (!log.open(QIODevice::ReadOnly)) {
-                QMessageBox::information(this, "Backend Log", "No backend log found at:\n" + path);
+                QMessageBox::information(this, "ViPER Log", "No ViPER log found at:\n" + path);
                 return;
             }
             const qint64 start = std::max<qint64>(0, log.size() - 128 * 1024);
             log.seek(start);
             QDialog viewer(this);
-            viewer.setWindowTitle("Viper4Linux — Backend Log");
+            viewer.setWindowTitle("Viper4Linux — Diagnostic Log");
             viewer.resize(750, 480);
             auto* layout = new QVBoxLayout(&viewer);
             auto* text = new QPlainTextEdit(&viewer);

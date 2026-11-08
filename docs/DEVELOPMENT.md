@@ -304,7 +304,7 @@ stdout/stderr pipe closes; by itself it does **not** establish the exit code,
 signal, or root cause. Correlate it with the launcher entries and the system
 journal before attributing a crash.
 
-The separate `output-monitor.log` now timestamps its diagnostics, including
+The Audio Output monitor now timestamps its diagnostics, including
 initialization and whether its tracked backend PID disappears. The monitor
 can notice backend disappearance while running, but cannot report the
 terminated process's exit code. Log timestamps reflect when messages reach
@@ -315,13 +315,20 @@ test of both launcher logging streams and the monitor/launcher message format.
 ### Log retention
 
 `src/viper_log_retention.py` implements user-selectable age retention for the
-two live session logs (default seven days, zero means keep indefinitely). The
-application menu offers **Log Retention…** adjacent to **View Backend Log**.
+combined session log (default seven days, zero means keep indefinitely). The
+application menu offers **Log Retention…** adjacent to **View ViPER Log**.
 The setting is saved in `$XDG_CONFIG_HOME/viper4linux/log-retention.json`.
-The backend log reader and Audio Output monitor write through short-lived file
-opens guarded by stable `.log.lock` sidecars. Pruning uses atomic file
-replacement under those locks; it does not truncate or rename a descriptor
-still held for writes. The monitor checks periodically even with no diagnostics.
+The backend log reader and Audio Output monitor write their differently labeled
+messages into a single `backend.log` through short-lived file opens guarded by
+the same stable `backend.log.lock` sidecar. Pruning uses atomic replacement
+under the lock; it does not truncate or rename a descriptor still held for
+writes. The monitor checks periodically even with no diagnostics. After the
+former output monitor exits, the launcher imports the legacy
+`output-monitor.log` once, marking the archived block for clarity. Only the
+combined log receives new messages. A fallback pipe drain prevents a
+failed log helper from closing the backend/monitor diagnostic pipe; it may lose
+diagnostics in that failure case, but should not terminate audio or monitoring.
+Normal hourly maintenance avoids copying logs that contain no expired entries.
 Legacy entries without timestamps use the first later timestamp as a
 conservative fallback until that date expires. Install both logger scripts and
 restart the ViPER backend after upgrading from the earlier direct-file logger.

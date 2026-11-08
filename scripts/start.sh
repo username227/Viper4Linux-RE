@@ -40,7 +40,7 @@ exec > >(
     done
     printf -v timestamp '%(%Y-%m-%dT%H:%M:%S%z)T' -1
     printf '[%s:%s] [backend pid=%s] output stream closed\n' "${timestamp:0:-2}" "${timestamp: -2}" "$backend_pid"
-  } | python3 src/viper_log_retention.py stream backend
+  } | { python3 src/viper_log_retention.py stream backend || cat >/dev/null; }
 ) 2>&1
 
 printf 'Running ViPER for Linux smart filter (one foreground client, current default physical output).\n'

@@ -26,6 +26,14 @@ section when a release is approved.
 
 ### Added
 
+- **Age-based diagnostic log retention and unified log** ([PR #14](https://github.com/username227/Viper4Linux-RE/pull/14)):
+  The application menu now groups **View ViPER Log** with **Log Retention…**.
+  Logs are kept for seven days by default, or for a user-selected number of
+  days (0 means unlimited retention). Backend, launcher and Audio Output
+  monitor messages now share one timestamped log with distinct source/PID
+  labels for easier troubleshooting; older monitor history is imported.
+  The backend keeps running during cleanup.
+
 - **Timestamped backend diagnostics** ([PR #12](https://github.com/username227/Viper4Linux-RE/pull/12)):
   New backend and Audio Output monitor log messages include local timestamps
   with timezone offsets and process identifiers. The launcher also records

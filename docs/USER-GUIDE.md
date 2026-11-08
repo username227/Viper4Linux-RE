@@ -87,12 +87,17 @@ Backend status distinguishes the following conditions:
   backend log and filter-chain configuration.
 - **Offline:** no marked ViPER backend process is detected. Start `viper4linux`.
 
-The application menu groups **View Backend Log** with **Log Retention…**.
-Retention defaults to **7 days** for both `backend.log` and `output-monitor.log`.
+The application menu groups **View ViPER Log** with **Log Retention…**.
+Both backend and Audio Output monitor diagnostics share one timestamped file,
+`backend.log`, with source/PID labels distinguishing the processes.
+Retention defaults to **7 days** for this combined log.
 Choose any period from 1 to 3650 days, or **0** to retain indefinitely.
 Changing the setting cleans older entries immediately; automatic maintenance
 also runs about once per hour while the Audio Output monitor is operating.
-Log cleanup leaves the audio backend running. Untimestamped historical entries
+Log cleanup leaves the audio backend running. The separate
+`output-monitor.log` from older releases is imported once, after the old
+monitor stops; its historical entries are marked and preserved.
+Untimestamped historical entries
 preceding the new logging format cannot be aged precisely: they are
 conservatively treated as belonging to the first subsequent timestamped
 entry. The duration is a retention period, not a fixed disk-space quota.
