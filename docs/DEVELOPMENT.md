@@ -292,6 +292,26 @@ behavior, and the backend fingerprint on a GUI-only upgrade. Cinnamon/X11
 tray and minimize-to-tray behavior have been tested; KDE still requires live
 testing. The backend should not restart for GUI-only changes.
 
+### Backend lifecycle diagnostics
+
+The launcher appends to `$XDG_STATE_HOME/viper4linux/backend.log` (by default
+`~/.local/state/viper4linux/backend.log`). New backend stdout/stderr messages
+have local ISO-style timestamps including the UTC offset and the backend PID.
+This applies to both source and installed startup scripts. Launcher events
+identify start/ready, explicit restart or build replacement, and immediate
+startup failure. A final `output stream closed` line reports when the backend
+stdout/stderr pipe closes; by itself it does **not** establish the exit code,
+signal, or root cause. Correlate it with the launcher entries and the system
+journal before attributing a crash.
+
+The separate `output-monitor.log` now timestamps its diagnostics, including
+initialization and whether its tracked backend PID disappears. The monitor
+can notice backend disappearance while running, but cannot report the
+terminated process's exit code. Log timestamps reflect when messages reach
+the reader; they do not prove when a buffered upstream message was generated.
+Run `python3 tests/test_backend_lifecycle_logging.py` for a non-audio smoke
+test of both launcher logging streams and the monitor/launcher message format.
+
 ## Post-merge compatibility checks (not GUI refactor blockers)
 
 The GUI modularization work was accepted and merged in PR #1 on

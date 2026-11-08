@@ -27,6 +27,20 @@ if ! flock -n 9; then
   echo 'ViPER for Linux backend already appears to be running. Use ./scripts/status.sh; do not launch a duplicate.' >&2
   exit 1
 fi
+# Timestamp backend stdout/stderr without wrapping or replacing its PipeWire PID.
+# The background Bash reader inherits the original log fd, not the DSP pipe.
+# Close the instance lock in that reader so it cannot delay a subsequent launch.
+backend_pid=$$
+exec > >(
+  exec 9>&-
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    printf -v timestamp '%(%Y-%m-%dT%H:%M:%S%z)T' -1
+    printf '[%s:%s] [backend pid=%s] %s\n' "${timestamp:0:-2}" "${timestamp: -2}" "$backend_pid" "$line"
+  done
+  printf -v timestamp '%(%Y-%m-%dT%H:%M:%S%z)T' -1
+  printf '[%s:%s] [backend pid=%s] output stream closed\n' "${timestamp:0:-2}" "${timestamp: -2}" "$backend_pid"
+) 2>&1
+
 printf 'Running ViPER for Linux smart filter (one foreground client, current default physical output).\n'
 printf 'Saved preferences are read from ~/.config/ViPERforLinux/ViPERClean.conf.\n'
 printf 'Settings can be changed in the Qt6 GUI without restarting the filter.\n'

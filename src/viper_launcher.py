@@ -7,6 +7,7 @@ restart. The fingerprint represents the *built backend*, not merely Git HEAD.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import fcntl
 import hashlib
 import json
@@ -27,6 +28,19 @@ SYSTEM_BACKEND = Path('/usr/lib/ladspa/viper_dsp_ladspa.so')
 SYSTEM_CTL = Path('/usr/bin/viper4linux-ctl')
 SYSTEM_ROUTING = Path('/usr/share/viper4linux/routing-config/filter-chain.conf.d')
 PROC = Path('/proc')
+
+
+def record_backend_event(message: str) -> None:
+    """Append timestamped lifecycle events without changing the PipeWire stdout fd."""
+    directory = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'viper4linux'
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().astimezone().isoformat(timespec='seconds')
+        with (directory / 'backend.log').open('a', encoding='utf-8') as log:
+            log.write(f'[{timestamp}] [launcher] {message}\n')
+    except OSError as exc:
+        # Diagnostics must not prevent audio from starting or stopping.
+        print(f'viper4linux: unable to append backend lifecycle log: {exc}', file=sys.stderr)
 
 
 def source_routing_dir(root: Path) -> Path:
@@ -117,11 +131,15 @@ def ensure_backend(root: Path = ROOT, *, force_restart: bool = False) -> int:
                   'Previous or mismatched Viper4Linux backend detected; stopping it first.',
                   flush=True)
             for pid in current:
+                record_backend_event(
+                    f'stop requested: pid={pid} reason=' +
+                    ('explicit restart' if force_restart else 'backend build replacement'))
                 try:
                     os.kill(pid, signal.SIGTERM)
                 except ProcessLookupError:
                     pass
             if not wait_until_absent(set(current)):
+                record_backend_event('stop timed out; refusing duplicate backend')
                 raise RuntimeError('Old Viper4Linux backend did not stop. Refusing to start a duplicate.')
 
         state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'viper4linux'
@@ -129,10 +147,17 @@ def ensure_backend(root: Path = ROOT, *, force_restart: bool = False) -> int:
         log_path = state / 'backend.log'
         backend_start = (Path('/usr/lib/viper4linux/start-backend')
                          if SYSTEM_MODE and root == ROOT else root / 'scripts/start.sh')
+        record_backend_event(
+            'start requested: reason=' +
+            ('explicit restart' if force_restart else 'normal launch or build replacement'))
         with log_path.open('ab') as log:
-            proc = subprocess.Popen([str(backend_start)], cwd=root, stdin=subprocess.DEVNULL,
-                                    stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
-                                    close_fds=True)
+            try:
+                proc = subprocess.Popen([str(backend_start)], cwd=root, stdin=subprocess.DEVNULL,
+                                        stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+                                        close_fds=True)
+            except OSError as exc:
+                record_backend_event(f'backend spawn failed: {exc}')
+                raise
         # Seeing the correct process marker proves that start.sh exec'd PipeWire.
         # Stabilize briefly to catch immediately failing client startup.
         deadline = time.monotonic() + 7.0
@@ -140,11 +165,13 @@ def ensure_backend(root: Path = ROOT, *, force_restart: bool = False) -> int:
         while time.monotonic() < deadline:
             running = running_clients()
             if proc.poll() is not None:
+                record_backend_event(f'backend exited during startup: pid={proc.pid} exit_code={proc.returncode}')
                 raise RuntimeError(f'Backend exited at startup (code {proc.returncode}); see {log_path}')
             if len(running) == 1 and running.get(proc.pid) == desired:
                 if first_seen is None:
                     first_seen = time.monotonic()
                 elif time.monotonic() - first_seen >= 0.35:
+                    record_backend_event(f'backend ready: pid={proc.pid}')
                     print(f'Viper4Linux backend started (PID {proc.pid}); log: {log_path}', flush=True)
                     return proc.pid
             else:
@@ -152,7 +179,10 @@ def ensure_backend(root: Path = ROOT, *, force_restart: bool = False) -> int:
             time.sleep(0.1)
         # Do not leave a half-started filter-chain client behind.
         if proc.poll() is None:
+            record_backend_event(f'backend readiness timed out; terminating pid={proc.pid}')
             proc.terminate()
+        else:
+            record_backend_event(f'backend failed readiness: pid={proc.pid} exit_code={proc.returncode}')
         raise RuntimeError(f'Backend did not become ready; see {log_path}')
 
 
