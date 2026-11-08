@@ -150,6 +150,8 @@ architecture and source layout.
 **Requires PipeWire.** Arch Linux with Cinnamon/X11 is the primary tested
 environment; broader desktop and distribution compatibility needs more testing.
 
+**Note:** See complete installation guide [here](https://github.com/username227/Viper4Linux-RE/blob/main/docs/INSTALLATION.md).
+
 | Distribution | Installation |
 | --- | --- |
 | **Arch Linux** | [Stable AUR](https://aur.archlinux.org/packages/viper4linux-re), [development AUR](https://aur.archlinux.org/packages/viper4linux-re-git), or prebuilt Arch package |
