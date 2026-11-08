@@ -10,6 +10,14 @@ section when a release is approved.
 
 ### Fixed
 
+- **Accurate audio-activity status** ([PR #13](https://github.com/username227/Viper4Linux-RE/pull/13)):
+  The GUI now distinguishes incoming audio from silent DSP callbacks. When a
+  player such as Elisa is paused, the footer changes from green **Processing
+  audio** to blue **Connected — no audio signal (DSP ready)**, with separate
+  colors for light and dark themes. A short grace period avoids flicker during
+  musical rests. The existing DSP idle/offline states, effects and Audio Output
+  memory remain unchanged. Signal detection is not proof of audible output.
+
 - **Desktop startup and window activation** ([PR #6](https://github.com/username227/Viper4Linux-RE/pull/6)):
   Fixed Cinnamon/X11's lingering busy cursor on repeated GUI launches and
   start-hidden-in-tray launches. Improved desktop identity and activation-token
@@ -17,6 +25,13 @@ section when a release is approved.
   Cinnamon Wayland menu, popup, or decoration issues.
 
 ### Added
+
+- **Timestamped backend diagnostics** ([PR #12](https://github.com/username227/Viper4Linux-RE/pull/12)):
+  New backend and Audio Output monitor log messages include local timestamps
+  with timezone offsets and process identifiers. The launcher also records
+  backend start, stop and readiness transitions, making intermittent audio
+  interruptions easier to investigate. Existing historical log entries are
+  preserved.
 
 - **Restart Backend** ([PR #7](https://github.com/username227/Viper4Linux-RE/pull/7)):
   Added a footer button and application-menu action to restart the ViPER audio

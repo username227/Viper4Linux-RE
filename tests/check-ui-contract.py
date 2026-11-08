@@ -352,3 +352,10 @@ for token in (
     assert token in source, token
 assert 'if (before != liveUiSnapshot()) publishToBackend();' not in source
 print('PASS: CLI readback blocks feedback and persists GUI-observed backend edits')
+
+# A silent but connected backend uses distinct, theme-readable blue status text.
+bridge = (root / "src/sync/gui-backend-bridge.inc").read_text()
+assert 'Connected — no audio signal (DSP ready)' in bridge
+assert 'color: #75B9F4;' in bridge and 'color: #2B75B8;' in bridge
+assert 'palette().color(QPalette::Window).lightness() < 130' in bridge
+print('PASS: distinct blue no-signal status in light and dark themes')

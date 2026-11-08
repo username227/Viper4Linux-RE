@@ -4,6 +4,7 @@
 #include "viperdsp_compat.h" // Include missing upstream standard headers first.
 #include "viper/ViPER.h"
 #include "viper-control.h"
+#include "viper-input-signal.h"
 #include "viper-ir-wave.h"
 #include "viper-ddc.h"
 
