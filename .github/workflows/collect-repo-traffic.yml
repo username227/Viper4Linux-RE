@@ -1,0 +1,48 @@
+name: Collect GitHub traffic statistics
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * *'
+      timezone: 'America/New_York'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: viper-repo-traffic
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read collection script from main
+        uses: actions/checkout@v4
+        with:
+          path: project
+          persist-credentials: false
+
+      - name: Read data branch
+        uses: actions/checkout@v4
+        with:
+          ref: traffic-stats
+          path: stats
+
+      - name: Collect complete source data
+        env:
+          VIPER_TRAFFIC_TOKEN: ${{ secrets.VIPER_TRAFFIC_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 project/scripts/collect_repo_traffic.py stats/traffic.json
+
+      - name: Save statistics without updating main
+        working-directory: stats
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add traffic.json
+          if ! git diff --cached --quiet; then
+            git commit -m "stats: update GitHub traffic $(date -u +%F)"
+            git push origin HEAD:traffic-stats
+          fi
