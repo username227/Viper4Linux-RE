@@ -637,6 +637,14 @@ struct Processor {
         p.frequency = static_cast<uint32_t>(frequency);
         p.gain = strength;
         p.anti_pop = true;
+        // Match the Android effect's initial gain state. ViPERDSP resets the
+        // Mono Bass smoother on enable, so seed the selected gain while off.
+        // Ordinary parameter edits during playback retain native smoothing.
+        if (enabled && !last_mono_enabled) {
+            p.enable = false;
+            wet.ApplyBassMono(p);
+            p.enable = true;
+        }
         wet.ApplyBassMono(p);
         last_mono_enabled = enabled;
         last_mono_mode = p.mode;
