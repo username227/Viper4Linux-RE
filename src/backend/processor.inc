@@ -6,7 +6,8 @@ struct Processor {
         dry.SetSamplingRate(rate);
         wet.ResetAllEffects();
         dry.ResetAllEffects();
-        configure_bass(true, 0, 10.0f, 65.0f);
+        // Keep Bass disabled until the first run has read the saved controls.
+        configure_bass(false, 0, 10.0f, 65.0f);
         configure_bass_mono(false, 0, 2.0f, 65);
         configure_psycho(false, 80, 0.30f, 3, 1.0f);
         configure_dynamic(false, 100, 6000, 100, 150, 0.5f, 0.5f, 0.0f);
@@ -614,6 +615,14 @@ struct Processor {
         bass.frequency = static_cast<uint32_t>(frequency);
         bass.gain = strength;
         bass.anti_pop = true;
+        // When enabling Bass, establish the requested gain while disabled so
+        // ViPERDSP resets its gain smoother to that value. Subsequent edits
+        // while enabled retain the native smoothing behavior.
+        if (enabled && !last_bass_enabled) {
+            bass.enable = false;
+            wet.ApplyBass(bass);
+            bass.enable = true;
+        }
         wet.ApplyBass(bass);
         last_bass_enabled = enabled;
         last_bass_mode = bass.mode;
