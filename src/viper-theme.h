@@ -158,11 +158,11 @@ inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                     width:9px; margin:-8px 0; border-radius:4px; }
             )").arg(remaining, accent, dark ? "#c1e8ee" : "#ffffff"));
         }
-        // Title icon follows the selected UI style; the taskbar/window icon
-        // stays blue for a stable application identity.
+        // The enlarged header logo follows the chosen theme. The application
+        // icon and the system-tray icon stay blue.
         if (headerIcon) {
             const QPixmap logo(classic ? ":/viper4linux/blue.png" : ":/viper4linux/teal.png");
-            headerIcon->setPixmap(logo.scaled(36,36,Qt::KeepAspectRatio,Qt::SmoothTransformation));
+            headerIcon->setPixmap(logo.scaled(56,56,Qt::KeepAspectRatio,Qt::SmoothTransformation));
         }
         // The vector glyphs receive the theme accent directly, independently
         // of font availability and QLabel style inheritance.
