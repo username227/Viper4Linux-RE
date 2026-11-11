@@ -89,3 +89,15 @@ target_compile_options(viper_test_fet_native PRIVATE
 add_test(NAME viper_fet_native COMMAND viper_test_fet_native)
 set_tests_properties(viper_fet_native PROPERTIES
   LABELS "developer;native;fet")
+
+# Real native Multiband initialization regression. The helper is the exact
+# control-path code used by the LADSPA processor; not an Android PCM fixture.
+add_executable(viper_test_multiband_init_native check-multiband-init-native.cpp)
+target_include_directories(viper_test_multiband_init_native PRIVATE
+  "${PROJECT_SOURCE_DIR}/src" "${VIPERDSP_PREPARED_SOURCE_DIR}")
+target_link_libraries(viper_test_multiband_init_native PRIVATE ViPERDSP)
+target_compile_options(viper_test_multiband_init_native PRIVATE
+  -O2 -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME viper_multiband_init_native COMMAND viper_test_multiband_init_native)
+set_tests_properties(viper_multiband_init_native PROPERTIES
+  LABELS "developer;native;multiband")

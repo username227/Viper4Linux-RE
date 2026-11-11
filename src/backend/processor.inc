@@ -465,8 +465,12 @@ struct Processor {
             b.adapt = native.adapt;
             b.no_clip = native.no_clip;
         }
-        wet.ApplyMultibandCompressor(p);
+        // Prime the selected 3-/5-band parameters while disabled before the
+        // native enable/reset. Leave live edits as a single native apply.
+        // This always runs on the existing control worker (never the RT callback).
+        viper_multiband::apply(wet, p, last_mb_enabled, last_mb_band_count);
         last_mb_enabled = enabled;
+        last_mb_band_count = p.band_count;
     }
     void apply_multiband_from_controls() {
         if (!controls) return;
@@ -864,6 +868,7 @@ struct Processor {
     int last_crossfeed_preset = 0;
     bool last_fet_enabled = false;
     bool last_mb_enabled = false;
+    std::uint32_t last_mb_band_count = 3;
     bool last_imager_enabled = false;
     bool last_speaker_enabled = false;
     int last_imager_low = 100, last_imager_mid = 100, last_imager_high = 100;

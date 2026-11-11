@@ -7,6 +7,7 @@
 #include "viper-input-signal.h"
 #include "viper-ir-wave.h"
 #include "viper-ddc.h"
+#include "viper-multiband-init.h"
 
 #include <algorithm>
 #include <array>
