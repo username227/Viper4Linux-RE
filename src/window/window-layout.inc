@@ -177,7 +177,8 @@
         auto* value = new QLabel(container);
         value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         value->setProperty("viperSliderValue", true);
-        value->setStyleSheet("color: #23818b; font-weight: 600;");
+        value->setStyleSheet("QLabel { color: #23818b; font-weight: 600; } "
+                             "QLabel:disabled { color: palette(mid); }");
         heading->addWidget(caption, 1);
         heading->addWidget(value);
         vertical->addLayout(heading);
@@ -193,10 +194,29 @@
             QSlider::add-page:horizontal { border-radius: 5px; background: %1; }
             QSlider::handle:horizontal { background: #236e76; border: 1px solid #d4e8ea;
                                          width: 9px; margin: -8px 0; border-radius: 4px; }
+            QSlider::groove:horizontal:disabled { background: palette(mid); }
+            QSlider::sub-page:horizontal:disabled { background: palette(mid); }
+            QSlider::add-page:horizontal:disabled { background: palette(mid); }
+            QSlider::handle:horizontal:disabled { background: palette(mid);
+                                                  border: 1px solid palette(midlight); }
         )").arg(remaining));
         vertical->addWidget(slider);
         form->addRow(container);
         return {slider, value};
+    }
+    void updateDynamicSystemControlSensitivity() {
+        // Native DynamicBass uses its simpler shared-bass path at Low X <= 120.
+        // The advanced X/Y filters and side gains have no effect in that path.
+        // Disabling only row widgets preserves every DSP and preset value.
+        const bool active = dyn_enabled_->isChecked();
+        const bool advanced = active && dyn_xlo_.slider->value() > 120;
+        const auto setRowEnabled = [](const SliderRow& row, bool enabled) {
+            row.slider->parentWidget()->setEnabled(enabled);
+        };
+        setRowEnabled(dyn_xlo_, active);
+        setRowEnabled(dyn_strength_, active); // 0% still runs native processing.
+        for (const auto& row : {dyn_xhi_, dyn_ylo_, dyn_yhi_, dyn_side_lo_, dyn_side_hi_})
+            setRowEnabled(row, advanced);
     }
     void updateLabels() {
         strength_.value->setText(QString::number(strength_.slider->value() / 10.0, 'f', 1) + " / 10");
@@ -261,4 +281,6 @@
         if (output_warning_) output_warning_->setVisible(agc_enabled_->isChecked() && lufs_enabled_->isChecked());
         diff_lowpass_.value->setText(diff_lowpass_.slider->value() == 0
             ? "Off" : QString::number(diff_lowpass_.slider->value() * 100) + " Hz");
+        // Also refresh after signal-blocked preset loads and backend state sync.
+        updateDynamicSystemControlSensitivity();
     }

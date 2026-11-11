@@ -611,7 +611,7 @@
 <h3>Bass</h3><p><b>ViPER Bass:</b> Low-frequency enhancement, with Natural, Pure Bass+ and Subwoofer modes.</p>
 <p><b>Mono Bass:</b> Uses a mono-derived bass component for both channels.</p>
 <p><b>Psychoacoustic Bass:</b> Generates harmonics to make low frequencies more perceptible on smaller drivers.</p>
-<p><b>Dynamic System:</b> Shapes bass and dynamic frequency response using crossover and gain parameters.</p>
+<p><b>Dynamic System:</b> Low X selects the native processing algorithm. At <b>120 Hz or below</b>, ViPERDSP uses the simpler bass-processing path: High X, Low Y, High Y, and both side-gain controls have no effect and are grayed out. <b>Above 120 Hz</b>, the advanced filtering path uses all these controls. The GUI slider starts at 120 Hz; a CLI setting below that is preserved in the DSP while displayed as 120 Hz in the GUI. Strength remains available in both paths; 0% strength does not necessarily bypass processing. Use the Dynamic System switch to disable the effect.</p>
 <h3>EQ &amp; Tone</h3><p><b>Graphic Equalizer:</b> Native 10/15/25/31-band minimum-phase IIR EQ. Select a curve preset or click the read-only response graph to open vertical faders. Save your own named curves; zero dB is flat.</p><p><b>Clarity:</b> Enhances high-frequency detail in Natural, Ozone or XHiFi modes.</p>
 <p><b>Spectrum Extension:</b> Adds upper-frequency harmonics above a reference frequency.</p>
 <p><b>Tube Simulator:</b> Native ViPERDSP tube-coloration effect with 12AX7, 12AU7 and 6N1P models, drive and wet/dry mix.</p>

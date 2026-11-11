@@ -62,7 +62,14 @@
         c->psycho_order.store(psycho_order_->currentIndex()+2);
         c->psycho_original_percent.store(psycho_original_.slider->value());
         c->dynamic_enabled.store(dyn_enabled_->isChecked() ? 1 : 0);
-        c->dynamic_x_low.store(dyn_xlo_.slider->value());
+        if (dyn_xlo_explicit_) {
+            c->dynamic_x_low.store(dyn_xlo_native_);
+        } else {
+            // The backend is authoritative for unrelated GUI edits, including
+            // CLI values below our slider's 120 Hz visual minimum.
+            dyn_xlo_native_ = std::clamp(c->dynamic_x_low.load(), 0, 2400);
+            settings_.setValue("dynamic_x_low", dyn_xlo_native_);
+        }
         c->dynamic_x_high.store(dyn_xhi_.slider->value());
         c->dynamic_y_low.store(dyn_ylo_.slider->value());
         c->dynamic_y_high.store(dyn_yhi_.slider->value());
@@ -227,6 +234,7 @@
             return false;
         }
         pending_edit_ = false;
+        dyn_xlo_explicit_ = false;
         replace_precision_on_push_ = false;
         return true;
     }
@@ -251,6 +259,7 @@
         if (!viperbass::running(mapping_.get())) return;
         auto* c = mapping_.get();
         const auto before = liveUiSnapshot();
+        const int beforeNativeLowX = dyn_xlo_native_;
         // Reflect changes made from the CLI; avoid tug-of-war while dragging sliders.
         const QSignalBlocker block0(global_);
         const QSignalBlocker block1(enabled_);
@@ -424,14 +433,18 @@
             {&psycho_cutoff_, c->psycho_cutoff_hz.load(), 60, 150},
             {&psycho_intensity_, c->psycho_intensity_percent.load(), 0, 100},
             {&psycho_original_, c->psycho_original_percent.load(), 0, 100},
-            {&dyn_xlo_, c->dynamic_x_low.load(), 0, 2400},
-            {&dyn_xhi_, c->dynamic_x_high.load(), 0, 12000},
+                        {&dyn_xhi_, c->dynamic_x_high.load(), 0, 12000},
             {&dyn_ylo_, c->dynamic_y_low.load(), 0, 200},
             {&dyn_yhi_, c->dynamic_y_high.load(), 0, 300},
             {&dyn_side_lo_, c->dynamic_side_low_percent.load(), 0, 100},
             {&dyn_side_hi_, c->dynamic_side_high_percent.load(), 0, 100},
             {&dyn_strength_, c->dynamic_strength_percent.load(), 0, 100}
         };
+        if (!dyn_xlo_.slider->isSliderDown()) {
+            dyn_xlo_native_ = std::clamp(c->dynamic_x_low.load(), 0, 2400);
+            const QSignalBlocker block(dyn_xlo_.slider);
+            dyn_xlo_.slider->setValue(std::max(120, dyn_xlo_native_));
+        }
         for (const auto& item : bassRows) {
             if (item.row->slider->isSliderDown()) continue;
             const QSignalBlocker blocker(item.row->slider);
@@ -534,7 +547,7 @@
         // retained in QSettings for the next backend startup. Persist only on
         // actual UI changes: otherwise the 500ms poll would keep resetting the
         // batched disk-save timer and prevent it from ever firing.
-        if (before != liveUiSnapshot()) persistCurrentSettings();
+        if (before != liveUiSnapshot() || beforeNativeLowX != dyn_xlo_native_) persistCurrentSettings();
     }
 
     void pollBackend() {

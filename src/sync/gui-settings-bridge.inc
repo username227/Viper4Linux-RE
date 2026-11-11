@@ -24,7 +24,7 @@
         settings_.setValue("psycho_order", psycho_order_->currentIndex()+2);
         settings_.setValue("psycho_original_percent", psycho_original_.slider->value());
         settings_.setValue("dynamic_enabled", dyn_enabled_->isChecked());
-        settings_.setValue("dynamic_x_low", dyn_xlo_.slider->value());
+        settings_.setValue("dynamic_x_low", dyn_xlo_native_);
         settings_.setValue("dynamic_x_high", dyn_xhi_.slider->value());
         settings_.setValue("dynamic_y_low", dyn_ylo_.slider->value());
         settings_.setValue("dynamic_y_high", dyn_yhi_.slider->value());

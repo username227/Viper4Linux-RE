@@ -79,7 +79,7 @@
             {"psycho_enabled", psycho_enabled_->isChecked()}, {"psycho_cutoff_hz", psycho_cutoff_.slider->value()},
             {"psycho_intensity_percent", psycho_intensity_.slider->value()}, {"psycho_order", psycho_order_->currentIndex()+2},
             {"psycho_original_percent", psycho_original_.slider->value()},
-            {"dynamic_enabled", dyn_enabled_->isChecked()}, {"dynamic_x_low", dyn_xlo_.slider->value()},
+            {"dynamic_enabled", dyn_enabled_->isChecked()}, {"dynamic_x_low", dyn_xlo_native_},
             {"dynamic_x_high", dyn_xhi_.slider->value()}, {"dynamic_y_low", dyn_ylo_.slider->value()},
             {"dynamic_y_high", dyn_yhi_.slider->value()},
             {"dynamic_side_low_percent", dyn_side_lo_.slider->value()},
@@ -112,7 +112,9 @@
         psycho_order_->setCurrentIndex(std::clamp(order, 2, 5)-2);
         psycho_original_.slider->setValue(std::clamp(original, 0, 100));
         dyn_enabled_->setChecked(dynamic != 0);
-        dyn_xlo_.slider->setValue(std::clamp(xlo, 0, 2400));
+        dyn_xlo_native_ = std::clamp(xlo, 0, 2400);
+        dyn_xlo_explicit_ = true;
+        dyn_xlo_.slider->setValue(std::max(120, dyn_xlo_native_));
         dyn_xhi_.slider->setValue(std::clamp(xhi, 0, 12000));
         dyn_ylo_.slider->setValue(std::clamp(ylo, 0, 200));
         dyn_yhi_.slider->setValue(std::clamp(yhi, 0, 300));
@@ -123,14 +125,14 @@
         push();
     }
     void resetNewBassControls() {
-        applyBassExtra(0,0,200,65,0,80,30,3,100,0,100,6000,100,150,50,50,0);
+        applyBassExtra(0,0,200,65,0,80,30,3,100,0,120,6000,100,150,50,50,0);
     }
     void restoreBassPreset() {
         auto get = [this](const char* key,int defaultValue){return settings_.value(QString("preset/")+key,defaultValue).toInt();};
         applyBassExtra(get("bass_mono_enabled",0),get("bass_mono_mode",0),get("bass_mono_strength_centi",200),
                        get("bass_mono_frequency_hz",65),get("psycho_enabled",0),get("psycho_cutoff_hz",80),
                        get("psycho_intensity_percent",30),get("psycho_order",3),get("psycho_original_percent",100),
-                       get("dynamic_enabled",0),get("dynamic_x_low",100),get("dynamic_x_high",6000),
+                       get("dynamic_enabled",0),get("dynamic_x_low",120),get("dynamic_x_high",6000),
                        get("dynamic_y_low",100),get("dynamic_y_high",150),get("dynamic_side_low_percent",50),
                        get("dynamic_side_high_percent",50),get("dynamic_strength_percent",0));
     }

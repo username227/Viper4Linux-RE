@@ -36,7 +36,8 @@
         psycho_order_->setCurrentIndex(std::clamp(settings_.value("psycho_order", 3).toInt()-2, 0, 3));
         psycho_original_.slider->setValue(std::clamp(settings_.value("psycho_original_percent", 100).toInt(), 0, 100));
         dyn_enabled_->setChecked(settings_.value("dynamic_enabled", false).toBool());
-        dyn_xlo_.slider->setValue(std::clamp(settings_.value("dynamic_x_low", 100).toInt(), 0, 2400));
+        dyn_xlo_native_ = std::clamp(settings_.value("dynamic_x_low", 100).toInt(), 0, 2400);
+        dyn_xlo_.slider->setValue(std::max(120, dyn_xlo_native_));
         dyn_xhi_.slider->setValue(std::clamp(settings_.value("dynamic_x_high", 6000).toInt(), 0, 12000));
         dyn_ylo_.slider->setValue(std::clamp(settings_.value("dynamic_y_low", 100).toInt(), 0, 200));
         dyn_yhi_.slider->setValue(std::clamp(settings_.value("dynamic_y_high", 150).toInt(), 0, 300));
@@ -144,10 +145,17 @@
         connect(mono_mode_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
         connect(psycho_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
         connect(psycho_order_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
-        connect(dyn_enabled_, &QCheckBox::toggled, this, [this]{ push(); });
+        connect(dyn_enabled_, &QCheckBox::toggled, this, [this]{ updateDynamicSystemControlSensitivity(); push(); });
+        connect(dyn_xlo_.slider, &QSlider::valueChanged, this, [this] {
+            // A deliberate GUI movement selects a value in the GUI's 120–2400 Hz range.
+            dyn_xlo_native_ = dyn_xlo_.slider->value();
+            dyn_xlo_explicit_ = true; // Keep this intent through an offline/restart queue.
+            updateLabels();
+            push();
+        });
         for (auto* slider : {mono_strength_.slider, mono_frequency_.slider,
                              psycho_cutoff_.slider, psycho_intensity_.slider, psycho_original_.slider,
-                             dyn_xlo_.slider, dyn_xhi_.slider, dyn_ylo_.slider, dyn_yhi_.slider,
+                             dyn_xhi_.slider, dyn_ylo_.slider, dyn_yhi_.slider,
                              dyn_side_lo_.slider, dyn_side_hi_.slider, dyn_strength_.slider}) {
             connect(slider, &QSlider::valueChanged, this, [this]{ updateLabels(); push(); });
         }

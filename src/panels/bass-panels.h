@@ -83,14 +83,16 @@ auto createBassPanels(QWidget* parent, AddSlider addSlider) {
         auto* dyn_form = new QFormLayout(dyn_group);
         out.dyn_enabled = new EffectSwitch(dyn_group);
         dyn_form->addRow("Dynamic bass processing", out.dyn_enabled);
-        out.dyn_xlo = addSlider(dyn_form, "Low X frequency", 0, 2400);
+        // Strength is the primary adjustment: keep it above the mode-selecting Low X.
+        out.dyn_strength = addSlider(dyn_form, "Dynamic bass strength", 0, 100);
+        out.dyn_xlo = addSlider(dyn_form, "Low X frequency", 120, 2400);
+        out.dyn_xlo.slider->setToolTip("GUI minimum 120 Hz: simple bass processing; above 120 Hz: advanced filters. CLI values below 120 Hz are preserved.");
         out.dyn_xhi = addSlider(dyn_form, "High X frequency", 0, 12000);
         out.dyn_ylo = addSlider(dyn_form, "Low Y frequency", 0, 200);
         out.dyn_yhi = addSlider(dyn_form, "High Y frequency", 0, 300);
         out.dyn_side_lo = addSlider(dyn_form, "Low side gain", 0, 100);
         out.dyn_side_hi = addSlider(dyn_form, "High side gain", 0, 100);
-        out.dyn_strength = addSlider(dyn_form, "Dynamic bass strength", 0, 100);
-        auto* dyn_note = new QLabel("Advanced crossover/dynamic-bass controls. Enable only after setting a conservative strength.", dyn_group);
+        auto* dyn_note = new QLabel("Low X = 120 Hz: simple bass processing; advanced filters and side gains are inactive. Above 120 Hz: advanced processing. CLI values below 120 Hz display as 120 here without being changed.", dyn_group);
         dyn_note->setWordWrap(true);
         dyn_form->addRow(dyn_note);
         out.dynamicGroup = dyn_group;

@@ -897,6 +897,10 @@ private:
     viperbass::Mapping mapping_;
     bool pending_edit_ = false;
     bool replace_precision_on_push_ = false;
+    // Native Low X can be 0–119 via CLI while the GUI displays 120.
+    // Track the true value separately and publish it only on deliberate edits.
+    int dyn_xlo_native_ = 100;
+    bool dyn_xlo_explicit_ = false;
     QCheckBox* limiter_indicator_{};
     SliderRow limiter_threshold_{};
     SliderRow limiter_gain_{};

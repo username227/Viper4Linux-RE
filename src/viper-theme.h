@@ -139,6 +139,12 @@ inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
             QTabBar::tab:!selected:hover { background-color:%5; }
         )").arg(inactiveBg, inactiveText, inactiveBorder, accent, hoverBg, activeTabText));
         const QString remaining = dark ? "#52666a" : "#cbdfe4";
+        // Qt custom QSS does not automatically dim slider subcontrols.
+        // Disabled colors must be part of this final theme stylesheet;
+        // addSlider()'s initial stylesheet is replaced here on startup.
+        const QString disabledTrack = dark ? "#354449" : "#e1e7e9";
+        const QString disabledHandle = dark ? "#64757a" : "#a0b0b5";
+        const QString disabledBorder = dark ? "#7b8e94" : "#becbd0";
         for (auto* slider : window->findChildren<QSlider*>()) {
             if (slider->orientation() == Qt::Vertical) {
                 slider->setStyleSheet(QString(R"(
@@ -156,7 +162,12 @@ inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                 QSlider::add-page:horizontal { border-radius:5px; background:%1; }
                 QSlider::handle:horizontal { background:%2; border:1px solid %3;
                     width:9px; margin:-8px 0; border-radius:4px; }
-            )").arg(remaining, accent, dark ? "#c1e8ee" : "#ffffff"));
+                QSlider::groove:horizontal:disabled { background:%4; }
+                QSlider::sub-page:horizontal:disabled { background:%4; }
+                QSlider::add-page:horizontal:disabled { background:%4; }
+                QSlider::handle:horizontal:disabled { background:%5; border:1px solid %6; }
+            )").arg(remaining, accent, dark ? "#c1e8ee" : "#ffffff",
+                    disabledTrack, disabledHandle, disabledBorder));
         }
         // Title icon follows the selected UI style; the taskbar/window icon
         // stays blue for a stable application identity.
@@ -176,19 +187,26 @@ inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
         for (auto* label : window->findChildren<QLabel*>()) {
             if (label == status) continue; // live status color is set by pollBackend().
             if (label->property("viperWarningText").toBool()) {
-                label->setStyleSheet(QString("color:%1; font-weight:600;")
-                    .arg(dark ? "#ffce88" : "#9b5e12"));
+                label->setStyleSheet(QString(
+                    "QLabel { color:%1; font-weight:600; } QLabel:disabled { color:%2; }")
+                    .arg(dark ? "#ffce88" : "#9b5e12", disabledText));
             } else if (label->property("viperSliderValue").toBool()) {
-                label->setStyleSheet(QString("color:%1; font-weight:600;").arg(accent));
+                label->setStyleSheet(QString(
+                    "QLabel { color:%1; font-weight:600; } QLabel:disabled { color:%2; }")
+                    .arg(accent, disabledText));
             } else if (label->property("viperMutedText").toBool() ||
                        label->styleSheet().trimmed() == "color: palette(mid);") {
                 label->setProperty("viperMutedText", true);
-                label->setStyleSheet(QString("color:%1;").arg(mutedColor));
+                label->setStyleSheet(QString(
+                    "QLabel { color:%1; } QLabel:disabled { color:%2; }")
+                    .arg(mutedColor, disabledText));
             } else {
                 // Do not let a former Classic palette leave dark text on dark
                 // Modern cards (or vice versa). All plain labels get an explicit
                 // foreground; QFont-based bold headings remain bold.
-                label->setStyleSheet(QString("color:%1;").arg(textColor));
+                label->setStyleSheet(QString(
+                    "QLabel { color:%1; } QLabel:disabled { color:%2; }")
+                    .arg(textColor, disabledText));
             }
         }
         for (auto* button : window->findChildren<QToolButton*>()) {
