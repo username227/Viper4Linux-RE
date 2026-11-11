@@ -53,7 +53,8 @@ endif()
 set(_viper_patch_scripts
   "${PROJECT_SOURCE_DIR}/patches/fix_lufs_speed.py"
   "${PROJECT_SOURCE_DIR}/patches/preallocate_stereo_imager.py"
-  "${PROJECT_SOURCE_DIR}/patches/preallocate_multiband_compressor.py")
+  "${PROJECT_SOURCE_DIR}/patches/preallocate_multiband_compressor.py"
+  "${PROJECT_SOURCE_DIR}/patches/fix_harmonic_abs.py")
 
 # Hash the actual source content and the patch scripts, not their mtimes. A
 # matching fingerprint avoids gratuitous native DSP recompiles on reconfigure.
@@ -102,7 +103,7 @@ else()
   message(STATUS "Reusing verified private ViPERDSP source")
 endif()
 
-# Every configuration verifies the three exact patch signatures. The existing
+# Every configuration verifies all four exact patch signatures. The existing
 # fail-closed Python scripts accept either the pristine or already-fixed form.
 foreach(_viper_patch IN LISTS _viper_patch_scripts)
   execute_process(
