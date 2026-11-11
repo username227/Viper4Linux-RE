@@ -80,6 +80,25 @@ assert 'showMaximized();' in s[s.index('    void restoreFromTray() {'):
 # Explicit taskbar minimization paths still bypass the tray preference.
 assert 'force_taskbar_minimize_ = true;' in s
 assert 'force_taskbar_minimize_' in minimize_handler
+# A native Wayland GUI cannot observe compositor-side title-bar minimization.
+# Never switch the Qt platform automatically; allow a deliberate xcb override.
+main = (Path(__file__).resolve().parents[1] / 'src/viper-gui.cpp').read_text()
+entry = main[main.index('int main(int argc, char* argv[]) {'):]
+assert 'QApplication app(argc, argv);' in entry
+assert 'qputenv("QT_QPA_PLATFORM", "xcb");' not in main
+assert 'windowSettings.value("ui/minimizeToTray"' not in entry
+assert 'Minimize to tray instead of taskbar (X11 only)' in prefs
+assert 'const bool x11Gui = QGuiApplication::platformName() == QLatin1String("xcb");' in prefs
+assert 'minimize->setEnabled(x11Gui);' in prefs
+# The app theme normally forces checkbox text to an active foreground color,
+# so ensure disabled controls visibly use the existing muted palette.
+theme = (Path(__file__).resolve().parents[1] / 'src/viper-theme.h').read_text()
+assert 'QPushButton:disabled, QComboBox:disabled, QCheckBox:disabled { color:%7; }' in theme
+assert 'minimize->setChecked(settings_.value("ui/minimizeToTray", false).toBool())' in prefs
+assert 'if (x11Gui)\n            settings_.setValue("ui/minimizeToTray", minimize->isChecked());' in prefs
+assert 'QGuiApplication::platformName() != QLatin1String("xcb")' in minimize_handler
+assert minimize_handler.index('QMainWindow::changeEvent(event);') < minimize_handler.index('QGuiApplication::platformName() !=')
+assert minimize_handler.index('QGuiApplication::platformName() !=') < minimize_handler.index('if (!is_state_change || !isMinimized()')
 # Tray/close GUI code cannot launch, stop, or fingerprint the backend.
 for begin, end in (('    void setupTray() {', '    QString autostartFile() const {'),
                    ('    void closeEvent(QCloseEvent* event) override {',

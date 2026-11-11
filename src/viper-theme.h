@@ -108,7 +108,7 @@ inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                 image:url(%8); width:12px; height:8px;
             }
             QPushButton:pressed { background-color:%6; }
-            QPushButton:disabled, QComboBox:disabled { color:%7; }
+            QPushButton:disabled, QComboBox:disabled, QCheckBox:disabled { color:%7; }
             QComboBox QAbstractItemView {
                 color:%2; background-color:%3;
                 selection-color:%2; selection-background-color:%6; }

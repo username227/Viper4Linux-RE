@@ -764,6 +764,10 @@ protected:
         const bool was_maximized = is_state_change &&
             static_cast<QWindowStateChangeEvent*>(event)->oldState().testFlag(Qt::WindowMaximized);
         QMainWindow::changeEvent(event);
+        // This handler requires the X11 window-state protocol. Native Wayland
+        // cannot notify clients of compositor-side minimization, but an
+        // explicitly selected XWayland/xcb GUI can still use this feature.
+        if (QGuiApplication::platformName() != QLatin1String("xcb")) return;
         if (!is_state_change || !isMinimized() || force_taskbar_minimize_
             || !settings_.value("ui/minimizeToTray", false).toBool()) return;
         if (!trayAvailable()) return; // Keep native taskbar behavior without a tray.
