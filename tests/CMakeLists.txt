@@ -75,3 +75,17 @@ foreach(_viper_group IN ITEMS package mock contracts release)
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     LABELS "developer;${_viper_group}")
 endforeach()
+
+
+# Real pinned native FET Compressor, not the synthetic mock engine. These
+# 25 Linux functional cases guard the floating-point sidechain regression.
+# Full Android PCM parity requires separately captured Android reference files.
+add_executable(viper_test_fet_native check-fet-native.cpp)
+target_include_directories(viper_test_fet_native PRIVATE
+  "${VIPERDSP_PREPARED_SOURCE_DIR}")
+target_link_libraries(viper_test_fet_native PRIVATE ViPERDSP)
+target_compile_options(viper_test_fet_native PRIVATE
+  -O2 -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME viper_fet_native COMMAND viper_test_fet_native)
+set_tests_properties(viper_fet_native PROPERTIES
+  LABELS "developer;native;fet")
