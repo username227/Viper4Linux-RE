@@ -16,6 +16,7 @@ GUI_FILES = (
     "src/panels/correction-panels.h",
     "src/sync/gui-control-channel.h",
     "src/sync/gui-settings-bridge.inc",
+    "src/sync/gui-simple-settings.inc",
     "src/sync/gui-backend-bridge.inc",
     "src/window/window-presets.inc",
     "src/window/window-layout.inc",

@@ -1,11 +1,7 @@
 // Implementation is included in ViperWindow to retain Qt UI ownership
 // and the original 300ms QSettings debounce and persistence ordering.
     void persistCurrentSettings() {
-        settings_.setValue("master_enabled", global_->isChecked());
-        settings_.setValue("enabled", enabled_->isChecked());
-        settings_.setValue("bass_mode", bass_mode_->currentIndex());
-        settings_.setValue("strength_tenths", strength_.slider->value());
-        settings_.setValue("frequency", frequency_.slider->value());
+        syncSimpleGuiSettings(GuiSettingPhase::Intro, false);
         saveEqLayout();
         settings_.setValue("eq_enabled", eq_enabled_->isChecked());
         settings_.setValue("eq_band_count", eq_active_bands_);
@@ -25,39 +21,10 @@
         settings_.setValue("psycho_original_percent", psycho_original_.slider->value());
         settings_.setValue("dynamic_enabled", dyn_enabled_->isChecked());
         settings_.setValue("dynamic_x_low", dyn_xlo_native_);
-        settings_.setValue("dynamic_x_high", dyn_xhi_.slider->value());
-        settings_.setValue("dynamic_y_low", dyn_ylo_.slider->value());
-        settings_.setValue("dynamic_y_high", dyn_yhi_.slider->value());
-        settings_.setValue("dynamic_side_low_percent", dyn_side_lo_.slider->value());
-        settings_.setValue("dynamic_side_high_percent", dyn_side_hi_.slider->value());
-        settings_.setValue("dynamic_strength_percent", dyn_strength_.slider->value());
-        settings_.setValue("clarity_enabled", clarity_enabled_->isChecked());
-        settings_.setValue("clarity_mode", clarity_mode_->currentIndex());
-        settings_.setValue("clarity_gain_tenths", clarity_gain_.slider->value());
-        settings_.setValue("spectrum_enabled", spectrum_enabled_->isChecked());
-        settings_.setValue("spectrum_frequency_hundreds", spectrum_frequency_.slider->value());
-        settings_.setValue("spectrum_exciter_tenths", spectrum_exciter_.slider->value());
-        settings_.setValue("tube_enabled", tube_enabled_->isChecked());
-        settings_.setValue("tube_model", tube_model_->currentIndex());
-        settings_.setValue("tube_drive_percent", tube_drive_.slider->value());
-        settings_.setValue("tube_mix_percent", tube_mix_.slider->value());
-        settings_.setValue("analogx_enabled", analogx_enabled_->isChecked());
-        settings_.setValue("analogx_mode", analogx_mode_->currentIndex());
-        settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked());
-        settings_.setValue("crossfeed_preset", crossfeed_mode_->currentIndex());
+        syncSimpleGuiSettings(GuiSettingPhase::DynamicTail, false);
+        syncSimpleGuiSettings(GuiSettingPhase::Tone, false);
         saveMultibandSettings("");
-        settings_.setValue("fet_enabled", fet_enabled_->isChecked());
-        settings_.setValue("fet_threshold_db", fet_threshold_.slider->value());
-        settings_.setValue("fet_ratio_tenths", fet_ratio_.slider->value());
-        settings_.setValue("fet_knee_db", fet_knee_.slider->value());
-        settings_.setValue("fet_makeup_db", fet_gain_.slider->value());
-        settings_.setValue("fet_attack_ms", fet_attack_.slider->value());
-        settings_.setValue("fet_release_ms", fet_release_.slider->value());
-        settings_.setValue("imager_enabled", imager_enabled_->isChecked());
-        settings_.setValue("imager_low_width_percent", imager_low_.slider->value());
-        settings_.setValue("imager_mid_width_percent", imager_mid_.slider->value());
-        settings_.setValue("imager_high_width_percent", imager_high_.slider->value());
-        settings_.setValue("imager_low_crossover_hz", imager_low_xover_.slider->value());
+        syncSimpleGuiSettings(GuiSettingPhase::Dynamics, false);
         settings_.setValue("imager_high_crossover_hz", imager_high_xover_.slider->value() * 100);
         settings_.setValue("deq_enabled", deq_enabled_->isChecked());
         settings_.setValue("deq_band_count", deq_active_count_);
@@ -73,33 +40,6 @@
             settings_.setValue(k+"release",b.release);
             settings_.setValue(k+"type",b.type);
         }
-        settings_.setValue("headphone_enabled", headphone_enabled_->isChecked());
-        settings_.setValue("headphone_quality", headphone_quality_->currentIndex());
-        settings_.setValue("diff_enabled", diff_enabled_->isChecked());
-        settings_.setValue("diff_delay_ms", diff_delay_.slider->value());
-        settings_.setValue("diff_reverse", diff_reverse_->isChecked());
-        settings_.setValue("diff_mix_percent", diff_mix_.slider->value());
-        settings_.setValue("diff_lp_hundreds", diff_lowpass_.slider->value());
-        settings_.setValue("field_enabled", field_enabled_->isChecked());
-        settings_.setValue("field_widen_tenths", field_widen_.slider->value());
-        settings_.setValue("field_mid_hundredths", field_mid_.slider->value());
-        settings_.setValue("field_depth_step", field_depth_.slider->value());
-        settings_.setValue("reverb_enabled", reverb_enabled_->isChecked());
-        settings_.setValue("reverb_room_percent", reverb_room_.slider->value());
-        settings_.setValue("reverb_width_percent", reverb_width_.slider->value());
-        settings_.setValue("reverb_damp_percent", reverb_damp_.slider->value());
-        settings_.setValue("reverb_wet_percent", reverb_wet_.slider->value());
-        settings_.setValue("reverb_dry_percent", reverb_dry_.slider->value());
-        settings_.setValue("limiter_threshold_permille", limiter_threshold_.slider->value());
-        settings_.setValue("limiter_output_percent", limiter_gain_.slider->value());
-        settings_.setValue("limiter_pan_percent", limiter_pan_.slider->value());
-        settings_.setValue("agc_enabled", agc_enabled_->isChecked());
-        settings_.setValue("agc_strength_centi", agc_strength_.slider->value());
-        settings_.setValue("agc_max_gain_centi", agc_max_gain_.slider->value());
-        settings_.setValue("agc_threshold_permille", agc_threshold_.slider->value());
-        settings_.setValue("lufs_enabled", lufs_enabled_->isChecked());
-        settings_.setValue("lufs_target_tenths", lufs_target_.slider->value());
-        settings_.setValue("lufs_max_gain_tenths", lufs_gain_.slider->value());
-        settings_.setValue("lufs_speed", lufs_speed_->currentIndex());
+        syncSimpleGuiSettings(GuiSettingPhase::SpatialOutput, false);
         save_timer_->start(300); // batch writes while a slider is dragged
     }

@@ -5,11 +5,7 @@
     void loadSavedEffectSettings() {
         // The original Stage 5 GUI saved these keys on every adjustment.
         // Keep the format and keys compatible so old settings are preserved.
-        global_->setChecked(settings_.value("master_enabled", true).toBool());
-        enabled_->setChecked(settings_.value("enabled", true).toBool());
-        bass_mode_->setCurrentIndex(std::clamp(settings_.value("bass_mode", 0).toInt(), 0, 2));
-        strength_.slider->setValue(settings_.value("strength_tenths", 100).toInt());
-        frequency_.slider->setValue(settings_.value("frequency", 65).toInt());
+        syncSimpleGuiSettings(GuiSettingPhase::Intro, true);
         // Remove obsolete settings so no hidden input attenuation survives.
         settings_.remove("input_percent");
         settings_.remove("preset/input_percent");
@@ -38,69 +34,13 @@
         dyn_enabled_->setChecked(settings_.value("dynamic_enabled", false).toBool());
         dyn_xlo_native_ = std::clamp(settings_.value("dynamic_x_low", 100).toInt(), 0, 2400);
         dyn_xlo_.slider->setValue(std::max(120, dyn_xlo_native_));
-        dyn_xhi_.slider->setValue(std::clamp(settings_.value("dynamic_x_high", 6000).toInt(), 0, 12000));
-        dyn_ylo_.slider->setValue(std::clamp(settings_.value("dynamic_y_low", 100).toInt(), 0, 200));
-        dyn_yhi_.slider->setValue(std::clamp(settings_.value("dynamic_y_high", 150).toInt(), 0, 300));
-        dyn_side_lo_.slider->setValue(std::clamp(settings_.value("dynamic_side_low_percent", 50).toInt(), 0, 100));
-        dyn_side_hi_.slider->setValue(std::clamp(settings_.value("dynamic_side_high_percent", 50).toInt(), 0, 100));
-        dyn_strength_.slider->setValue(std::clamp(settings_.value("dynamic_strength_percent", 0).toInt(), 0, 100));
-        clarity_enabled_->setChecked(settings_.value("clarity_enabled", false).toBool());
-        clarity_mode_->setCurrentIndex(std::clamp(settings_.value("clarity_mode", 0).toInt(), 0, 2));
-        clarity_gain_.slider->setValue(settings_.value("clarity_gain_tenths", 15).toInt());
-        spectrum_enabled_->setChecked(settings_.value("spectrum_enabled", false).toBool());
-        spectrum_frequency_.slider->setValue(settings_.value("spectrum_frequency_hundreds", 76).toInt());
-        spectrum_exciter_.slider->setValue(settings_.value("spectrum_exciter_tenths", 10).toInt());
-        tube_enabled_->setChecked(settings_.value("tube_enabled", false).toBool());
-        tube_model_->setCurrentIndex(std::clamp(settings_.value("tube_model", 0).toInt(), 0, 2));
-        tube_drive_.slider->setValue(std::clamp(settings_.value("tube_drive_percent", 50).toInt(), 0, 100));
-        tube_mix_.slider->setValue(std::clamp(settings_.value("tube_mix_percent", 30).toInt(), 0, 100));
-        analogx_enabled_->setChecked(settings_.value("analogx_enabled", false).toBool());
-        analogx_mode_->setCurrentIndex(std::clamp(settings_.value("analogx_mode", 0).toInt(), 0, 2));
-        crossfeed_enabled_->setChecked(settings_.value("crossfeed_enabled", false).toBool());
-        crossfeed_mode_->setCurrentIndex(std::clamp(settings_.value("crossfeed_preset", 0).toInt(), 0, 2));
+        syncSimpleGuiSettings(GuiSettingPhase::DynamicTail, true);
+        syncSimpleGuiSettings(GuiSettingPhase::Tone, true);
         loadMultibandSettings("");
-        fet_enabled_->setChecked(settings_.value("fet_enabled", false).toBool());
-        fet_threshold_.slider->setValue(std::clamp(settings_.value("fet_threshold_db", -18).toInt(), -48, 0));
-        fet_ratio_.slider->setValue(std::clamp(settings_.value("fet_ratio_tenths", 20).toInt(), 10, 100));
-        fet_knee_.slider->setValue(std::clamp(settings_.value("fet_knee_db", 6).toInt(), 0, 12));
-        fet_gain_.slider->setValue(std::clamp(settings_.value("fet_makeup_db", 0).toInt(), 0, 24));
-        fet_attack_.slider->setValue(std::clamp(settings_.value("fet_attack_ms", 10).toInt(), 1, 100));
-        fet_release_.slider->setValue(std::clamp(settings_.value("fet_release_ms", 100).toInt(), 5, 500));
-        imager_enabled_->setChecked(settings_.value("imager_enabled", false).toBool());
-        imager_low_.slider->setValue(std::clamp(settings_.value("imager_low_width_percent", 100).toInt(), 0, 200));
-        imager_mid_.slider->setValue(std::clamp(settings_.value("imager_mid_width_percent", 100).toInt(), 0, 200));
-        imager_high_.slider->setValue(std::clamp(settings_.value("imager_high_width_percent", 100).toInt(), 0, 200));
-        imager_low_xover_.slider->setValue(std::clamp(settings_.value("imager_low_crossover_hz", 200).toInt(), 80, 400));
+        syncSimpleGuiSettings(GuiSettingPhase::Dynamics, true);
         imager_high_xover_.slider->setValue(std::clamp(settings_.value("imager_high_crossover_hz", 4000).toInt()/100, 20, 80));
         loadDeqSettings();
-        headphone_enabled_->setChecked(settings_.value("headphone_enabled", false).toBool());
-        headphone_quality_->setCurrentIndex(std::clamp(settings_.value("headphone_quality", 0).toInt(), 0, 4));
-        diff_enabled_->setChecked(settings_.value("diff_enabled", false).toBool());
-        diff_delay_.slider->setValue(std::clamp(settings_.value("diff_delay_ms", 8).toInt(), 1, 20));
-        diff_reverse_->setChecked(settings_.value("diff_reverse", false).toBool());
-        diff_mix_.slider->setValue(std::clamp(settings_.value("diff_mix_percent", 50).toInt(), 0, 100));
-        diff_lowpass_.slider->setValue(std::clamp(settings_.value("diff_lp_hundreds", 0).toInt(), 0, 200));
-        field_enabled_->setChecked(settings_.value("field_enabled", false).toBool());
-        field_widen_.slider->setValue(std::clamp(settings_.value("field_widen_tenths", 10).toInt(), 0, 80));
-        field_mid_.slider->setValue(std::clamp(settings_.value("field_mid_hundredths", 100).toInt(), 100, 200));
-        field_depth_.slider->setValue(std::clamp(settings_.value("field_depth_step", 3).toInt(), 0, 16));
-        reverb_enabled_->setChecked(settings_.value("reverb_enabled", false).toBool());
-        reverb_room_.slider->setValue(std::clamp(settings_.value("reverb_room_percent", 50).toInt(), 0, 100));
-        reverb_width_.slider->setValue(std::clamp(settings_.value("reverb_width_percent", 50).toInt(), 0, 100));
-        reverb_damp_.slider->setValue(std::clamp(settings_.value("reverb_damp_percent", 50).toInt(), 0, 100));
-        reverb_wet_.slider->setValue(std::clamp(settings_.value("reverb_wet_percent", 20).toInt(), 0, 100));
-        reverb_dry_.slider->setValue(std::clamp(settings_.value("reverb_dry_percent", 50).toInt(), 0, 100));
-        limiter_threshold_.slider->setValue(std::clamp(settings_.value("limiter_threshold_permille", 500).toInt(), 300, 1000));
-        limiter_gain_.slider->setValue(std::clamp(settings_.value("limiter_output_percent", 100).toInt(), 1, 200));
-        limiter_pan_.slider->setValue(std::clamp(settings_.value("limiter_pan_percent", 0).toInt(), -100, 100));
-        agc_enabled_->setChecked(settings_.value("agc_enabled", false).toBool());
-        agc_strength_.slider->setValue(std::clamp(settings_.value("agc_strength_centi", 100).toInt(), 50, 300));
-        agc_max_gain_.slider->setValue(std::clamp(settings_.value("agc_max_gain_centi", 300).toInt(), 100, 1000));
-        agc_threshold_.slider->setValue(std::clamp(settings_.value("agc_threshold_permille", 900).toInt(), 300, 1000));
-        lufs_enabled_->setChecked(settings_.value("lufs_enabled", false).toBool());
-        lufs_target_.slider->setValue(std::clamp(settings_.value("lufs_target_tenths", -140).toInt(), -240, -80));
-        lufs_gain_.slider->setValue(std::clamp(settings_.value("lufs_max_gain_tenths", 60).toInt(), 0, 120));
-        lufs_speed_->setCurrentIndex(std::clamp(settings_.value("lufs_speed", 1).toInt(), 0, 2));
+        syncSimpleGuiSettings(GuiSettingPhase::SpatialOutput, true);
         updateLabels();
     }
 

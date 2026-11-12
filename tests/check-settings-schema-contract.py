@@ -12,6 +12,12 @@ saved = (root / "src/sync/gui-settings-bridge.inc").read_text()
 loaded = (root / "src/window/window-initialization.inc").read_text()
 deq = (root / "src/window/window-dynamics.inc").read_text()
 preset = (root / "src/window/window-presets.inc").read_text()
+shared = (root / "src/sync/gui-simple-settings.inc").read_text()
+shared_rows = re.findall(r'\{Phase::\w+,\s*"([^"]+)",\s*[^,]+,\s*(-?\d+)', shared)
+shared_pairs = dict(shared_rows)
+assert len(shared_rows) == len(shared_pairs), "Repeated shared GUI binding key"
+shared_keys = set(shared_pairs)
+assert len(shared_keys) == 65, "Stage 3C bindings must remain unique and complete"
 
 # The literal effect keys written by persistCurrentSettings on the Stage 2
 # baseline. Dynamic DEQ and multiband keys are verified separately below.
@@ -43,7 +49,9 @@ assert len(canonical_keys) == 86, f"Unexpected golden key count: {len(canonical_
 def literal_keys(source: str, method: str) -> set[str]:
     return set(re.findall(r'settings_\.' + method + r'\(\s*"([^"]+)"', source))
 
-actual_saved = literal_keys(saved, "setValue")
+assert not (literal_keys(saved, "setValue") & shared_keys), "Shared setting written twice"
+assert not (literal_keys(loaded, "value") & shared_keys), "Shared setting loaded twice"
+actual_saved = literal_keys(saved, "setValue") | shared_keys
 assert actual_saved == canonical_keys, (
     f"Persisted keys changed: missing={sorted(canonical_keys - actual_saved)}; "
     f"extra={sorted(actual_saved - canonical_keys)}"
@@ -51,7 +59,7 @@ assert actual_saved == canonical_keys, (
 # DEQ is loaded by loadDeqSettings; DDC path is loaded by this method.
 # Theme is read in the GUI constructor and updated in the initialization
 # signal setup, not read in loadSavedEffectSettings().
-actual_loaded = literal_keys(loaded, "value")
+actual_loaded = literal_keys(loaded, "value") | shared_keys
 expected_loaded = (canonical_keys - {"deq_enabled", "deq_band_count"}) | {
     "ddc_profile"
 }
@@ -75,7 +83,10 @@ for key, default, conversion in (
     ("lufs_target_tenths", "-140", "toInt"),
     ("headphone_quality", "0", "toInt"),
 ):
-    assert f'settings_.value("{key}", {default}).{conversion}()' in loaded, key
+    if key in shared_pairs:
+        assert shared_pairs[key] == ("1" if default == "true" else "0" if default == "false" else default), key
+    else:
+        assert f'settings_.value("{key}", {default}).{conversion}()' in loaded, key
 
 # Controls with special native/GUI units must preserve the existing mapping.
 assert 'dyn_xlo_native_ = std::clamp(settings_.value("dynamic_x_low", 100).toInt(), 0, 2400);' in loaded
