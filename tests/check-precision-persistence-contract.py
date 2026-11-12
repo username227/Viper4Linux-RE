@@ -49,6 +49,8 @@ assert precise > legacy, "Native precision must override legacy slider values"
 assert 'file.seekg(0);' in backend[legacy:precise]
 assert "editedControl == slider" in gui, "Only edited slider should quantize"
 assert 'nativePrecision(' in gui, "Precise slider policy must be delegated"
+assert 'viper_precision::fromSlider(' in gui, "GUI edits must share native conversion"
+assert 'viper_precision::toSlider(' in gui, "GUI readback must share native conversion"
 # Visible widgets can remain unchanged while CLI updates exact Dynamic System
 # low-X below the GUI slider's 120 Hz minimum. That native value must persist,
 # but idle polling still must not continuously restart the disk-save timer.
