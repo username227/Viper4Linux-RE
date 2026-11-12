@@ -75,8 +75,6 @@ like to see what the community can make of it.
 > primary tested environment; KDE Plasma tray integration and other Linux
 > environments need further testing. See [Current limitations](#current-limitations). Extensive testing comparing ViPER4Linux-RE with ViPER4Android-RE has now been completed across all 24 effect groups. Results demonstrate that audio output is generally identical or extremely close to ViPER4Android-RE under the tested conditions, suggesting that audible differences should be negligible in most cases. Any identified discrepancies, corrections, and remaining limitations are documented in the [Validation Test History](https://github.com/username227/Viper4Linux-RE/blob/main/docs/DSP-ANDROID-LINUX-VALIDATION.md). If you discover any audio processing errors or see opportunities for improvement, bug reports and suggestions are always welcome!
 
-**Since the last release:** See the [changelog](CHANGELOG.md) for user-facing changes merged after v1.1.1 that are not yet released.
-
 **For contributors:** `main` uses CMake for pinned ViPERDSP preparation, native builds, developer verification, and guarded system-package staging. See the [developer guide](docs/DEVELOPMENT.md) and [Arch packaging guide](docs/ARCH-PACKAGING.md). This was a build and packaging modernization, not a user-facing DSP or GUI feature change.
 
 ## What it offers
