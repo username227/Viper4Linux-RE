@@ -4,6 +4,7 @@
 #include "../src/viper-ctl.cpp"
 #undef main
 #include <QSettings>
+#include <QStringList>
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -26,7 +27,25 @@ int main() {
     assert(execute({"off"}) == 0);
     s.sync();
     assert(!s.value("master_enabled", true).toBool());
+    // A CLI change must leave unrelated UI preferences, staged presets and
+    // other effects' exact native precision untouched.
+    s.setValue("ui/theme", "classic-v4a");
+    s.setValue("preset/valid", true);
+    s.setValue("preset/bass_mode", 2);
+    s.setValue("psycho_intensity_percent", 22);
+    s.setValue("precision/clarity_gain_milli", 4321);
+    s.sync();
+    const QStringList statusKeys = s.allKeys();
+    assert(execute({"status"}) == 0);
+    s.sync();
+    assert(s.allKeys() == statusKeys);
     assert(execute({"bass-gain", "2.38"}) == 0);
+    s.sync();
+    assert(s.value("ui/theme").toString() == "classic-v4a");
+    assert(s.value("preset/valid").toBool());
+    assert(s.value("preset/bass_mode").toInt() == 2);
+    assert(s.value("psycho_intensity_percent").toInt() == 22);
+    assert(s.value("precision/clarity_gain_milli").toInt() == 4321);
     s.sync();
     assert(s.value("strength_tenths").toInt() == 23);
     assert(s.value("precision/strength_centi").toInt() == 238); // Full native precision, with GUI coarse projection.

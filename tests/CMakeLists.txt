@@ -102,6 +102,18 @@ foreach(_viper_name IN ITEMS cli-controls cli-settings cli-eq-presets output-sta
   list(APPEND _viper_native_mock_targets ${_viper_target})
 endforeach()
 
+# Runtime named-preset compatibility: isolated, disposable XDG data directory.
+add_executable(viper_test_named_presets check-named-presets.cpp)
+target_include_directories(viper_test_named_presets PRIVATE "${_viper_test_include}")
+target_link_libraries(viper_test_named_presets PRIVATE Qt6::Core)
+target_compile_options(viper_test_named_presets PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+list(APPEND _viper_native_mock_targets viper_test_named_presets)
+add_test(NAME viper_contract_named_presets_runtime
+  COMMAND "$<TARGET_FILE:viper_test_named_presets>")
+set_tests_properties(viper_contract_named_presets_runtime PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;contracts;presets")
+
 add_custom_target(viper_native_mock_tests DEPENDS ${_viper_native_mock_targets})
 
 # Exercise request-serial coalescing without starting a PipeWire process.
@@ -162,6 +174,7 @@ set_tests_properties(viper_contract_audio_activity PROPERTIES
 foreach(_viper_script IN ITEMS
     check-native-state-contract
     check-precision-persistence-contract
+    check-settings-schema-contract
     check-gui-sync-contract
     check-window-integration-contract
     check-version
