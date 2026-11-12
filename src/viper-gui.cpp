@@ -1,6 +1,7 @@
 // ViPER for Linux — Qt6 control surface.
 // Audio runs in PipeWire's independent filter-chain, not inside this GUI.
 #include "viper-control.h"
+#include "viper-precision-units.h"
 #include "viper-backend-state.h"
 #include "gui-backend-exit.h"
 #include "sync/gui-control-channel.h"

@@ -15,6 +15,7 @@ gui = "\n".join([
     (root / "src/window/window-effect-actions.inc").read_text(),
 ])
 output = (root / "src/viper-output-state.cpp").read_text()
+precision = (root / "src/viper-precision-units.h").read_text()
 mock = (root / "tests/check-mock.sh").read_text()
 native = (root / "tests/mock/check.cpp").read_text()
 
@@ -27,14 +28,19 @@ fields = (
     "diff_lp_hz",
     "field_depth",
 )
-for key in fields:
+field_names = (
+    "Strength", "MonoStrength", "Clarity", "SpectrumFrequency",
+    "SpectrumExciter", "DiffLowpass", "FieldDepth",
+)
+for key, field in zip(fields, field_names):
     exact = f"precision/{key}"
-    assert exact in cli, f"CLI doesn't persist {key}"
+    assert f'Field::{field}, "{key}"' in precision, f"Native/legacy map missing {key}"
+    assert f"viper_precision::Field::{field}, c.{key}" in cli, f"CLI doesn't persist {key}"
     assert f'key == "{key}"' in backend, f"backend doesn't restore {key}"
     assert exact in gui, f"GUI doesn't preserve {key}"
-    assert f'key == "{key}"' in output or f'|| key == "{key}"' in output, (
-        f"Audio Output restoration doesn't persist {key}"
-    )
+assert 'QStringLiteral("precision/")' in cli
+assert 'if (precisionBinding(key))' in output
+assert 'viper_precision::fromLegacy(spec->field, value)' in output
 
 backend_start = backend.index("void load_saved_settings(")
 legacy = backend.index('key == "spectrum_frequency_hundreds"', backend_start)
@@ -43,6 +49,8 @@ assert precise > legacy, "Native precision must override legacy slider values"
 assert 'file.seekg(0);' in backend[legacy:precise]
 assert "editedControl == slider" in gui, "Only edited slider should quantize"
 assert 'nativePrecision(' in gui, "Precise slider policy must be delegated"
+assert 'viper_precision::fromSlider(' in gui, "GUI edits must share native conversion"
+assert 'viper_precision::toSlider(' in gui, "GUI readback must share native conversion"
 # Visible widgets can remain unchanged while CLI updates exact Dynamic System
 # low-X below the GUI slider's 120 Hz minimum. That native value must persist,
 # but idle polling still must not continuously restart the disk-save timer.

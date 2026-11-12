@@ -1,6 +1,7 @@
 // All physical Audio Output snapshots use a native, complete DSP IPC round trip.
 // This executable is invoked by the non-realtime Python monitor, never from audio.
 #include "viper-control.h"
+#include "viper-precision-units.h"
 #include <QCoreApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -177,21 +178,19 @@ static QString joinEq(const QJsonArray& values, int count) {
     for (int i = 0; i < count; ++i) parts << QString::number(values[i].toInt());
     return parts.join(',');
 }
+static const viper_precision::Binding* precisionBinding(const QString& key) {
+    for (const auto& spec : viper_precision::bindings)
+        if (key == QLatin1String(spec.nativeKey)) return &spec;
+    return nullptr;
+}
 static QString settingName(QString key) {
-    if (key == "strength_centi") return "strength_tenths";
     if (key == "frequency_hz") return "frequency";
-    if (key == "clarity_gain_milli") return "clarity_gain_tenths";
-    if (key == "spectrum_frequency_hz") return "spectrum_frequency_hundreds";
-    if (key == "spectrum_exciter_milli") return "spectrum_exciter_tenths";
-    if (key == "diff_lp_hz") return "diff_lp_hundreds";
-    if (key == "field_depth") return "field_depth_step";
+    if (const auto* spec = precisionBinding(key)) return QLatin1String(spec->legacyKey);
     return key;
 }
 static int settingValue(const QString& key, int value) {
-    if (key == "strength_centi") return value / 10;
-    if (key == "clarity_gain_milli" || key == "spectrum_exciter_milli") return value / 100;
-    if (key == "spectrum_frequency_hz" || key == "diff_lp_hz") return value / 100;
-    if (key == "field_depth") return value == 0 ? 0 : std::clamp((value - 150 + 25) / 50, 1, 16);
+    if (const auto* spec = precisionBinding(key))
+        return viper_precision::toLegacy(spec->field, value);
     return value;
 }
 static bool flagName(const QString& key) {
@@ -208,10 +207,7 @@ static void persistState(QSettings& settings, const QJsonObject& state) {
         // Store full native units as well as legacy GUI slider units.
         // Without these, output restoration could leave a stale precision
         // override from the previously selected physical output.
-        if (key == "strength_centi" || key == "bass_mono_strength_centi" ||
-            key == "clarity_gain_milli" || key == "spectrum_frequency_hz" ||
-            key == "spectrum_exciter_milli" || key == "diff_lp_hz" ||
-            key == "field_depth")
+        if (precisionBinding(key))
             settings.setValue("precision/" + key, value);
     }
     const auto eq = state.value("eq_levels").toArray();
@@ -446,11 +442,9 @@ static QJsonObject snapshotFromNamedPreset(const QString& path, Controls& contro
         if (name == "imager_high_crossover_hz") key = "imager_high_crossover_hundreds";
         int value = 0;
         if (!readInt(key, value)) return {};
-        if (name == "strength_centi") value *= 10;
-        else if (name == "clarity_gain_milli" || name == "spectrum_exciter_milli") value *= 100;
-        else if (name == "spectrum_frequency_hz" || name == "diff_lp_hz" ||
-                 name == "imager_high_crossover_hz") value *= 100;
-        else if (name == "field_depth") value = value == 0 ? 0 : value * 50 + 150;
+        if (const auto* spec = precisionBinding(name))
+            value = viper_precision::fromLegacy(spec->field, value);
+        else if (name == "imager_high_crossover_hz") value *= 100;
         values.insert(name, value);
     }
     state.insert("values", values);

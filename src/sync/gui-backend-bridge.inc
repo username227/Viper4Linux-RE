@@ -27,7 +27,7 @@
         c->enabled.store(enabled_->isChecked() ? 1 : 0);
         c->bass_mode.store(bass_mode_->currentIndex());
         c->strength_centi.store(preciseSlider(strength_.slider, c->strength_centi.load(),
-            strength_.slider->value() * 10,
+            viper_precision::fromSlider(viper_precision::Field::Strength, strength_.slider->value()),
             "precision/strength_centi"));
         c->frequency_hz.store(frequency_.slider->value());
         viper_gui_sync::ChangeGroup eq_changed;
@@ -48,7 +48,8 @@
         c->bass_mono_mode.store(mono_mode_->currentIndex());
         c->bass_mono_strength_centi.store(preciseSlider(mono_strength_.slider,
             c->bass_mono_strength_centi.load(),
-            mono_strength_.slider->value() * 10, "precision/bass_mono_strength_centi"));
+            viper_precision::fromSlider(viper_precision::Field::MonoStrength, mono_strength_.slider->value()),
+            "precision/bass_mono_strength_centi"));
         c->bass_mono_frequency_hz.store(mono_frequency_.slider->value());
         c->psycho_enabled.store(psycho_enabled_->isChecked() ? 1 : 0);
         c->psycho_cutoff_hz.store(psycho_cutoff_.slider->value());
@@ -73,15 +74,17 @@
         c->clarity_enabled.store(clarity_enabled_->isChecked() ? 1 : 0);
         c->clarity_mode.store(clarity_mode_->currentIndex());
         c->clarity_gain_milli.store(preciseSlider(clarity_gain_.slider, c->clarity_gain_milli.load(),
-            clarity_gain_.slider->value() * 100,
+            viper_precision::fromSlider(viper_precision::Field::Clarity, clarity_gain_.slider->value()),
             "precision/clarity_gain_milli"));
         c->spectrum_enabled.store(spectrum_enabled_->isChecked() ? 1 : 0);
         c->spectrum_frequency_hz.store(preciseSlider(spectrum_frequency_.slider,
             c->spectrum_frequency_hz.load(),
-            spectrum_frequency_.slider->value() * 100, "precision/spectrum_frequency_hz"));
+            viper_precision::fromSlider(viper_precision::Field::SpectrumFrequency, spectrum_frequency_.slider->value()),
+            "precision/spectrum_frequency_hz"));
         c->spectrum_exciter_milli.store(preciseSlider(spectrum_exciter_.slider,
             c->spectrum_exciter_milli.load(),
-            spectrum_exciter_.slider->value() * 100, "precision/spectrum_exciter_milli"));
+            viper_precision::fromSlider(viper_precision::Field::SpectrumExciter, spectrum_exciter_.slider->value()),
+            "precision/spectrum_exciter_milli"));
         viper_gui_sync::ChangeGroup tube_changed;
         tube_changed.set(c->tube_enabled, tube_enabled_->isChecked() ? 1 : 0);
         tube_changed.set(c->tube_model, tube_model_->currentIndex());
@@ -151,14 +154,14 @@
         c->diff_reverse.store(diff_reverse_->isChecked() ? 1 : 0);
         c->diff_mix_percent.store(diff_mix_.slider->value());
         c->diff_lp_hz.store(preciseSlider(diff_lowpass_.slider, c->diff_lp_hz.load(),
-            diff_lowpass_.slider->value() * 100,
+            viper_precision::fromSlider(viper_precision::Field::DiffLowpass, diff_lowpass_.slider->value()),
             "precision/diff_lp_hz"));
         c->field_enabled.store(field_enabled_->isChecked() ? 1 : 0);
         c->field_widen_tenths.store(field_widen_.slider->value());
         c->field_mid_hundredths.store(field_mid_.slider->value());
         const int liveFieldDepth = c->field_depth.load();
         c->field_depth.store(preciseSlider(field_depth_.slider, liveFieldDepth,
-            field_depth_.slider->value() == 0 ? 0 : 150 + 50 * field_depth_.slider->value(),
+            viper_precision::fromSlider(viper_precision::Field::FieldDepth, field_depth_.slider->value()),
             "precision/field_depth"));
         c->reverb_enabled.store(reverb_enabled_->isChecked() ? 1 : 0);
         c->reverb_room_percent.store(reverb_room_.slider->value());
@@ -380,7 +383,7 @@
         }
         lufs_speed_->setCurrentIndex(std::clamp(c->lufs_speed.load(), 0, 2));
         const struct { SliderRow* row; std::int32_t value; int lo; int hi; } bassRows[] = {
-            {&mono_strength_, c->bass_mono_strength_centi.load()/10, 5, 100},
+            {&mono_strength_, viper_precision::toSlider(viper_precision::Field::MonoStrength, c->bass_mono_strength_centi.load()), 5, 100},
             {&mono_frequency_, c->bass_mono_frequency_hz.load(), 15, 150},
             {&psycho_cutoff_, c->psycho_cutoff_hz.load(), 60, 150},
             {&psycho_intensity_, c->psycho_intensity_percent.load(), 0, 100},
@@ -440,8 +443,7 @@
         if (!field_depth_.slider->isSliderDown()) {
             const QSignalBlocker block(field_depth_.slider);
             const int depth = c->field_depth.load();
-            field_depth_.slider->setValue(depth == 0 ? 0 :
-                std::clamp(static_cast<int>(std::lround((depth - 150) / 50.0)), 1, 16));
+            field_depth_.slider->setValue(viper_precision::toSlider(viper_precision::Field::FieldDepth, depth));
         }
         if (!diff_delay_.slider->isSliderDown()) {
             const QSignalBlocker block(diff_delay_.slider);
@@ -453,7 +455,7 @@
         }
         if (!diff_lowpass_.slider->isSliderDown()) {
             const QSignalBlocker block(diff_lowpass_.slider);
-            diff_lowpass_.slider->setValue(std::clamp(c->diff_lp_hz.load() / 100, 0, 200));
+            diff_lowpass_.slider->setValue(std::clamp(viper_precision::toSlider(viper_precision::Field::DiffLowpass, c->diff_lp_hz.load()), 0, 200));
         }
         const int rate = c->sample_rate_hz.load();
         if (rate != 0 && rate != 44100 && rate != 48000) {
@@ -476,19 +478,19 @@
         clarity_mode_->setCurrentIndex(std::clamp(c->clarity_mode.load(), 0, 2));
         if (!clarity_gain_.slider->isSliderDown()) {
             const QSignalBlocker block(clarity_gain_.slider);
-            clarity_gain_.slider->setValue(std::clamp(c->clarity_gain_milli.load() / 100, 0, 45));
+            clarity_gain_.slider->setValue(std::clamp(viper_precision::toSlider(viper_precision::Field::Clarity, c->clarity_gain_milli.load()), 0, 45));
         }
         if (!spectrum_frequency_.slider->isSliderDown()) {
             const QSignalBlocker block(spectrum_frequency_.slider);
-            spectrum_frequency_.slider->setValue(std::clamp(c->spectrum_frequency_hz.load() / 100, 22, 82));
+            spectrum_frequency_.slider->setValue(std::clamp(viper_precision::toSlider(viper_precision::Field::SpectrumFrequency, c->spectrum_frequency_hz.load()), 22, 82));
         }
         if (!spectrum_exciter_.slider->isSliderDown()) {
             const QSignalBlocker block(spectrum_exciter_.slider);
-            spectrum_exciter_.slider->setValue(std::clamp(c->spectrum_exciter_milli.load() / 100, 0, 60));
+            spectrum_exciter_.slider->setValue(std::clamp(viper_precision::toSlider(viper_precision::Field::SpectrumExciter, c->spectrum_exciter_milli.load()), 0, 60));
         }
         if (!strength_.slider->isSliderDown()) {
             const QSignalBlocker block(strength_.slider);
-            strength_.slider->setValue(std::clamp(c->strength_centi.load() / 10, 5, 100));
+            strength_.slider->setValue(std::clamp(viper_precision::toSlider(viper_precision::Field::Strength, c->strength_centi.load()), 5, 100));
         }
         if (!frequency_.slider->isSliderDown()) {
             const QSignalBlocker block(frequency_.slider);
