@@ -13,7 +13,7 @@ loaded = (root / "src/window/window-initialization.inc").read_text()
 deq = (root / "src/window/window-dynamics.inc").read_text()
 preset = (root / "src/window/window-presets.inc").read_text()
 shared = (root / "src/sync/gui-simple-settings.inc").read_text()
-shared_pairs = dict(re.findall(r'\\{Phase::\\w+,\\s*"([^"]+)",\\s*[^,]+,\\s*Kind::\\w+,\\s*(-?\\d+)', shared))
+shared_pairs = dict(re.findall(r'\{Phase::\w+,\s*"([^"]+)",\s*[^,]+,\s*Kind::\w+,\s*(-?\d+)', shared))
 shared_keys = set(shared_pairs)
 assert len(shared_keys) == 65, "Stage 3C bindings must remain unique and complete"
 
