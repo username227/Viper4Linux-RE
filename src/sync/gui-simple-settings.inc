@@ -88,7 +88,7 @@
         };
         for (const auto& binding : bindings) {
             if (binding.phase != phase) continue;
-            const auto key = QLatin1String(binding.key);
+            const QString key = QString::fromLatin1(binding.key);
             if (loading) {
                 if (binding.kind == Kind::Toggle) {
                     static_cast<QCheckBox*>(binding.widget)->setChecked(

@@ -47,6 +47,8 @@ assert len(canonical_keys) == 86, f"Unexpected golden key count: {len(canonical_
 def literal_keys(source: str, method: str) -> set[str]:
     return set(re.findall(r'settings_\.' + method + r'\(\s*"([^"]+)"', source))
 
+assert not (literal_keys(saved, "setValue") & shared_keys), "Shared setting written twice"
+assert not (literal_keys(loaded, "value") & shared_keys), "Shared setting loaded twice"
 actual_saved = literal_keys(saved, "setValue") | shared_keys
 assert actual_saved == canonical_keys, (
     f"Persisted keys changed: missing={sorted(canonical_keys - actual_saved)}; "

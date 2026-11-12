@@ -321,7 +321,7 @@ for token in (
     'out.crossfeed_enabled = new EffectSwitch(',
     'out.crossfeed_mode->addItems({"Mild", "Medium", "Strong"})',
     'addEffectPanel(spatialLayout, spatialPanels.crossfeedGroup, "crossfeed", crossfeed_enabled_)',
-    'settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked())',
+    '"crossfeed_enabled", crossfeed_enabled_, Kind::Toggle, 0',
     'settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked())',
     'crossfeed_changed.set(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0)',
     'crossfeed_changed.notify(c->crossfeed_request_serial);',
