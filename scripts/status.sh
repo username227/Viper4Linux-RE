@@ -23,7 +23,7 @@ if current:
 else: print('ViPER for Linux: not running')
 if legacy:
     print('WARNING: Other ViPER filter-chain client(s) detected:', ', '.join(pid for pid, _ in legacy))
-    print('Stop them before using the new prototype to avoid double processing.')
+    print('Stop them before running ViPER4Linux-RE to avoid double processing.')
 PY
 if [[ -x build/viper-ctl ]]; then
   echo 'DSP control channel:'

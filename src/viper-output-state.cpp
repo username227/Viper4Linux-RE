@@ -396,24 +396,24 @@ static bool restoreState(Controls& c, const QJsonObject& snapshot, QSettings& se
         deqChanged |= restoreFields(c.deq_bands[i], snapshot.value("deq_bands").toArray()[i].toObject(), deqFields);
     // Native filter rebuilds are always scheduled off the real-time thread.
     // Use one request per affected group, after complete parameter publication.
-    auto bumped = [&](const char* /*unused*/, std::atomic<std::uint32_t>& request) {
+    auto bumped = [](std::atomic<std::uint32_t>& request) {
         request.fetch_add(1, std::memory_order_release);
     };
-    if (changed || eqChanged) bumped("eq", c.eq_request_serial);
-    if (changed || mbChanged) bumped("multiband", c.mb_request_serial);
-    if (changed || deqChanged) bumped("deq", c.deq_request_serial);
+    if (changed || eqChanged) bumped(c.eq_request_serial);
+    if (changed || mbChanged) bumped(c.mb_request_serial);
+    if (changed || deqChanged) bumped(c.deq_request_serial);
     if (changed) {
-        bumped("tube", c.tube_request_serial);
-        bumped("analogx", c.analogx_request_serial);
-        bumped("crossfeed", c.crossfeed_request_serial);
-        bumped("fet", c.fet_request_serial);
-        bumped("speaker", c.speaker_request_serial);
-        bumped("imager", c.imager_request_serial);
+        bumped(c.tube_request_serial);
+        bumped(c.analogx_request_serial);
+        bumped(c.crossfeed_request_serial);
+        bumped(c.fet_request_serial);
+        bumped(c.speaker_request_serial);
+        bumped(c.imager_request_serial);
     }
     if (changed || previousDdc != settings.value("ddc_profile").toString())
-        bumped("ddc", c.ddc_request_serial);
+        bumped(c.ddc_request_serial);
     if (changed || previousIr != settings.value("convolver_kernel").toString())
-        bumped("convolver", c.convolver_request_serial);
+        bumped(c.convolver_request_serial);
     return true;
 }
 

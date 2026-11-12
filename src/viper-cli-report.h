@@ -30,7 +30,7 @@ inline bool starts(const std::string& s, const char* p) {
 inline Effect fromCommand(const std::string& cmd) {
     if (cmd == "status" || cmd == "on" || cmd == "off" ||
         cmd == "all-on" || cmd == "all-off") return Effect::Master;
-    if (starts(cmd, "bass-") || cmd == "toggle") return Effect::Bass;
+    if (starts(cmd, "bass-")) return Effect::Bass;
     if (starts(cmd, "mono-")) return Effect::Mono;
     if (starts(cmd, "psycho-")) return Effect::Psycho;
     if (starts(cmd, "dynamic-")) return Effect::Dynamic;

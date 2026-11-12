@@ -825,7 +825,6 @@ private:
     // intentional: reflecting CLI changes must not republish a stale GUI
     // snapshot over them. We then persist the resulting live settings without
     // sending a second change to the DSP. This is GUI-thread-only code.
-    // Checkpoint 6: implementation-only synchronization modules.
 #include "sync/gui-settings-bridge.inc"
 #include "sync/gui-backend-bridge.inc"
     QSettings settings_;
