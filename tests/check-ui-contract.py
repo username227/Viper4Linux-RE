@@ -352,12 +352,16 @@ print('PASS: compact Sound Correction tab without redundant notice')
 # CLI-to-GUI readback: worker-managed effect switches must not trigger a
 # stale GUI push while polling. Persist only actual readback changes, not every
 # 500 ms tick (which would starve QSettings' 300 ms write timer).
+# Include precise native Dynamic System low-X: a CLI update below 120 Hz may
+# change the saved native value without moving the clamped GUI slider.
 for token in (
     'const auto before = liveUiSnapshot();',
     'const QSignalBlocker blockDdc(ddc_enabled_), blockSpeaker(speaker_enabled_);',
     'const QSignalBlocker blockDeq(deq_enabled_);',
     'deq_enabled_->setChecked(c->deq_enabled.load() != 0);',
-    'if (before != liveUiSnapshot()) persistCurrentSettings();',
+    'const int beforeNativeLowX = dyn_xlo_native_;',
+    'dyn_xlo_native_ = std::clamp(c->dynamic_x_low.load(), 0, 2400);',
+    'if (before != liveUiSnapshot() || beforeNativeLowX != dyn_xlo_native_) persistCurrentSettings();',
 ):
     assert token in source, token
 assert 'if (before != liveUiSnapshot()) publishToBackend();' not in source

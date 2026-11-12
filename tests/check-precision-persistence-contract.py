@@ -43,7 +43,12 @@ assert precise > legacy, "Native precision must override legacy slider values"
 assert 'file.seekg(0);' in backend[legacy:precise]
 assert "editedControl == slider" in gui, "Only edited slider should quantize"
 assert 'nativePrecision(' in gui, "Precise slider policy must be delegated"
-assert 'if (before != liveUiSnapshot()) persistCurrentSettings();' in gui, "Readback must avoid spurious persistence"
+# Visible widgets can remain unchanged while CLI updates exact Dynamic System
+# low-X below the GUI slider's 120 Hz minimum. That native value must persist,
+# but idle polling still must not continuously restart the disk-save timer.
+assert 'const int beforeNativeLowX = dyn_xlo_native_;' in gui, "Capture native Dynamic System low-X before readback"
+assert 'dyn_xlo_native_ = std::clamp(c->dynamic_x_low.load(), 0, 2400);' in gui, "Read back exact low-X from native IPC"
+assert 'if (before != liveUiSnapshot() || beforeNativeLowX != dyn_xlo_native_) persistCurrentSettings();' in gui, "Readback must persist changed UI or native low-X only"
 assert 'if (pending_edit_) {' in gui, "Offline GUI edit must win on reconnect"
 assert "replace_precision_on_push_" in gui
 assert 'settings_.remove("precision");' in gui
