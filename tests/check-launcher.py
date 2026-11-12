@@ -6,6 +6,8 @@ from io import StringIO
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
 import os
+import shutil
+import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 import viper_launcher as v
@@ -108,6 +110,44 @@ with TemporaryDirectory() as tmp:
     gui.write_bytes(b'fake GUI binary')
     gui.chmod(0o755)
 
+    # Manual source builds always use build/: the real entry-point wrapper
+    # must work without an override, even from a different working directory.
+    # Run preflight only: it reads current processes but never starts audio.
+    checkout = Path(__file__).resolve().parents[1]
+    (root / 'src').mkdir()
+    for module_name in ('viper_launcher.py', 'viper_log_retention.py'):
+        shutil.copy2(checkout / 'src' / module_name, root / 'src' / module_name)
+    wrapper = root / 'viper4linux'
+    shutil.copy2(checkout / 'viper4linux', wrapper)
+    wrapper.chmod(0o755)
+    isolated_env = {**os.environ,
+                    'HOME': str(root),
+                    'XDG_RUNTIME_DIR': str(runtime),
+                    'XDG_STATE_HOME': str(state),
+                    'VIPER_SOURCE_BUILD_DIR': 'nonexistent-alternate-build'}
+    result = subprocess.run([str(wrapper), '--preflight'], cwd=runtime,
+                            env=isolated_env, capture_output=True,
+                            text=True, timeout=15)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert 'Build: source checkout' in result.stdout
+    assert f'Launcher backend: {backend_script}' in result.stdout
+    assert f'Backend fingerprint: {desired}' in result.stdout
+    assert 'No GUI or backend was started, stopped, or modified.' in result.stdout
+    assert not state.exists(), 'Bare source wrapper preflight changed state'
+
+    # Calling the launcher's no-argument mode must choose build/viper-gui.
+    # Mock backend and exec so this test cannot launch real PipeWire or Qt.
+    with patch.dict(os.environ, fake_env), \
+            patch.object(v, 'ROOT', root), \
+            patch.object(v, 'ensure_backend', return_value=543) as backend, \
+            patch.object(v, 'ensure_output_monitor') as monitor, \
+            patch.object(v.os, 'execv') as exec_gui, \
+            patch.object(sys, 'argv', ['viper4linux']):
+        assert v.main() == 0
+        backend.assert_called_once_with()
+        monitor.assert_called_once_with(543)
+        exec_gui.assert_called_once_with(str(gui), [str(gui)])
+
     # The CLI mode itself must exit before ensure_backend or execv.
     with patch.object(v, 'launch_preflight', return_value='safe plan') as preview, \
             patch.object(v, 'ensure_backend') as backend, \
@@ -171,6 +211,9 @@ for name in ('start.sh', 'stop.sh', 'status.sh', 'gui.sh', 'verify.sh'):
     assert os.access(relocated, os.X_OK), relocated
     assert not (checkout / name).exists(), name
 source_launcher = (checkout / 'src/viper_launcher.py').read_text()
+assert "root / 'build/viper-gui'" in source_launcher, 'Manual GUI launch must use build/'
+assert "root / 'build/viper_dsp_ladspa.so'" in source_launcher, 'Manual DSP launch must use build/'
+assert "VIPER_SOURCE_BUILD_DIR" not in source_launcher, 'Retired source build override reintroduced'
 assert "else root / 'scripts/start.sh'" in source_launcher
 assert "else root / 'start.sh'" not in source_launcher
 

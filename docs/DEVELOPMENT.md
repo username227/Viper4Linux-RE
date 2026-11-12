@@ -52,7 +52,11 @@ filter-chain template and project fragment into
 does not need the developer's stock filter-chain file, because it sets
 `VIPER_ENABLE_SYSTEM_INSTALL=ON` and defaults routing preparation to OFF.
 
-The source launcher expects the build directory named **`build`**.
+The source launcher expects the conventional **`build/`** directory. Manual
+source builds, including full developer CTest builds, use `-B build` so that
+`./viper4linux` and `./viper4linux --preflight` work without build-directory
+overrides, symlinks or additional environment variables. Package build trees
+are independently configured and installed via system paths.
 When a developer already has a custom
 `routing-config/filter-chain.conf` in the checkout, the launcher and
 backend keep using that file; otherwise they use CMake's generated files
@@ -280,13 +284,15 @@ package builds. To disable all CTest registration, configure with
 an independent update before its regular builds use the same CTest interface.
 
 For the complete native DSP, GUI, preset, snapshot and release-contract
-regressions, **CTest is the standard developer test runner**. Configure an
-isolated developer build, compile its native/mock test binaries, then run CTest:
+regressions, **CTest is the standard developer test runner**. Configure the
+normal `build/` directory with developer tests enabled, compile its native/mock
+test binaries, then run CTest:
 
 ```bash
-cmake -S . -B build-ctest -DCMAKE_BUILD_TYPE=Release -DVIPER_BUILD_DEVELOPER_TESTS=ON
-cmake --build build-ctest
-ctest --test-dir build-ctest --output-on-failure
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+./viper4linux --preflight
 ```
 
 CTest registers the independent Python contract checks and native mock checks
@@ -298,11 +304,11 @@ individual assertions remain visible through verbose output.
 Useful options:
 
 ```bash
-ctest --test-dir build-ctest -N                 # list registered checks without running
-ctest --test-dir build-ctest -L package --output-on-failure
-ctest --test-dir build-ctest -L mock --output-on-failure
-ctest --test-dir build-ctest -R backend --output-on-failure
-ctest --test-dir build-ctest -V                 # full output, including passing checks
+ctest --test-dir build -N                 # list registered checks without running
+ctest --test-dir build -L package --output-on-failure
+ctest --test-dir build -L mock --output-on-failure
+ctest --test-dir build -R backend --output-on-failure
+ctest --test-dir build -V                 # full output, including passing checks
 ```
 
 The legacy all-in-one developer runner has been removed; the full suite now
