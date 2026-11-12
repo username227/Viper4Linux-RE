@@ -343,10 +343,12 @@ public:
             updateEqDeleteButton();
         });
 
+        // Panel factories all share the same slider builder and its UI owner.
+        const auto panelSlider = [this](QFormLayout* form, const char* label, int min, int max) {
+            return addSlider(form, label, min, max);
+        };
         const auto dynamicsFet = viper_panels::createFetPanel(
-            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
-                return addSlider(form, label, min, max);
-            });
+            tabs_, panelSlider);
         fet_enabled_ = dynamicsFet.fet_enabled;
         fet_threshold_ = dynamicsFet.fet_threshold;
         fet_ratio_ = dynamicsFet.fet_ratio;
@@ -356,9 +358,7 @@ public:
         fet_release_ = dynamicsFet.fet_release;
         addEffectPanel(dynamicsLayout, dynamicsFet.group, "fet", fet_enabled_);
         const auto dynamicsMb = viper_panels::createMultibandPanel(
-            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
-                return addSlider(form, label, min, max);
-            }, mb_crossovers_, mb_band_ranges_, mb_bands_);
+            tabs_, panelSlider, mb_crossovers_, mb_band_ranges_, mb_bands_);
         mb_enabled_ = dynamicsMb.mb_enabled;
         mb_band_count_ = dynamicsMb.mb_band_count;
         mb_band_tabs_ = dynamicsMb.mb_band_tabs;
@@ -431,9 +431,7 @@ public:
         speaker_enabled_ = correctionSpeaker.speaker_enabled;
         addEffectPanel(correctionLayout, correctionSpeaker.group, "speaker_correction", speaker_enabled_);
         const auto correctionConvolver = viper_panels::createConvolverPanel(
-            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
-                return addSlider(form, label, min, max);
-            });
+            tabs_, panelSlider);
         convolver_enabled_ = correctionConvolver.convolver_enabled;
         convolver_library_ = correctionConvolver.convolver_library;
         convolver_full_name_ = correctionConvolver.convolver_full_name;
@@ -510,9 +508,7 @@ public:
         // Bass widget construction moved; card wrappers, persistence,
         // precise DSP values and shared-memory subscriptions remain here.
         const auto bassPanels = viper_panels::createBassPanels(
-            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
-                return addSlider(form, label, min, max);
-            });
+            tabs_, panelSlider);
         enabled_ = bassPanels.enabled;
         bass_mode_ = bassPanels.bass_mode;
         strength_ = bassPanels.strength;
@@ -540,9 +536,7 @@ public:
         addEffectPanel(bassLayout, bassPanels.dynamicGroup, "dynamic_bass", dyn_enabled_);
 
         const auto eqToneClarity = viper_panels::createClaritySpectrumPanels(
-            central, [this](QFormLayout* form, const char* label, int min, int max) {
-                return addSlider(form, label, min, max);
-            });
+            central, panelSlider);
         clarity_enabled_ = eqToneClarity.clarity_enabled;
         clarity_mode_ = eqToneClarity.clarity_mode;
         clarity_gain_ = eqToneClarity.clarity_gain;
@@ -553,9 +547,7 @@ public:
         addEffectPanel(effectLayout, eqToneClarity.spectrumGroup, "spectrum", spectrum_enabled_);
 
         const auto spatialPanels = viper_panels::createSpatialPanels(tabs_,
-            [this](QFormLayout* form, const char* label, int min, int max) {
-                return addSlider(form, label, min, max);
-            });
+            panelSlider);
         crossfeed_enabled_ = spatialPanels.crossfeed_enabled;
         crossfeed_mode_ = spatialPanels.crossfeed_mode;
         headphone_enabled_ = spatialPanels.headphone_enabled;
@@ -589,9 +581,7 @@ public:
         addEffectPanel(spatialLayout, spatialPanels.imagerGroup, "imager", imager_enabled_);
 
         const auto eqToneTube = viper_panels::createTubeAnalogXPanels(
-            tabs_, [this](QFormLayout* form, const char* label, int min, int max) {
-                return addSlider(form, label, min, max);
-            });
+            tabs_, panelSlider);
         tube_enabled_ = eqToneTube.tube_enabled;
         tube_model_ = eqToneTube.tube_model;
         tube_drive_ = eqToneTube.tube_drive;
@@ -606,9 +596,7 @@ public:
         // Output effect widget construction is separate; persistence and all
         // backend/CLI connections remain in ViperWindow.
         const auto outputPanels = viper_panels::createOutputPanels(
-            tabs_, [this](QFormLayout* form, const char* label, int minimum, int maximum) {
-                return addSlider(form, label, minimum, maximum);
-            });
+            tabs_, panelSlider);
         limiter_indicator_ = outputPanels.limiter_indicator;
         limiter_threshold_ = outputPanels.limiter_threshold;
         limiter_gain_ = outputPanels.limiter_gain;

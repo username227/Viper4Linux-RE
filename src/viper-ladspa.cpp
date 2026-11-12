@@ -8,6 +8,7 @@
 #include "viper-ir-wave.h"
 #include "viper-ddc.h"
 #include "viper-multiband-init.h"
+#include "backend/worker-request.h"
 
 #include <algorithm>
 #include <array>
