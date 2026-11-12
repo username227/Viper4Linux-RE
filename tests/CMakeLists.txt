@@ -114,6 +114,17 @@ add_test(NAME viper_contract_named_presets_runtime
 set_tests_properties(viper_contract_named_presets_runtime PROPERTIES
   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;contracts;presets")
 
+# Exact native/legacy unit projections need no Qt or live DSP.
+add_executable(viper_test_precision_units check-precision-units.cpp)
+target_include_directories(viper_test_precision_units PRIVATE "${_viper_test_include}")
+target_compile_options(viper_test_precision_units PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+list(APPEND _viper_native_mock_targets viper_test_precision_units)
+add_test(NAME viper_native_precision_units
+  COMMAND "$<TARGET_FILE:viper_test_precision_units>")
+set_tests_properties(viper_native_precision_units PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;native;settings")
+
 add_custom_target(viper_native_mock_tests DEPENDS ${_viper_native_mock_targets})
 
 # Exercise request-serial coalescing without starting a PipeWire process.

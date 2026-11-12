@@ -4,6 +4,7 @@
 // Only the affected effect group is persisted, to avoid overwriting unrelated
 // GUI state or named presets. Qt handles concurrent QSettings file locking.
 #include "viper-control.h"
+#include "viper-precision-units.h"
 #include <QSettings>
 #include <algorithm>
 #include <cstdint>
@@ -21,6 +22,13 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
     const auto num = [&](const char* key, const std::atomic<std::int32_t>& v) {
         s.setValue(key, value(v));
     };
+    const auto precise = [&](viper_precision::Field field,
+                             const std::atomic<std::int32_t>& v) {
+        const auto& spec = viper_precision::binding(field);
+        const int native = value(v);
+        s.setValue(spec.legacyKey, viper_precision::toLegacy(field, native, true));
+        s.setValue(QStringLiteral("precision/") + QLatin1String(spec.nativeKey), native);
+    };
     const auto oneOf = [&](std::initializer_list<const char*> options) {
         for (const auto* opt : options) if (cmd == opt) return true;
         return false;
@@ -32,14 +40,12 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
     } else if (oneOf({"bass-on", "bass-off", "bass-toggle", "bass-mode", "bass-gain", "bass-freq"})) {
         flag("enabled", c.enabled);
         num("bass_mode", c.bass_mode);
-        s.setValue("strength_tenths", value(c.strength_centi) / 10);
-        num("precision/strength_centi", c.strength_centi);
+        precise(viper_precision::Field::Strength, c.strength_centi);
         num("frequency", c.frequency_hz);
     } else if (begins("mono-")) {
         flag("bass_mono_enabled", c.bass_mono_enabled);
         num("bass_mono_mode", c.bass_mono_mode);
-        s.setValue("bass_mono_strength_centi", (value(c.bass_mono_strength_centi) / 10) * 10);
-        num("precision/bass_mono_strength_centi", c.bass_mono_strength_centi);
+        precise(viper_precision::Field::MonoStrength, c.bass_mono_strength_centi);
         num("bass_mono_frequency_hz", c.bass_mono_frequency_hz);
     } else if (begins("psycho-")) {
         flag("psycho_enabled", c.psycho_enabled);
@@ -74,14 +80,11 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
     } else if (begins("clarity-")) {
         flag("clarity_enabled", c.clarity_enabled);
         num("clarity_mode", c.clarity_mode);
-        s.setValue("clarity_gain_tenths", value(c.clarity_gain_milli) / 100);
-        num("precision/clarity_gain_milli", c.clarity_gain_milli);
+        precise(viper_precision::Field::Clarity, c.clarity_gain_milli);
     } else if (begins("spectrum-")) {
         flag("spectrum_enabled", c.spectrum_enabled);
-        s.setValue("spectrum_frequency_hundreds", value(c.spectrum_frequency_hz) / 100);
-        num("precision/spectrum_frequency_hz", c.spectrum_frequency_hz);
-        s.setValue("spectrum_exciter_tenths", value(c.spectrum_exciter_milli) / 100);
-        num("precision/spectrum_exciter_milli", c.spectrum_exciter_milli);
+        precise(viper_precision::Field::SpectrumFrequency, c.spectrum_frequency_hz);
+        precise(viper_precision::Field::SpectrumExciter, c.spectrum_exciter_milli);
     } else if (begins("tube-")) {
         flag("tube_enabled", c.tube_enabled);
         num("tube_model", c.tube_model);
@@ -101,15 +104,12 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
         num("diff_delay_ms", c.diff_delay_ms);
         flag("diff_reverse", c.diff_reverse);
         num("diff_mix_percent", c.diff_mix_percent);
-        s.setValue("diff_lp_hundreds", value(c.diff_lp_hz) / 100);
-        num("precision/diff_lp_hz", c.diff_lp_hz);
+        precise(viper_precision::Field::DiffLowpass, c.diff_lp_hz);
     } else if (begins("field-")) {
         flag("field_enabled", c.field_enabled);
         num("field_widen_tenths", c.field_widen_tenths);
         num("field_mid_hundredths", c.field_mid_hundredths);
-        const int depth = value(c.field_depth);
-        s.setValue("field_depth_step", depth == 0 ? 0 : std::clamp((depth - 150 + 25) / 50, 1, 16));
-        num("precision/field_depth", c.field_depth);
+        precise(viper_precision::Field::FieldDepth, c.field_depth);
     } else if (begins("reverb-")) {
         flag("reverb_enabled", c.reverb_enabled);
         num("reverb_room_percent", c.reverb_room_percent);
