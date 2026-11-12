@@ -51,5 +51,22 @@ assert 'settings_.remove("presets")' not in presets
 assert 'settings.remove("presets")' not in presets
 assert '"Presets…"' in s
 assert 'showPresetManager();' in s
+# Restore one complete effect state before the GUI publishes it. Existing
+# applySettings/restoreOutputPreset/restoreBassPreset helpers each push on
+# their own; intermediate state must not escape when loading a named preset.
+restore = presets[presets.index('    void restoreFromPresetStaging() {'):
+                  presets.index('    void resetEffectsWithConfirmation() {')]
+assert 'if (!settings_.value("preset/valid", false).toBool()) return;' in restore
+assert 'const QScopedValueRollback<bool> deferPublishes(suppress_named_preset_push_, true);' in restore
+assert restore.index('deferPublishes') < restore.index('applySettings(')
+assert restore.count('push();') == 1
+assert restore.index('} // End deferred-publish scope before the single final push.') < restore.index('            push();')
+assert 'requestDdcReload();' in restore and 'requestIrsLoad();' in restore
+assert '#include <QScopedValueRollback>' in s
+assert 'if (suppress_named_preset_push_) return;' in s
+# Reset and ordinary slider changes still publish normally.
+reset = presets[presets.index('    void resetEffectsWithConfirmation() {'):]
+assert 'deferPublishes' not in reset
+assert 'void push() {' in s
 # New preset library only changes GUI and personal settings; no DSP source involved.
 print('PASS: named presets, collision confirmation, guarded loads, legacy migration, reset safety')
