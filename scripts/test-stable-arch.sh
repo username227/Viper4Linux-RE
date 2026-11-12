@@ -24,8 +24,8 @@ runuser -u builder -- env SRCDEST="$release_dir" bash -c '
     makepkg --noconfirm --cleanbuild --nodeps
     makepkg --printsrcinfo > "$1/.SRCINFO"
 ' bash "$release_dir"
-# makepkg runs the 12 fast package CTests. Enable the full developer suite
-# afterwards in the same build tree, without recompiling the production app.
+# makepkg's check() already compiled and ran the complete offline CTest suite.
+# Do not reconfigure/rebuild/rerun it a second time in CI.
 source_tree="$release_dir/arch-build/src/viper4linux-re-$version"
 build_tree="$release_dir/arch-build/src/viper4linux-build"
 test -f "$source_tree/tests/CMakeLists.txt"
@@ -33,21 +33,13 @@ test -f "$source_tree/tests/CMakeLists.txt"
 # against the real CMake install script produced by makepkg.
 VIPER_CI_STAGING_GUARD_TEST=1 bash "$source_tree/tests/check-cmake-install-guard.sh" \
     "$build_tree"
-runuser -u builder -- bash -c '
-    set -Eeuo pipefail
-    cmake -S "$1" -B "$2" -DVIPER_BUILD_DEVELOPER_TESTS=ON
-    cmake --build "$2"
-    ctest --test-dir "$2" --output-on-failure --no-tests=error
-' bash "$source_tree" "$build_tree"
-
 # Independently exercise the *normal source-checkout* CMake defaults from the
 # same pinned source archive. No package install or PipeWire audio is started.
 runuser -u builder -- bash -c '
         set -Eeuo pipefail
         source_tree=$1
         cmake -S "$source_tree" -B "$source_tree/build" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DVIPER_BUILD_DEVELOPER_TESTS=OFF
+            -DCMAKE_BUILD_TYPE=Release
         cmake --build "$source_tree/build" --target viper_source_check
         test -r "$source_tree/build/routing-config/filter-chain.conf"
         test -r "$source_tree/build/routing-config/filter-chain.conf.d/99-viper-smart.conf"

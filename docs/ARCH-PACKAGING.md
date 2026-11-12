@@ -50,21 +50,21 @@ Python files, failure behavior and stable/VCS custom notice directories. A separ
 real-build staging test compares the complete manifests of two independently
 staged CMake installations.
 
-The packaged `check()` suite is intentionally short and offline.
-CMake's standard `BUILD_TESTING=ON` default registers 12 package checks.
-The stable release PKGBUILD runs `ctest --output-on-failure
---no-tests=error`, providing standard numbered results and failing if zero
-tests are found. No custom package-test CMake flag or native mock build is
-needed. Use `-DBUILD_TESTING=OFF` only when intentionally disabling tests.
+The stable PKGBUILD builds the complete offline CTest suite under CMake's
+standard `BUILD_TESTING=ON` default. Its `check()` runs
+`ctest --output-on-failure --no-tests=error`, reporting every independently
+registered test and failing when any check fails (or none are found).
+The former 12-test fast-only package gate is no longer the default.
+All native mocks, DSP checks, CLI and GUI contracts operate without live
+PipeWire or the user's installed audio backend. The `git` build dependency
+supports offline regression checks that create temporary repositories.
+Use `-DBUILD_TESTING=OFF` only to intentionally omit test targets entirely;
+`makepkg --nocheck` skips running `check()` but still compiles test targets.
 The older `tests/check-package.sh` remains available to existing callers.
 
-For complete native DSP and GUI regression coverage, enable
-`VIPER_BUILD_DEVELOPER_TESTS=ON`, build, then run
-`ctest --test-dir BUILD_DIR --output-on-failure`. The old all-in-one developer test wrapper was removed after the complete
-46/46 CTest suite passed; use the developer CTest suite instead.
-Arch release preparation additionally runs the full developer CTest suite in
-the already-compiled Arch package build tree. Both native Debian-family builds
-enable the developer test targets and run CTest before staging their packages.
+Arch release preparation relies on the full CTest run already performed by
+`makepkg`; it does not rerun those tests in a second build pass. Both native
+Debian-family builds likewise run the complete CTest suite before staging.
 The existing source-staging, LADSPA export and disposable-container installation
 checks remain separate. The separate published AUR VCS recipe remains
 maintainer-owned and **does not automatically adopt this new CTest gate**;

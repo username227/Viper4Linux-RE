@@ -152,8 +152,7 @@ No native DSP implementation changes have been made.
 The maintainer ran, in the fresh source checkout:
 
 ~~~bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-  -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 bash tests/check-developer.sh
@@ -328,8 +327,7 @@ tests. Real-device auditory equivalence remains a later maintainer gate.
 
 ~~~bash
 git pull --ff-only
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-  -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 bash tests/check-developer.sh
@@ -391,8 +389,7 @@ currently justified merely to reduce file size.
 
 ~~~bash
 git pull --ff-only
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-  -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 bash tests/check-developer.sh

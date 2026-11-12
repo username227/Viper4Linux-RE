@@ -54,7 +54,7 @@ require('Gerald Frank' in readme and 'GPL-3.0-only' in readme,
 require('GPL-3.0-only' in third_party_notices and 'ViPERDSP' in third_party_notices,
         'Third-party licensing boundary missing')
 runtime = {'glibc', 'gcc-libs', 'qt6-base', 'pipewire', 'ladspa', 'python'}
-build = {'cmake', 'pkgconf'}  # gcc/make/binutils belong to Arch base-devel
+build = {'cmake', 'pkgconf', 'git'}  # gcc/make/binutils belong to Arch base-devel
 require(runtime <= bash_array(stable, 'depends'), 'Stable runtime dependencies incomplete')
 require(build <= bash_array(stable, 'makedepends'), 'Stable build dependencies incomplete')
 require("conflicts=('viper4linux-re-git' 'viper4linux' 'viper4linux-git')" in stable,
@@ -72,8 +72,8 @@ require('Qt6::Widgets Qt6::Network' in cmake, 'Qt6 GUI link dependencies changed
 require('find_package(Threads REQUIRED)' in cmake, 'Thread dependency changed')
 require('include(CTest)' in cmake and 'if(BUILD_TESTING)' in cmake,
         'Standard CMake BUILD_TESTING/CTest registration missing')
-require('option(VIPER_BUILD_DEVELOPER_TESTS' in cmake,
-        'Opt-in developer mock suite option missing')
+require('VIPER_BUILD_DEVELOPER_TESTS' not in cmake,
+        'Retired developer test flag reintroduced')
 require('VIPER_BUILD_PACKAGE_TESTS' not in cmake,
         'Obsolete custom package testing option remains')
 require('#include <ladspa.h>' in (root / 'src/viper-ladspa.cpp').read_text(),
@@ -110,13 +110,15 @@ for forbidden in ('VIPER_ARCH_STAGING_BACKEND', 'install-package.sh',
                   'ViPERDSP-patched', 'fix_lufs_speed.py'):
     require(forbidden not in stable, f'Legacy stable packaging path remains: {forbidden}')
 require('install -Dm' not in stable, 'Stable recipe must delegate staging to CMake')
-require('bash tests/check-mock.sh' not in stable, 'Full developer tests must not run during makepkg')
+require('bash tests/check-mock.sh' not in stable,
+        'Native mock checks should be invoked through CTest, not a second package runner')
 require('VIPER_BUILD_PACKAGE_TESTS' not in stable,
         'Stable PKGBUILD should use default-on BUILD_TESTING, not a custom flag')
 arch_ci = (root / 'scripts/test-stable-arch.sh').read_text()
-require('-DVIPER_BUILD_DEVELOPER_TESTS=ON' in arch_ci and
-        'ctest --test-dir "$2" --output-on-failure --no-tests=error' in arch_ci,
-        'Arch release CI must run the full developer CTest suite')
+require('makepkg --noconfirm --cleanbuild --nodeps' in arch_ci and
+        'VIPER_BUILD_DEVELOPER_TESTS' not in arch_ci and
+        'ctest --test-dir "$2"' not in arch_ci,
+        'Arch release CI must run full CTest once through makepkg check()')
 require('bash tests/check-developer.sh' not in arch_ci,
         'Arch release CI still invokes the legacy developer test runner')
 for patch in ('fix_lufs_speed.py', 'preallocate_stereo_imager.py',
@@ -136,6 +138,9 @@ if modules.is_file():
 smoke = (root / 'tests/check-package.sh').read_text()
 ctest = (root / 'tests/CMakeLists.txt').read_text()
 mock_runner = (root / 'tests/check-mock.sh').read_text()
+require('VIPER_BUILD_DEVELOPER_TESTS' not in ctest and
+        'viper_test_mock_ladspa' in ctest and 'viper_native_fet' in ctest,
+        'Complete offline CTest suite must register with default BUILD_TESTING=ON')
 for required in ('python3 tests/check-launcher.py', 'python3 tests/check-arch-install.py',
                  'python3 tests/check-cmake-source-checkout.py',
                  "python3 -m unittest discover -s tests -p 'test_output_*.py'",

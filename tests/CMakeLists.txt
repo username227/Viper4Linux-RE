@@ -1,6 +1,6 @@
-# BUILD_TESTING registers fast package checks without native mock targets.
-# Opt-in developer mode adds native mocks, GUI/application contracts and
-# conditional release contracts.
+# BUILD_TESTING=ON registers the complete offline CTest suite by default:
+# package checks, isolated native mocks, GUI/application contracts, and
+# conditional release contracts. No live PipeWire or audio backend required.
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 # CTest is the primary developer test runner: report each independent check,
@@ -44,11 +44,7 @@ foreach(_viper_file IN LISTS _viper_package_unit_modules)
     LABELS "developer;package")
 endforeach()
 
-if(NOT VIPER_BUILD_DEVELOPER_TESTS)
-  return()
-endif()
-
-# Developer-only mock compilation and independent mock/contract CTest cases.
+# Native mock compilation and independent mock/contract CTest cases.
 find_program(VIPER_BASH_EXECUTABLE NAMES bash REQUIRED)
 
 # Never use the production IPC namespace or load the real ViPERDSP in mocks.
