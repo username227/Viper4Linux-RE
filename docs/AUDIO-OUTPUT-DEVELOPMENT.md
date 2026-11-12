@@ -41,7 +41,7 @@ memory, and supports `--assign-preset FILE --target OUTPUT_KEY`.
 
 Unit tests exercise discovery, stable identities, output transitions and
 assignment. `tests/check-output-state.cpp` tests native snapshot round-trips,
-validation and persistence; `bash tests/check-developer.sh` includes the mock
+validation and persistence; the developer CTest suite includes the mock
 DSP and package checks. Live acceptance still requires checking hardware
 switching, idle/no-playback initialization, Bluetooth reconnection and
 per-output preset assignment. These were exercised on Cinnamon/X11 with the

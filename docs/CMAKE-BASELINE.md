@@ -1,5 +1,11 @@
 # CMake modernization: baseline and migration inventory
 
+> **Historical record:** Commands referencing `tests/check-developer.sh` below
+> describe earlier checkpoints. This legacy wrapper was removed following the
+> successful 46/46 individual CTest checks on November 11, 2026. For current
+> testing, configure with `-DVIPER_BUILD_DEVELOPER_TESTS=ON`, build, then run
+> `ctest --test-dir BUILD_DIR --output-on-failure`.
+
 **Branch:** `refactor/cmake-modernization`  
 **Reference revision:** `a84a433fc6b0f39cdf718e7ae127badba10df424` (branch point on `main`).  
 **Status:** Static inventory and maintainer's Arch CTest and patched-DSP native build baselines passed (2026-11-04). Stage-manifest parity and live audio tests remain open.  

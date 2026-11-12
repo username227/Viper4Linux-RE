@@ -265,8 +265,9 @@ interrupt the current ViPER audio session. Check that your existing output
 memory and settings are preserved before proceeding.
 
 Run `./viper4linux` only when intentionally testing the source backend.
-For complete DSP mock and regression tests, use CTest or the preserved
-standalone `tests/check-developer.sh` CI script. For a system package,
+For complete DSP mock and regression tests, use CTest as the supported
+runner. The former `tests/check-developer.sh` aggregate wrapper was retired
+after the integrated 46/46 test run. For a system package,
 see [Arch packaging](ARCH-PACKAGING.md).
 
 The standard CMake `include(CTest)` integration enables `BUILD_TESTING=ON`
@@ -304,10 +305,11 @@ ctest --test-dir build-ctest -R backend --output-on-failure
 ctest --test-dir build-ctest -V                 # full output, including passing checks
 ```
 
-The existing `bash tests/check-developer.sh` remains a complete standalone
-fallback for scripts and legacy CI; `tests/check-package.sh` remains the
-equivalent fast shell-based package gate for callers that have not switched
-to CTest. No actual test assertions were removed. CTest runs the same mock
+The legacy all-in-one developer runner has been removed; the full suite now
+runs through individually registered CTest cases. `tests/check-package.sh`
+remains a fast shell-based package gate for existing callers, and
+`tests/check-mock.sh` remains required by the individual CTest mock cases.
+No actual test assertions were removed. CTest runs the same mock
 harness with isolated temporary preferences and IPC, not the user's live
 PipeWire or installed backend.
 Release-contract checks are registered only when the corresponding GitHub

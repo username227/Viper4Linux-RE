@@ -1,5 +1,10 @@
 # Native DSP Backend Modularization Plan
 
+> **Historical test commands:** References to `tests/check-developer.sh`
+> below document earlier executed checkpoints, not the current workflow.
+> The wrapper was retired after the complete 46/46 CTest suite passed.
+> Use `ctest --test-dir BUILD_DIR --output-on-failure` for new testing.
+
 **Project:** Viper4Linux-RE  
 **Working branch:** `refactor/backend-modularization`  
 **Original branch point:** merged `main`, commit `17bc4fd5993dea2c6c44e3eaf9859dbb988dd8da` (2026-11-03)  

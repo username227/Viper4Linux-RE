@@ -60,8 +60,8 @@ The older `tests/check-package.sh` remains available to existing callers.
 
 For complete native DSP and GUI regression coverage, enable
 `VIPER_BUILD_DEVELOPER_TESTS=ON`, build, then run
-`ctest --test-dir BUILD_DIR --output-on-failure`. The full
-`bash tests/check-developer.sh` runner remains available for legacy scripts.
+`ctest --test-dir BUILD_DIR --output-on-failure`. The old all-in-one developer test wrapper was removed after the complete
+46/46 CTest suite passed; use the developer CTest suite instead.
 Arch release preparation additionally runs the full developer CTest suite in
 the already-compiled Arch package build tree. Both native Debian-family builds
 enable the developer test targets and run CTest before staging their packages.

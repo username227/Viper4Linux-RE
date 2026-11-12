@@ -5,8 +5,9 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 # CTest is the primary developer test runner: report each independent check,
 # rather than concealing dozens of checks inside four aggregate shell tests.
-# Legacy tests/check-{package,mock,developer}.sh remain available for
-# existing callers; they are not invoked by these CTest registrations.
+# The legacy all-in-one developer wrapper is retired after full 46/46 CTest
+# validation. The standalone package and mock runners remain as needed;
+# CTest directly registers each developer check independently.
 function(viper_add_script_test _name _script _group)
   add_test(NAME "${_name}"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/${_script}")

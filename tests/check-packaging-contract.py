@@ -134,15 +134,37 @@ if modules.is_file():
             'Pinned ViPERDSP submodule declaration changed')
 
 smoke = (root / 'tests/check-package.sh').read_text()
-developer = (root / 'tests/check-developer.sh').read_text()
+ctest = (root / 'tests/CMakeLists.txt').read_text()
+mock_runner = (root / 'tests/check-mock.sh').read_text()
 for required in ('python3 tests/check-launcher.py', 'python3 tests/check-arch-install.py',
                  'python3 tests/check-cmake-source-checkout.py',
                  "python3 -m unittest discover -s tests -p 'test_output_*.py'",
                  'python3 tests/check-packaging-contract.py'):
     require(required in smoke, f'Package smoke test missing: {required}')
-require('bash tests/check-mock.sh' in developer and
-        'python3 tests/check-native-state-contract.py' in developer,
-        'Developer regression coverage changed')
+# The legacy aggregate wrapper is retired. Verify its replacement registers
+# each category and the native regression checks with individual CTest cases.
+require(not (root / 'tests/check-developer.sh').exists(),
+        'Retired developer test wrapper reintroduced')
+for required in (
+        'viper_add_script_test("viper_package_${_viper_test_name}"',
+        'viper_add_script_test("viper_mock_${_viper_test_name}"',
+        'viper_add_script_test("viper_contract_${_viper_test_name}"',
+        'viper_add_script_test("viper_release_${_viper_test_name}"',
+        'VIPER_MOCK_SINGLE_CHECK=${_viper_mock_case}',
+        'check-native-state-contract',
+        'check-precision-persistence-contract',
+        'check-ui-contract',
+        'check-packaging-contract',
+        'test_output_*.py',
+        'test_log_retention.py',
+        'viper_native_fet',
+        'viper_native_multiband_init'):
+    require(required in ctest, f'Developer CTest registration missing: {required}')
+require('viper_selected()' in mock_runner and
+        'VIPER_MOCK_SINGLE_CHECK' in mock_runner,
+        'CTest-compatible mock selection missing')
+require('check-developer.sh' not in ctest,
+        'Developer CTest must not call the retired wrapper')
 # The repository deliberately does not duplicate the independently maintained
 # AUR -git PKGBUILD. The maintainer confirmed a clean -git makepkg -Cf build
 # using the same options and direct DESTDIR staging before adapter retirement.
@@ -159,7 +181,7 @@ for required in ('src/viper_launcher.py', 'src/viper_output_monitor.py',
                  'ViPERDSP-NOTICE.md', 'v4l-cli.1', 'VIPER_SYSTEM_PACKAGE_NAME'):
     require(required in system, f'CMake install contract missing: {required}')
 require('viper-output-state' in cmake, 'Native output-state binary missing from CMake')
-for path in ('tests/check-package.sh', 'tests/check-developer.sh',
+for path in ('tests/check-package.sh', 'tests/check-mock.sh',
              'cmake/SourceCheckout.cmake', 'tests/check-cmake-source-checkout.py', 'LICENSE', 'COPYRIGHT',
              'THIRD-PARTY-NOTICES.md', 'packaging/arch/viper4linux.desktop'):
     require((root / path).is_file(), f'Missing project file: {path}')
