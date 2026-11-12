@@ -1,8 +1,54 @@
-# Developer-only tests. Ordinary production builds never enter this directory.
-# Legacy check-mock.sh remains a standalone full-suite fallback for packaging
-# and existing CI while CTest consumes CMake-built mock executables.
-find_program(VIPER_BASH_EXECUTABLE NAMES bash REQUIRED)
+# BUILD_TESTING registers fast package checks without native mock targets.
+# Opt-in developer mode adds native mocks, GUI/application contracts and
+# conditional release contracts.
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+# CTest is the primary developer test runner: report each independent check,
+# rather than concealing dozens of checks inside four aggregate shell tests.
+# Legacy tests/check-{package,mock,developer}.sh remain available for
+# existing callers; they are not invoked by these CTest registrations.
+function(viper_add_script_test _name _script _group)
+  add_test(NAME "${_name}"
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/${_script}")
+  set_tests_properties("${_name}" PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    LABELS "developer;${_group}")
+endfunction()
+
+# Same fast, offline package checks as check-package.sh (no live PipeWire).
+foreach(_viper_script IN ITEMS
+    check-packaging-contract
+    check-launcher
+    check-audio-restart
+    check-arch-install
+    check-cmake-source-checkout)
+  string(REPLACE "-" "_" _viper_test_name "${_viper_script}")
+  viper_add_script_test("viper_package_${_viper_test_name}" "${_viper_script}.py" package)
+endforeach()
+
+# Preserve the original unittest discovery pattern, but expose each test
+# module independently. GLOB CONFIGURE_DEPENDS tracks future output modules.
+file(GLOB _viper_package_unit_modules CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/test_output_*.py")
+list(APPEND _viper_package_unit_modules
+  "${CMAKE_CURRENT_SOURCE_DIR}/test_log_retention.py")
+foreach(_viper_file IN LISTS _viper_package_unit_modules)
+  get_filename_component(_viper_unit_module "${_viper_file}" NAME)
+  get_filename_component(_viper_unit_name "${_viper_file}" NAME_WE)
+  add_test(NAME "viper_package_${_viper_unit_name}"
+    COMMAND "${Python3_EXECUTABLE}" -m unittest discover
+      -s tests -p "${_viper_unit_module}" -v)
+  set_tests_properties("viper_package_${_viper_unit_name}" PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    LABELS "developer;package")
+endforeach()
+
+if(NOT VIPER_BUILD_DEVELOPER_TESTS)
+  return()
+endif()
+
+# Developer-only mock compilation and independent mock/contract CTest cases.
+find_program(VIPER_BASH_EXECUTABLE NAMES bash REQUIRED)
 
 # Never use the production IPC namespace or load the real ViPERDSP in mocks.
 # -UNDEBUG preserves assertions in Release builds (unlike the CMake defaults).
@@ -57,21 +103,77 @@ endforeach()
 
 add_custom_target(viper_native_mock_tests DEPENDS ${_viper_native_mock_targets})
 
-# CTest runs each existing regression group only once. The mock group uses
-# prebuilt native binaries; build them before invoking CTest. The standalone
-# check-developer.sh command still supports the original direct-compiler path.
-foreach(_viper_group IN ITEMS package mock contracts release)
-  if(_viper_group STREQUAL "mock")
-    add_test(NAME viper_mock
-      COMMAND "${CMAKE_COMMAND}" -E env
-        "VIPER_MOCK_BIN_DIR=$<TARGET_FILE_DIR:viper_test_mock_check>"
-        "${VIPER_BASH_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check-developer.sh" mock)
-  else()
-    add_test(NAME viper_${_viper_group}
-      COMMAND "${VIPER_BASH_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/check-developer.sh" "${_viper_group}")
-  endif()
-  set_tests_properties(viper_${_viper_group} PROPERTIES
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    LABELS "developer;${_viper_group}")
+# Static mock contracts run directly with Python. Native checks reuse their
+# existing temp-config/mocked-IPC harness, selecting one check per CTest case.
+foreach(_viper_script IN ITEMS
+    check-dynamic-eq-ui-contract
+    check-about-and-deq-handoff
+    check-tray-contract
+    check-native-effect-routing)
+  string(REPLACE "-" "_" _viper_test_name "${_viper_script}")
+  viper_add_script_test("viper_mock_${_viper_test_name}" "${_viper_script}.py" mock)
 endforeach()
+
+foreach(_viper_mock_case IN ITEMS
+    eq-presets
+    ir-reader
+    ddc-reader
+    native-effect-basic
+    native-effect-precision
+    cli-controls
+    cli-batch
+    cli-settings
+    cli-eq-presets
+    output-state)
+  string(REPLACE "-" "_" _viper_test_name "${_viper_mock_case}")
+  add_test(NAME "viper_mock_${_viper_test_name}"
+    COMMAND "${CMAKE_COMMAND}" -E env
+      "VIPER_MOCK_BIN_DIR=$<TARGET_FILE_DIR:viper_test_mock_check>"
+      "VIPER_MOCK_SINGLE_CHECK=${_viper_mock_case}"
+      "${VIPER_BASH_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/check-mock.sh")
+  set_tests_properties("viper_mock_${_viper_test_name}" PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    LABELS "developer;mock")
+endforeach()
+
+# Build the tiny native activity-classification test once using CMake,
+# instead of recompiling it as a side effect of every CTest run.
+add_executable(viper_test_audio_activity check-audio-activity.cpp)
+target_include_directories(viper_test_audio_activity PRIVATE "${_viper_test_include}")
+target_compile_options(viper_test_audio_activity PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Werror)
+add_test(NAME viper_contract_audio_activity
+  COMMAND "$<TARGET_FILE:viper_test_audio_activity>")
+set_tests_properties(viper_contract_audio_activity PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;contracts")
+
+foreach(_viper_script IN ITEMS
+    check-native-state-contract
+    check-precision-persistence-contract
+    check-gui-sync-contract
+    check-window-integration-contract
+    check-version
+    check-single-gui
+    test_backend_lifecycle_logging
+    check-gui-backend-exit
+    check-theme-contract
+    check-ui-contract
+    check-named-presets-contract
+    check-preset-reset-contract
+    check-save-preset-choice-contract
+    test_filter_idle_config)
+  string(REPLACE "-" "_" _viper_test_name "${_viper_script}")
+  viper_add_script_test("viper_contract_${_viper_test_name}" "${_viper_script}.py" contracts)
+endforeach()
+
+# Source archives may intentionally omit release-workflow definitions.
+# Only register the corresponding contracts when the workflow is present.
+if(EXISTS "${PROJECT_SOURCE_DIR}/.github/workflows/prepare-stable-release.yml")
+  foreach(_viper_script IN ITEMS
+      check-native-deb-workflow
+      check-assembled-release
+      check-stable-release)
+    string(REPLACE "-" "_" _viper_test_name "${_viper_script}")
+    viper_add_script_test("viper_release_${_viper_test_name}" "${_viper_script}.py" release)
+  endforeach()
+endif()

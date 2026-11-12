@@ -24,19 +24,21 @@ runuser -u builder -- env SRCDEST="$release_dir" bash -c '
     makepkg --noconfirm --cleanbuild --nodeps
     makepkg --printsrcinfo > "$1/.SRCINFO"
 ' bash "$release_dir"
-# Run all developer regressions on the same extracted release candidate.
-# Keep full native DSP tests in CI, not routine user's makepkg check().
+# makepkg runs the 12 fast package CTests. Enable the full developer suite
+# afterwards in the same build tree, without recompiling the production app.
 source_tree="$release_dir/arch-build/src/viper4linux-re-$version"
-test -f "$source_tree/tests/check-developer.sh"
+build_tree="$release_dir/arch-build/src/viper4linux-build"
+test -f "$source_tree/tests/CMakeLists.txt"
 # Unsafe DESTDIR tests run ONLY inside this disposable Arch Docker job,
-    # against the real CMake install script produced by makepkg.
-    VIPER_CI_STAGING_GUARD_TEST=1 bash "$source_tree/tests/check-cmake-install-guard.sh" \
-        "$release_dir/arch-build/src/viper4linux-build"
+# against the real CMake install script produced by makepkg.
+VIPER_CI_STAGING_GUARD_TEST=1 bash "$source_tree/tests/check-cmake-install-guard.sh" \
+    "$build_tree"
 runuser -u builder -- bash -c '
     set -Eeuo pipefail
-    cd "$1"
-    bash tests/check-developer.sh
-' bash "$source_tree"
+    cmake -S "$1" -B "$2" -DVIPER_BUILD_DEVELOPER_TESTS=ON
+    cmake --build "$2"
+    ctest --test-dir "$2" --output-on-failure --no-tests=error
+' bash "$source_tree" "$build_tree"
 
 # Independently exercise the *normal source-checkout* CMake defaults from the
 # same pinned source archive. No package install or PipeWire audio is started.

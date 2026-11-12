@@ -38,6 +38,9 @@ assert 'gh release create' not in main_workflow and 'git push' not in main_workf
 assert 'DESTDIR="$pkgroot" cmake --install "$built"' in build_script
 assert '-DVIPER_ENABLE_SYSTEM_INSTALL=ON' in build_script
 assert '-DVIPER_SYSTEM_INSTALL_LAYOUT=debian' in build_script
+assert '-DVIPER_BUILD_DEVELOPER_TESTS=ON' in build_script
+assert 'ctest --test-dir "$built" --output-on-failure --no-tests=error' in build_script
+assert 'bash tests/check-mock.sh' not in build_script
 assert 'VIPER_DEB_STAGING_BACKEND' not in build_script
 assert 'ViPERDSP-patched' not in build_script
 assert 'install -Dm755' not in build_script

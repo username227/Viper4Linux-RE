@@ -32,7 +32,7 @@ jobs:
           set -Eeuo pipefail
           bash scripts/prepare-stable-release.sh "$VERSION" "$GITHUB_WORKSPACE/dist"
 
-      - name: Compile, test and package on current Arch Linux
+      - name: Build Arch package and run full CTest suite
         env:
           VERSION: ${{ inputs.version }}
         shell: bash
@@ -107,7 +107,7 @@ jobs:
           set -Eeuo pipefail
           (cd dist/release && sha256sum --check SHA256SUMS)
 
-      - name: Compile and install-test native .deb
+      - name: Build .deb, run CTest and install-test in container
         env:
           VERSION: ${{ inputs.version }}
           TARGET: ${{ matrix.target }}

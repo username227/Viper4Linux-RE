@@ -56,13 +56,15 @@ target_include_directories(viper-ctl PRIVATE src)
 target_link_libraries(viper-ctl PRIVATE Qt6::Core)
 target_compile_options(viper-ctl PRIVATE -Wall -Wextra -Wpedantic)
 
-# Developer regressions are opt-in. When enabled, tests/ owns the CMake
-# mock test targets and registers CTest groups; the standalone scripts retain
-# a direct-compiler fallback for existing CI and packaging workflows.
+# CMake's standard BUILD_TESTING option defaults to ON and registers the
+# fast, offline package checks. Native developer mocks remain explicitly opt-in.
+include(CTest)
 option(VIPER_BUILD_DEVELOPER_TESTS
-  "Build and register the Viper4Linux developer regression suite" OFF)
-if(VIPER_BUILD_DEVELOPER_TESTS)
-  enable_testing()
+  "Build and register the complete Viper4Linux developer regression suite" OFF)
+if(VIPER_BUILD_DEVELOPER_TESTS AND NOT BUILD_TESTING)
+  message(FATAL_ERROR "VIPER_BUILD_DEVELOPER_TESTS requires BUILD_TESTING=ON")
+endif()
+if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 

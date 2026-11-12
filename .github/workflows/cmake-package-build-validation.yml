@@ -69,7 +69,7 @@ jobs:
             dist/SHA256SUMS
 
   arch:
-    name: Arch package (CMake staging, no install)
+    name: Arch package + CTest (CMake staging, no install)
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -85,7 +85,7 @@ jobs:
           name: cmake-test-source
           path: dist
 
-      - name: Build and inspect a real makepkg archive in Arch container
+      - name: Build makepkg archive and run developer CTest in Arch container
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -110,7 +110,7 @@ jobs:
             dist/ARCH-SHA256SUMS
 
   debian:
-    name: Debian package (CMake staging) — ${{ matrix.target }}
+    name: Debian package + CTest (CMake staging) — ${{ matrix.target }}
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -134,7 +134,7 @@ jobs:
           name: cmake-test-source
           path: dist
 
-      - name: Build native .deb without installing the application
+      - name: Build native .deb and run CTest without installing the application
         env:
           TARGET: ${{ matrix.target }}
           IMAGE: ${{ matrix.image }}

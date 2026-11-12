@@ -70,6 +70,12 @@ require('find_package(Qt6 6.4 COMPONENTS Widgets Network REQUIRED)' in cmake,
         'Qt6 Widgets/Network CMake dependency changed')
 require('Qt6::Widgets Qt6::Network' in cmake, 'Qt6 GUI link dependencies changed')
 require('find_package(Threads REQUIRED)' in cmake, 'Thread dependency changed')
+require('include(CTest)' in cmake and 'if(BUILD_TESTING)' in cmake,
+        'Standard CMake BUILD_TESTING/CTest registration missing')
+require('option(VIPER_BUILD_DEVELOPER_TESTS' in cmake,
+        'Opt-in developer mock suite option missing')
+require('VIPER_BUILD_PACKAGE_TESTS' not in cmake,
+        'Obsolete custom package testing option remains')
 require('#include <ladspa.h>' in (root / 'src/viper-ladspa.cpp').read_text(),
         'LADSPA interface changed; review dependency')
 for required in ('find_package(Python3 REQUIRED COMPONENTS Interpreter)',
@@ -94,7 +100,8 @@ require({'base-devel', 'cmake', 'git', 'pkgconf', 'ladspa', 'pipewire', 'qt6-bas
 # Both stable and VCS recipes install through CMake-owned rules; the VCS
 # recipe itself lives in the separately maintained AUR Git checkout.
 for required in ('package() {', 'check() {', 'sha256sums=(',
-                 'releases/download/v${pkgver}', 'bash tests/check-package.sh',
+                 'releases/download/v${pkgver}',
+                 'ctest --test-dir "$srcdir/viper4linux-build" --output-on-failure --no-tests=error',
                  'DESTDIR="$pkgdir" cmake --install "$srcdir/viper4linux-build"',
                  '-DVIPER_ENABLE_SYSTEM_INSTALL=ON', '-DVIPER_SYSTEM_INSTALL_LAYOUT=arch',
                  '-DVIPER_SYSTEM_PACKAGE_NAME="$pkgname"'):
@@ -104,6 +111,14 @@ for forbidden in ('VIPER_ARCH_STAGING_BACKEND', 'install-package.sh',
     require(forbidden not in stable, f'Legacy stable packaging path remains: {forbidden}')
 require('install -Dm' not in stable, 'Stable recipe must delegate staging to CMake')
 require('bash tests/check-mock.sh' not in stable, 'Full developer tests must not run during makepkg')
+require('VIPER_BUILD_PACKAGE_TESTS' not in stable,
+        'Stable PKGBUILD should use default-on BUILD_TESTING, not a custom flag')
+arch_ci = (root / 'scripts/test-stable-arch.sh').read_text()
+require('-DVIPER_BUILD_DEVELOPER_TESTS=ON' in arch_ci and
+        'ctest --test-dir "$2" --output-on-failure --no-tests=error' in arch_ci,
+        'Arch release CI must run the full developer CTest suite')
+require('bash tests/check-developer.sh' not in arch_ci,
+        'Arch release CI still invokes the legacy developer test runner')
 for patch in ('fix_lufs_speed.py', 'preallocate_stereo_imager.py',
               'preallocate_multiband_compressor.py'):
     require(patch in (root / 'cmake/PrepareViPERDSP.cmake').read_text(),
