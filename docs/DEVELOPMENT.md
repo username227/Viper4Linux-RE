@@ -22,10 +22,12 @@
 - `resources/`, `routing-config/`, `packaging/arch/`: icons, PipeWire configuration, local Arch packaging.
 - `tests/`: isolated DSP mock, parsing, GUI contract and launcher tests.
 
-The upstream ViPERDSP processor is a Git submodule pinned to commit
-`6fc1f1b8b2123c8cc49f3b3c7c7d5fbbf8a60933`. CMake verifies the
-recorded revision in a Git checkout and creates an untracked, private patched
-build copy. Release archives bundle that exact source for offline builds.
+The upstream ViPERDSP processor is a Git submodule from
+`https://github.com/likelikeslike/ViPERDSP.git`, now pinned on the validation
+branch to commit `f515736383586c6cc62990a517b8d1b809b92d03` (merged
+upstream Pure Bass+ stereo fix, PR #7). CMake verifies the recorded revision
+in a Git checkout and creates a private patched build copy. Already published
+release archives retain the DSP revision bundled when they were created.
 
 ## CMake-first source checkout (modernization branch)
 
@@ -39,8 +41,8 @@ cmake --build build
 cmake --build build --target viper_source_check
 ```
 
-CMake verifies the recorded upstream ViPERDSP revision and applies all three
-downstream fixes to a **private build-tree copy**, without modifying the Git
+CMake verifies the recorded upstream ViPERDSP revision and applies all five
+downstream patches to a **private build-tree copy**, without modifying the Git
 submodule. Unless `VIPER_ENABLE_SYSTEM_INSTALL=ON`, the source-build option
 `VIPER_SOURCE_PREPARE_ROUTING=ON` automatically copies the stock PipeWire
 filter-chain template and project fragment into
@@ -212,6 +214,8 @@ Individual extracted-file sizes for future source-audit comparisons:
 | `patches/fix_lufs_speed.py` | Corrects an upstream `SetSpeed` control-path bug. | Can change the requested LUFS response speed. |
 | `patches/preallocate_stereo_imager.py` | Allocates native scratch buffers before real-time processing. | Stereo width formula remains native. |
 | `patches/preallocate_multiband_compressor.py` | Allocates compressor scratch buffers before real-time processing. | Compressor mathematics remain native. |
+| `patches/fix_harmonic_abs.py` | Uses floating-point `std::abs` for Psychoacoustic Bass harmonic coefficients. | Corrects Linux fractional-coefficient truncation and startup behavior. |
+| `patches/fix_fet_abs.py` | Uses floating-point `std::abs` for the FET compressor sidechain. | Restores compression on fractional-level samples. |
 
 Neither the patches nor the mock suite certify the full processor as hard
 real-time-safe. The application also manages temporary dry/wet handoffs during
