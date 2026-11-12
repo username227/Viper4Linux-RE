@@ -85,6 +85,7 @@
 #include <QSettings>
 #include <QScrollArea>
 #include <QSignalBlocker>
+#include <QScopedValueRollback>
 #include <QSizePolicy>
 #include <QSlider>
 #include <QSpinBox>
@@ -805,6 +806,9 @@ private:
     }
 #include "window/window-dynamics.inc"
     void push() {
+        // Named preset restoration applies several effect groups as one state.
+        // The final push after restoration persists and publishes all changes.
+        if (suppress_named_preset_push_) return;
         persistCurrentSettings();
         if (audio_restart_process_) {
             pending_edit_ = true; // Send edits to the new backend, never the dying one.
@@ -900,6 +904,7 @@ private:
     QTimer* save_timer_{};
     viperbass::Mapping mapping_;
     bool pending_edit_ = false;
+    bool suppress_named_preset_push_ = false;
     bool replace_precision_on_push_ = false;
     // Native Low X can be 0–119 via CLI while the GUI displays 120.
     // Track the true value separately and publish it only on deliberate edits.

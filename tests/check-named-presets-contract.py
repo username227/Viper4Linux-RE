@@ -51,5 +51,26 @@ assert 'settings_.remove("presets")' not in presets
 assert 'settings.remove("presets")' not in presets
 assert '"Presets…"' in s
 assert 'showPresetManager();' in s
+# Restore one complete effect state before publishing it. Normal reset and
+# ordinary slider edits still use the existing immediate-push behavior.
+restore = presets[presets.index('    void restoreFromPresetStaging() {'):
+                  presets.index('    void applyStagedPresetControls() {')]
+controls = presets[presets.index('    void applyStagedPresetControls() {'):
+                   presets.index('    void resetEffectsWithConfirmation() {')]
+assert 'if (!settings_.value("preset/valid", false).toBool()) return;' in restore
+assert 'const QScopedValueRollback<bool> deferPublishes(suppress_named_preset_push_, true);' in restore
+assert restore.index('deferPublishes') < restore.index('applyStagedPresetControls();')
+assert restore.count('push();') == 1
+assert restore.index('            }\n            push();') > restore.index('applyStagedPresetControls();')
+assert 'applySettings(' in controls
+assert 'restoreOutputPreset();' in controls
+assert 'restoreBassPreset();' in controls
+assert 'requestDdcReload();' in controls and 'requestIrsLoad();' in controls
+assert 'push();' not in controls
+assert '#include <QScopedValueRollback>' in s
+assert 'if (suppress_named_preset_push_) return;' in s
+reset = presets[presets.index('    void resetEffectsWithConfirmation() {'):]
+assert 'deferPublishes' not in reset
+assert 'void push() {' in s
 # New preset library only changes GUI and personal settings; no DSP source involved.
 print('PASS: named presets, collision confirmation, guarded loads, legacy migration, reset safety')
