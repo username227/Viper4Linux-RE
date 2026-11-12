@@ -6,6 +6,7 @@ overwritten by the store. Output settings are stored separately from presets.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 import fcntl
 import json
 import os
@@ -63,19 +64,18 @@ class OutputStore:
         if not _KEY.fullmatch(key):
             raise ValueError('Invalid Audio Output identifier')
 
+    @contextmanager
     def _locked(self):
-        class Lock:
-            def __init__(self, path):
-                self.path = path
-                self.fd = None
-            def __enter__(self):
-                self.fd = os.open(self.path, os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
-                fcntl.flock(self.fd, fcntl.LOCK_EX)
-                return self
-            def __exit__(self, *exc):
-                fcntl.flock(self.fd, fcntl.LOCK_UN)
-                os.close(self.fd)
-        return Lock(self._lock)
+        fd = os.open(self._lock, os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
+        try:
+            # A failed flock() must not leak the already-open descriptor.
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
 
     def inventory(self) -> dict[str, dict[str, Any]]:
         obj = _read_json(self.root / 'inventory.json')
