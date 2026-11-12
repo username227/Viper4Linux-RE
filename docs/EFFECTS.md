@@ -9,7 +9,7 @@ Three documented downstream patches are listed in [Development](DEVELOPMENT.md).
 
 | Effect | Purpose and cautions |
 |---|---|
-| Master Limiter | Output limiting, volume and stereo balance; remains in the path during Master bypass. Not a listening-safety guarantee. |
+| Master Limiter | Mandatory native peak limiting, output gain and channel balance **while Master is ON**, even if every optional effect is OFF. Master OFF bypasses the entire native DSP stage (including limiter, gain, pan and lookahead) after a short transition; stable OFF audio is exact sanitized passthrough. The limiter is not a listening-safety guarantee. |
 | Playback Gain Control (AGC) | Automatically manages level; can interact with LUFS targeting and change loudness. |
 | LUFS Targeting | Targets perceived loudness with selectable adjustment speed and ceiling; includes a downstream `SetSpeed` bug fix. |
 
@@ -73,7 +73,7 @@ may not benefit from additional compression; both effects default off.
 | Effect | Purpose and cautions |
 |---|---|
 | Convolver | Loads stereo/mono `.irs` or compatible `.wav` impulse responses. Library selection can replace an IR without restarting the backend. |
-| ViPER-DDC | Loads external `.vdc` cascaded-biquad correction profiles; native processing supports **44.1 and 48 kHz** only. A valid profile must be selected to have an audible effect. |
+| ViPER-DDC | Loads external `.vdc` cascaded-biquad correction profiles; native processing supports **44.1 and 48 kHz** only. A valid profile must be selected to have an audible effect. When selecting/reloading a profile, the Linux loader briefly crossfades the **entire effects chain** to the dry path (approximately 20 ms out, 35 ms total wait, 20 ms back) to protect against filter-swap clicks. Other effects resume automatically; the bypass is not continuous during playback. |
 | Speaker Correction | Built-in high/low/band-pass filter chain; not a general-purpose headphone calibration profile. Internal filter parameters are not yet user-exposed. |
 
 ViPER-DDC and Speaker Correction default off. Speaker Correction's fixed

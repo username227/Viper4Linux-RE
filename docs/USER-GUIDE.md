@@ -9,8 +9,7 @@ when necessary. This does **not** restart PipeWire itself. GUI-only updates
 should leave the backend and music playing uninterrupted.
 
 The main window has six effect tabs. Each effect has an independent switch:
-collapsing a panel does not disable its processing. **Master** bypasses effects,
-though the native master limiter remains in the output path. **Theme** selects
+collapsing a panel does not disable its processing. The **Master Limiter** has no independent OFF switch: it remains active whenever **Master** is ON. Turning **Master OFF** bypasses the entire ViPER DSP stage (including limiter, output gain and balance) after a short transition, returning the source audio unchanged apart from nonfinite-sample sanitization. **Theme** selects
 Modern Teal or Classic Viper and follows supported desktop light/dark settings.
 The compact **☰ menu** provides Preferences, IRS/VDC library shortcuts,
 backend log, Effect Guide, About, Presets, and Quit GUI.

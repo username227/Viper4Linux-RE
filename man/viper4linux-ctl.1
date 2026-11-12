@@ -78,12 +78,16 @@ that audible music is playing; compare the counter between repeated queries.
 .B on
 Enable master DSP processing. No arguments. Prints only the confirmation
 .B "Master processing: ON"
-instead of the complete status report. The limiter remains in the path.
+instead of the complete status report. The native Master Limiter, output gain
+and balance become active; the limiter has no independent OFF switch.
 .TP
 .B off
-Bypass master DSP processing. No arguments. Prints only the confirmation
+Bypass the entire native ViPER DSP stage, including the Master Limiter,
+output gain, balance and its lookahead delay. After a short handoff, the
+signal is passed through unchanged apart from nonfinite-sample sanitization.
+No arguments. Prints only the confirmation
 .B "Master processing: BYPASSED"
-instead of the complete status report. The limiter remains in the path.
+instead of the complete status report.
 .TP
 .BR all-on " and " all-off
 Backward-compatible aliases for the global
@@ -97,8 +101,8 @@ master-processing confirmation.
 .TP
 .BI "limiter-threshold " VALUE
 Set limiter threshold. VALUE accepts decimals from 0.3 through 1 inclusive
-as a linear multiplier; the DSP stores thousandths. The limiter itself is
-always present and has no enable/disable command.
+as a linear multiplier; the DSP stores thousandths. The limiter has no
+independent enable/disable command and operates only while Master is ON.
 .TP
 .BI "limiter-gain " VALUE
 Set limiter output gain. VALUE accepts decimals from 0.01 through 2
