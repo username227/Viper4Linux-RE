@@ -109,6 +109,8 @@
 #include <functional>
 #include <vector>
 #include <utility>
+#include <type_traits>
+#include <variant>
 #include <cmath>
 
 class ViperWindow final : public QMainWindow {
