@@ -26,6 +26,12 @@ int main(int argc, char** argv) {
     }
     c->bass_mode.store(2);
     c->strength_centi.store(475);
+    // Exact native units deliberately differ from legacy slider steps.
+    c->clarity_gain_milli.store(2675);
+    c->spectrum_frequency_hz.store(8024);
+    c->spectrum_exciter_milli.store(2345);
+    c->diff_lp_hz.store(4267);
+    c->field_depth.store(550);
     c->eq_band_count.store(15);
     c->eq_levels_hundredths[0].store(-145);
     c->deq_bands[2].gain_hundredths.store(350);
@@ -53,6 +59,17 @@ int main(int argc, char** argv) {
     assert(saved.value("eq_levels").toArray()[0].toInt() == -145);
     assert(saved.value("ui").toObject().value("eq_selected_preset").toString() == "builtin:Acoustic");
     assert(saved.value("deq_bands").toArray()[2].toObject().value("gain_hundredths").toInt() == 350);
+    // All four legacy EQ layouts retain the same native 31-slot array.
+    for (const int bands : {10, 15, 25, 31}) {
+        c->eq_band_count.store(bands);
+        const auto variant = captureState(*c, settings);
+        assert(validateState(variant));
+        assert(variant.value("values").toObject().value("eq_band_count").toInt() == bands);
+        assert(variant.value("eq_levels").toArray().size() == 31);
+        assert(variant.value("ui").toObject().value("eq_selected_preset").toString() ==
+               "builtin:Acoustic");
+    }
+    c->eq_band_count.store(15);
 
     c->bass_mode.store(0);
     c->strength_centi.store(1000);
@@ -109,6 +126,17 @@ int main(int argc, char** argv) {
     assert(settings.value("eq_levels_15").toString().startsWith("-145,"));
     assert(settings.value("eq/selected_preset").toString() == "builtin:Acoustic");
     assert(settings.value("precision/strength_centi").toInt() == 475);
+    // Exact/coarse pairs must match historical QSettings projections.
+    assert(settings.value("clarity_gain_tenths").toInt() == 26);
+    assert(settings.value("precision/clarity_gain_milli").toInt() == 2675);
+    assert(settings.value("spectrum_frequency_hundreds").toInt() == 80);
+    assert(settings.value("precision/spectrum_frequency_hz").toInt() == 8024);
+    assert(settings.value("spectrum_exciter_tenths").toInt() == 23);
+    assert(settings.value("precision/spectrum_exciter_milli").toInt() == 2345);
+    assert(settings.value("diff_lp_hundreds").toInt() == 42);
+    assert(settings.value("precision/diff_lp_hz").toInt() == 4267);
+    assert(settings.value("field_depth_step").toInt() == 8);
+    assert(settings.value("precision/field_depth").toInt() == 550);
     assert(settings.value("precision/spectrum_frequency_hz").toInt() ==
            c->spectrum_frequency_hz.load());
     assert(settings.value("precision/field_depth").toInt() == c->field_depth.load());
@@ -150,36 +178,59 @@ int main(int argc, char** argv) {
     assert(settings.value("eq/selected_preset").toString() == "custom");
 
     // Invalid snapshots are rejected before touching any DSP controls.
+    // Compare the complete native snapshot and persisted key inventory.
+    c->bass_mode.store(1);
+    const auto beforeRejectedRestore = captureState(*c, settings);
+    const QStringList keysBeforeRejectedRestore = settings.allKeys();
+    const auto rejectWithoutMutation = [&](const QJsonObject& candidate) {
+        assert(!restoreState(*c, candidate, settings));
+        settings.sync();
+        assert(captureState(*c, settings) == beforeRejectedRestore);
+        assert(settings.allKeys() == keysBeforeRejectedRestore);
+    };
     auto invalid = saved;
     invalid.insert("control_version", 25);
     c->bass_mode.store(1);
-    assert(!restoreState(*c, invalid, settings));
+    rejectWithoutMutation(invalid);
     assert(c->bass_mode.load() == 1);
     invalid = saved;
     invalid.insert("control_version", 28);  // Future incompatible IPC version
-    assert(!restoreState(*c, invalid, settings));
+    rejectWithoutMutation(invalid);
     assert(c->bass_mode.load() == 1);
     invalid = saved;
     invalid.insert("control_version", "26"); // String spoof of compatible number
-    assert(!restoreState(*c, invalid, settings));
+    rejectWithoutMutation(invalid);
     assert(c->bass_mode.load() == 1);
     invalid = saved;
     auto values = invalid.value("values").toObject();
     values.insert("limiter_output_percent", 50000);
     invalid.insert("values", values);
-    assert(!restoreState(*c, invalid, settings));
+    rejectWithoutMutation(invalid);
     assert(c->bass_mode.load() == 1);
     invalid = saved;
     auto invalidUi = invalid.value("ui").toObject();
     invalidUi.insert("eq_selected_preset", "invalid label");
     invalid.insert("ui", invalidUi);
-    assert(!restoreState(*c, invalid, settings));
+    rejectWithoutMutation(invalid);
     assert(c->bass_mode.load() == 1);
     invalid = saved;
     auto paths = invalid.value("files").toObject();
     paths.insert("convolver_kernel", "/does/not/exist.irs");
     invalid.insert("files", paths);
-    assert(!restoreState(*c, invalid, settings));
+    rejectWithoutMutation(invalid);
+    invalid = saved;
+    paths = invalid.value("files").toObject();
+    paths.insert("ddc_profile", "/does/not/exist.vdc");
+    invalid.insert("files", paths);
+    rejectWithoutMutation(invalid);
+    invalid = saved;
+    invalid.remove("eq_levels");
+    rejectWithoutMutation(invalid);
+    invalid = saved;
+    invalidUi = invalid.value("ui").toObject();
+    invalidUi.insert("unrecognized_field", true);
+    invalid.insert("ui", invalidUi);
+    rejectWithoutMutation(invalid);
 
     server.stop_server();
     std::cout << "PASS: native output snapshots accept IPC v26 under v27, reject unknown versions, "
