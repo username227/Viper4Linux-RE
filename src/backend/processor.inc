@@ -151,67 +151,27 @@ struct Processor {
             }
             // Coalesce rapid fader edits. The same worker that services IRS
             // requests owns EQ coefficient updates, never the audio callback.
-            const auto eq_request = controls->eq_request_serial.load(std::memory_order_acquire);
-            if (eq_request != observed_eq) {
-                observed_eq = eq_request;
-                apply_eq_from_controls();
-                controls->eq_applied_serial.store(observed_eq, std::memory_order_release);
-            }
+            viper_worker::applyPending(controls->eq_request_serial,
+                controls->eq_applied_serial, observed_eq, [this] { apply_eq_from_controls(); });
             // Native tube model and drive reset filters: not on PipeWire's callback.
-            const auto requested_tube = controls->tube_request_serial.load(std::memory_order_acquire);
-            if (requested_tube != observed_tube) {
-                observed_tube = requested_tube;
-                apply_tube_from_controls();
-                controls->tube_applied_serial.store(observed_tube, std::memory_order_release);
-            }
-            const auto requested_analogx = controls->analogx_request_serial.load(std::memory_order_acquire);
-            if (requested_analogx != observed_analogx) {
-                observed_analogx = requested_analogx;
-                apply_analogx_from_controls();
-                controls->analogx_applied_serial.store(observed_analogx, std::memory_order_release);
-            }
-            const auto crossfeed_request = controls->crossfeed_request_serial.load(std::memory_order_acquire);
-            if (crossfeed_request != observed_crossfeed) {
-                observed_crossfeed = crossfeed_request;
-                apply_crossfeed_from_controls();
-                controls->crossfeed_applied_serial.store(observed_crossfeed, std::memory_order_release);
-            }
-            const auto fet_request = controls->fet_request_serial.load(std::memory_order_acquire);
-            if (fet_request != observed_fet) {
-                observed_fet = fet_request;
-                apply_fet_from_controls();
-                controls->fet_applied_serial.store(observed_fet, std::memory_order_release);
-            }
-            const auto mb_request = controls->mb_request_serial.load(std::memory_order_acquire);
-            if (mb_request != observed_multiband) {
-                observed_multiband = mb_request;
-                apply_multiband_from_controls();
-                controls->mb_applied_serial.store(observed_multiband, std::memory_order_release);
-            }
-            const auto imager_request = controls->imager_request_serial.load(std::memory_order_acquire);
-            if (imager_request != observed_imager) {
-                observed_imager = imager_request;
-                apply_imager_from_controls();
-                controls->imager_applied_serial.store(observed_imager, std::memory_order_release);
-            }
-            const auto ddc_request = controls->ddc_request_serial.load(std::memory_order_acquire);
-            if (ddc_request != observed_ddc) {
-                observed_ddc = ddc_request;
-                load_ddc_profile(saved_ddc_path());
-                controls->ddc_applied_serial.store(observed_ddc, std::memory_order_release);
-            }
-            const auto speaker_request = controls->speaker_request_serial.load(std::memory_order_acquire);
-            if (speaker_request != observed_speaker) {
-                observed_speaker = speaker_request;
-                apply_speaker_from_controls();
-                controls->speaker_applied_serial.store(observed_speaker, std::memory_order_release);
-            }
-            const auto deq_request = controls->deq_request_serial.load(std::memory_order_acquire);
-            if (deq_request != observed_deq) {
-                observed_deq = deq_request;
-                apply_dynamic_eq_from_controls();
-                controls->deq_applied_serial.store(observed_deq, std::memory_order_release);
-            }
+            viper_worker::applyPending(controls->tube_request_serial,
+                controls->tube_applied_serial, observed_tube, [this] { apply_tube_from_controls(); });
+            viper_worker::applyPending(controls->analogx_request_serial,
+                controls->analogx_applied_serial, observed_analogx, [this] { apply_analogx_from_controls(); });
+            viper_worker::applyPending(controls->crossfeed_request_serial,
+                controls->crossfeed_applied_serial, observed_crossfeed, [this] { apply_crossfeed_from_controls(); });
+            viper_worker::applyPending(controls->fet_request_serial,
+                controls->fet_applied_serial, observed_fet, [this] { apply_fet_from_controls(); });
+            viper_worker::applyPending(controls->mb_request_serial,
+                controls->mb_applied_serial, observed_multiband, [this] { apply_multiband_from_controls(); });
+            viper_worker::applyPending(controls->imager_request_serial,
+                controls->imager_applied_serial, observed_imager, [this] { apply_imager_from_controls(); });
+            viper_worker::applyPending(controls->ddc_request_serial,
+                controls->ddc_applied_serial, observed_ddc, [this] { load_ddc_profile(saved_ddc_path()); });
+            viper_worker::applyPending(controls->speaker_request_serial,
+                controls->speaker_applied_serial, observed_speaker, [this] { apply_speaker_from_controls(); });
+            viper_worker::applyPending(controls->deq_request_serial,
+                controls->deq_applied_serial, observed_deq, [this] { apply_dynamic_eq_from_controls(); });
             std::this_thread::sleep_for(std::chrono::milliseconds(35));
         }
     }

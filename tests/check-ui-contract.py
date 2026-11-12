@@ -142,7 +142,7 @@ assert 'QSlider::groove:vertical' in source
 assert 'widgets.faderContainer->setObjectName("viperEqFaders")' in source
 assert 'connect(eq_mode_, QOverload<int>::of(&QComboBox::currentIndexChanged)' in source
 assert 'widgets.faderContainer->setFixedSize(31 * 39 + 6, 235)' in source
-assert 'eq_request_serial.fetch_add(1' in source
+assert 'eq_changed.notify(c->eq_request_serial);' in source
 assert 'wet.ApplyEqualizer(p);' in backend
 assert 'if (changing_layout)' in backend
 assert 'std::lock_guard<std::mutex> guard(wet_mutex)' in backend
@@ -188,14 +188,14 @@ for token in [
     'out.tube_model->addItems({"12AX7 (High Gain)", "12AU7 (Low Gain)", "6N1P (Medium Gain)"})',
     'addEffectPanel(effectLayout, eqToneTube.tubeGroup, "tube", tube_enabled_)',
     'settings_.setValue("tube_enabled", tube_enabled_->isChecked())',
-    'setTubeValue(c->tube_enabled, tube_enabled_->isChecked() ? 1 : 0)',
+    'tube_changed.set(c->tube_enabled, tube_enabled_->isChecked() ? 1 : 0)',
     'void applyTubeSettings(bool enabled, int model, int drive, int mix)',
 ]: assert token in source, token
 for token in [
     'wet.ApplyTubeSimulator(p);',
     'void apply_tube_from_controls()',
-    'tube_request_serial.load(',
-    'tube_applied_serial.store(',
+    'controls->tube_request_serial',
+    'controls->tube_applied_serial',
     'std::lock_guard<std::mutex> lock(wet_mutex)',
 ]: assert token in backend, token
 assert 'Proof of concept · Native ViPERDSP · PipeWire smart routing' not in source
@@ -206,20 +206,23 @@ for token in (
     'addEffectPanel(effectLayout, eqToneTube.analogxGroup, "analogx", analogx_enabled_)',
     'settings_.setValue("analogx_enabled", analogx_enabled_->isChecked())',
     'settings_.setValue("preset/analogx_enabled", analogx_enabled_->isChecked())',
-    'setAnalogXValue(c->analogx_enabled, analogx_enabled_->isChecked() ? 1 : 0)',
+    'analogx_changed.set(c->analogx_enabled, analogx_enabled_->isChecked() ? 1 : 0)',
     'applyAnalogXSettings(false, 0)',
     'applyAnalogXSettings(settings_.value("preset/analogx_enabled", false).toBool()',
     'wet.ApplyAnalogX(p);',
-    'analogx_request_serial.load(',
-    'analogx_applied_serial.store(',
+    'controls->analogx_request_serial',
+    'controls->analogx_applied_serial',
     'kind_ == "analogx"',
 ):
-    assert token in ((Path(__file__).resolve().parents[1] / 'src/backend/processor.inc').read_text() if token.startswith(('wet.', 'analogx_request_serial', 'analogx_applied_serial')) else source), token
+    assert token in ((Path(__file__).resolve().parents[1] / 'src/backend/processor.inc').read_text() if token.startswith(('wet.', 'controls->analogx_request_serial', 'controls->analogx_applied_serial')) else source), token
+assert 'viper_worker::applyPending(controls->tube_request_serial' in backend
+assert 'viper_worker::applyPending(controls->analogx_request_serial' in backend
 print('PASS: Tube Simulator, native AnalogX and simplified Viper4Linux GUI controls')
 for token in ('imager_enabled_', 'imager_low_', 'imager_mid_', 'imager_high_',
               'imager_low_xover_', 'imager_high_xover_', 'preset/imager_enabled',
-              'setImager(c->imager_enabled', 'addEffectPanel(spatialLayout, spatialPanels.imagerGroup, "imager", imager_enabled_)'):
+              'imager_changed.set(c->imager_enabled', 'addEffectPanel(spatialLayout, spatialPanels.imagerGroup, "imager", imager_enabled_)'):
     assert token in source, f'Stereo Imager missing {token}'
+assert 'viper_worker::applyPending(controls->imager_request_serial' in backend
 assert 'wet.ApplyStereoImager(p);' in backend
 assert 'imager_request_serial' in backend
 print('PASS: Stereo Imager independent native three-band UI, presets and worker IPC')
@@ -320,9 +323,9 @@ for token in (
     'addEffectPanel(spatialLayout, spatialPanels.crossfeedGroup, "crossfeed", crossfeed_enabled_)',
     'settings_.setValue("crossfeed_enabled", crossfeed_enabled_->isChecked())',
     'settings_.setValue("preset/crossfeed_enabled", crossfeed_enabled_->isChecked())',
-    'setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0)',
-    'crossfeed_request_serial.fetch_add(',
-    'crossfeed_applied_serial.store(',
+    'crossfeed_changed.set(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0)',
+    'crossfeed_changed.notify(c->crossfeed_request_serial);',
+    'controls->crossfeed_applied_serial',
     'wet.ApplyCure(p);',
 ):
     if token in source: continue

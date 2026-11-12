@@ -30,18 +30,12 @@
             strength_.slider->value() * 10,
             "precision/strength_centi"));
         c->frequency_hz.store(frequency_.slider->value());
-        bool eq_changed = false;
-        const auto setEqValue = [&eq_changed](std::atomic<std::int32_t>& atom, int value) {
-            if (atom.load(std::memory_order_relaxed) != value) {
-                atom.store(value, std::memory_order_relaxed);
-                eq_changed = true;
-            }
-        };
-        setEqValue(c->eq_enabled, eq_enabled_->isChecked() ? 1 : 0);
-        setEqValue(c->eq_band_count, eq_active_bands_);
+        viper_gui_sync::ChangeGroup eq_changed;
+        eq_changed.set(c->eq_enabled, eq_enabled_->isChecked() ? 1 : 0);
+        eq_changed.set(c->eq_band_count, eq_active_bands_);
         for (int i = 0; i < eq_active_bands_; ++i)
-            setEqValue(c->eq_levels_hundredths[i], eq_faders_[i]->value());
-        if (eq_changed) c->eq_request_serial.fetch_add(1, std::memory_order_release);
+            eq_changed.set(c->eq_levels_hundredths[i], eq_faders_[i]->value());
+        eq_changed.notify(c->eq_request_serial);
         const int ddc_request = ddc_enabled_->isChecked() ? 1 : 0;
         if (c->ddc_enabled.exchange(ddc_request) != ddc_request)
             c->ddc_request_serial.fetch_add(1, std::memory_order_release);
@@ -88,110 +82,68 @@
         c->spectrum_exciter_milli.store(preciseSlider(spectrum_exciter_.slider,
             c->spectrum_exciter_milli.load(),
             spectrum_exciter_.slider->value() * 100, "precision/spectrum_exciter_milli"));
-        bool tube_changed = false;
-        const auto setTubeValue = [&tube_changed](std::atomic<std::int32_t>& atom, int value) {
-            if (atom.load(std::memory_order_relaxed) != value) {
-                atom.store(value, std::memory_order_relaxed);
-                tube_changed = true;
-            }
-        };
-        setTubeValue(c->tube_enabled, tube_enabled_->isChecked() ? 1 : 0);
-        setTubeValue(c->tube_model, tube_model_->currentIndex());
-        setTubeValue(c->tube_drive_percent, tube_drive_.slider->value());
-        setTubeValue(c->tube_mix_percent, tube_mix_.slider->value());
-        if (tube_changed) c->tube_request_serial.fetch_add(1, std::memory_order_release);
-        bool analogx_changed = false;
-        const auto setAnalogXValue = [&analogx_changed](std::atomic<std::int32_t>& atom, int value) {
-            if (atom.load(std::memory_order_relaxed) != value) {
-                atom.store(value, std::memory_order_relaxed);
-                analogx_changed = true;
-            }
-        };
-        setAnalogXValue(c->analogx_enabled, analogx_enabled_->isChecked() ? 1 : 0);
-        setAnalogXValue(c->analogx_mode, analogx_mode_->currentIndex());
-        if (analogx_changed) c->analogx_request_serial.fetch_add(1, std::memory_order_release);
-        bool crossfeed_changed = false;
-        const auto setCrossfeed = [&crossfeed_changed](std::atomic<std::int32_t>& dst, int value) {
-            if (dst.load(std::memory_order_relaxed) != value) {
-                dst.store(value, std::memory_order_relaxed);
-                crossfeed_changed = true;
-            }
-        };
-        setCrossfeed(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0);
-        setCrossfeed(c->crossfeed_preset, crossfeed_mode_->currentIndex());
-        if (crossfeed_changed) c->crossfeed_request_serial.fetch_add(1, std::memory_order_release);
-        bool mb_changed = false;
-        const auto setMb = [&mb_changed](std::atomic<std::int32_t>& dst, int value) {
-            if (dst.load(std::memory_order_relaxed) != value) {
-                dst.store(value, std::memory_order_relaxed);
-                mb_changed = true;
-            }
-        };
-        setMb(c->mb_enabled, mb_enabled_->isChecked() ? 1 : 0);
-        setMb(c->mb_band_count, mb_band_count_->currentIndex() == 1 ? 5 : 3);
-        for (int i=0; i<4; ++i) setMb(c->mb_crossovers_hz[i], mb_crossovers_[i].slider->value());
+        viper_gui_sync::ChangeGroup tube_changed;
+        tube_changed.set(c->tube_enabled, tube_enabled_->isChecked() ? 1 : 0);
+        tube_changed.set(c->tube_model, tube_model_->currentIndex());
+        tube_changed.set(c->tube_drive_percent, tube_drive_.slider->value());
+        tube_changed.set(c->tube_mix_percent, tube_mix_.slider->value());
+        tube_changed.notify(c->tube_request_serial);
+        viper_gui_sync::ChangeGroup analogx_changed;
+        analogx_changed.set(c->analogx_enabled, analogx_enabled_->isChecked() ? 1 : 0);
+        analogx_changed.set(c->analogx_mode, analogx_mode_->currentIndex());
+        analogx_changed.notify(c->analogx_request_serial);
+        viper_gui_sync::ChangeGroup crossfeed_changed;
+        crossfeed_changed.set(c->crossfeed_enabled, crossfeed_enabled_->isChecked() ? 1 : 0);
+        crossfeed_changed.set(c->crossfeed_preset, crossfeed_mode_->currentIndex());
+        crossfeed_changed.notify(c->crossfeed_request_serial);
+        viper_gui_sync::ChangeGroup mb_changed;
+        mb_changed.set(c->mb_enabled, mb_enabled_->isChecked() ? 1 : 0);
+        mb_changed.set(c->mb_band_count, mb_band_count_->currentIndex() == 1 ? 5 : 3);
+        for (int i=0; i<4; ++i) mb_changed.set(c->mb_crossovers_hz[i], mb_crossovers_[i].slider->value());
         for (int i=0; i<5; ++i) {
             const auto& src = mb_bands_[i];
             auto& dst = c->mb_bands[i];
-            setMb(dst.enabled, src.enabled->isChecked() ? 1 : 0);
-            setMb(dst.threshold_db, src.threshold.slider->value());
-            setMb(dst.ratio_tenths, src.ratio.slider->value());
-            setMb(dst.knee_db, src.knee.slider->value());
-            setMb(dst.makeup_db, src.gain.slider->value());
-            setMb(dst.attack_ms, src.attack.slider->value());
-            setMb(dst.release_ms, src.release.slider->value());
+            mb_changed.set(dst.enabled, src.enabled->isChecked() ? 1 : 0);
+            mb_changed.set(dst.threshold_db, src.threshold.slider->value());
+            mb_changed.set(dst.ratio_tenths, src.ratio.slider->value());
+            mb_changed.set(dst.knee_db, src.knee.slider->value());
+            mb_changed.set(dst.makeup_db, src.gain.slider->value());
+            mb_changed.set(dst.attack_ms, src.attack.slider->value());
+            mb_changed.set(dst.release_ms, src.release.slider->value());
         }
-        if (mb_changed) c->mb_request_serial.fetch_add(1, std::memory_order_release);
-        bool fet_changed = false;
-        const auto setFet = [&fet_changed](std::atomic<std::int32_t>& dst, int value) {
-            if (dst.load(std::memory_order_relaxed) != value) {
-                dst.store(value, std::memory_order_relaxed);
-                fet_changed = true;
-            }
-        };
-        setFet(c->fet_enabled, fet_enabled_->isChecked() ? 1 : 0);
-        setFet(c->fet_threshold_db, fet_threshold_.slider->value());
-        setFet(c->fet_ratio_tenths, fet_ratio_.slider->value());
-        setFet(c->fet_knee_db, fet_knee_.slider->value());
-        setFet(c->fet_makeup_db, fet_gain_.slider->value());
-        setFet(c->fet_attack_ms, fet_attack_.slider->value());
-        setFet(c->fet_release_ms, fet_release_.slider->value());
-        if (fet_changed) c->fet_request_serial.fetch_add(1, std::memory_order_release);
-        bool imager_changed = false;
-        const auto setImager = [&imager_changed](std::atomic<std::int32_t>& dst, int value) {
-            if (dst.load(std::memory_order_relaxed) != value) {
-                dst.store(value, std::memory_order_relaxed);
-                imager_changed = true;
-            }
-        };
-        setImager(c->imager_enabled, imager_enabled_->isChecked() ? 1 : 0);
-        setImager(c->imager_low_width_percent, imager_low_.slider->value());
-        setImager(c->imager_mid_width_percent, imager_mid_.slider->value());
-        setImager(c->imager_high_width_percent, imager_high_.slider->value());
-        setImager(c->imager_low_crossover_hz, imager_low_xover_.slider->value());
-        setImager(c->imager_high_crossover_hz, imager_high_xover_.slider->value() * 100);
-        if (imager_changed) c->imager_request_serial.fetch_add(1, std::memory_order_release);
-        bool deq_changed = false;
-        const auto setDeq = [&deq_changed](std::atomic<std::int32_t>& dst, int value) {
-            if (dst.load(std::memory_order_relaxed)!=value) {
-                dst.store(value,std::memory_order_relaxed);
-                deq_changed=true;
-            }
-        };
-        setDeq(c->deq_enabled,deq_enabled_->isChecked()?1:0);
-        setDeq(c->deq_band_count,deq_active_count_);
+        mb_changed.notify(c->mb_request_serial);
+        viper_gui_sync::ChangeGroup fet_changed;
+        fet_changed.set(c->fet_enabled, fet_enabled_->isChecked() ? 1 : 0);
+        fet_changed.set(c->fet_threshold_db, fet_threshold_.slider->value());
+        fet_changed.set(c->fet_ratio_tenths, fet_ratio_.slider->value());
+        fet_changed.set(c->fet_knee_db, fet_knee_.slider->value());
+        fet_changed.set(c->fet_makeup_db, fet_gain_.slider->value());
+        fet_changed.set(c->fet_attack_ms, fet_attack_.slider->value());
+        fet_changed.set(c->fet_release_ms, fet_release_.slider->value());
+        fet_changed.notify(c->fet_request_serial);
+        viper_gui_sync::ChangeGroup imager_changed;
+        imager_changed.set(c->imager_enabled, imager_enabled_->isChecked() ? 1 : 0);
+        imager_changed.set(c->imager_low_width_percent, imager_low_.slider->value());
+        imager_changed.set(c->imager_mid_width_percent, imager_mid_.slider->value());
+        imager_changed.set(c->imager_high_width_percent, imager_high_.slider->value());
+        imager_changed.set(c->imager_low_crossover_hz, imager_low_xover_.slider->value());
+        imager_changed.set(c->imager_high_crossover_hz, imager_high_xover_.slider->value() * 100);
+        imager_changed.notify(c->imager_request_serial);
+        viper_gui_sync::ChangeGroup deq_changed;
+        deq_changed.set(c->deq_enabled,deq_enabled_->isChecked()?1:0);
+        deq_changed.set(c->deq_band_count,deq_active_count_);
         for(int i=0; i<10; ++i) {
             const auto& b=deq_bands_[i];
             auto& dst=c->deq_bands[i];
-            setDeq(dst.frequency_hz,b.frequency);
-            setDeq(dst.q_hundredths,b.q);
-            setDeq(dst.gain_hundredths,b.gain);
-            setDeq(dst.threshold_tenths,b.threshold);
-            setDeq(dst.attack_ms,b.attack);
-            setDeq(dst.release_ms,b.release);
-            setDeq(dst.filter_type,b.type);
+            deq_changed.set(dst.frequency_hz,b.frequency);
+            deq_changed.set(dst.q_hundredths,b.q);
+            deq_changed.set(dst.gain_hundredths,b.gain);
+            deq_changed.set(dst.threshold_tenths,b.threshold);
+            deq_changed.set(dst.attack_ms,b.attack);
+            deq_changed.set(dst.release_ms,b.release);
+            deq_changed.set(dst.filter_type,b.type);
         }
-        if (deq_changed) c->deq_request_serial.fetch_add(1,std::memory_order_release);
+        deq_changed.notify(c->deq_request_serial);
         c->headphone_enabled.store(headphone_enabled_->isChecked() ? 1 : 0);
         c->headphone_quality.store(headphone_quality_->currentIndex());
         c->diff_enabled.store(diff_enabled_->isChecked() ? 1 : 0);

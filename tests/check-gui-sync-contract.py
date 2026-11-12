@@ -32,6 +32,23 @@ int main() {
     assert(viper_gui_sync::nativePrecision(false, true, 8024, 8000) == 8000);
     assert(viper_gui_sync::nativePrecision(true, false, 537, 550) == 550);
     assert(viper_gui_sync::nativePrecision(false, false, -234, -230) == -234);
+    // One notification per modified group; unchanged values are no-ops.
+    std::atomic<std::int32_t> gain{100};
+    std::atomic<std::uint32_t> serial{7};
+    viper_gui_sync::ChangeGroup unchanged;
+    unchanged.set(gain, 100);
+    unchanged.notify(serial);
+    assert(!unchanged.changed && gain.load() == 100 && serial.load() == 7);
+    viper_gui_sync::ChangeGroup edited;
+    edited.set(gain, 150);
+    edited.set(gain, 150);
+    assert(edited.changed && gain.load() == 150);
+    edited.notify(serial);
+    assert(serial.load() == 8);
+    viper_gui_sync::ChangeGroup next;
+    next.set(gain, 150);
+    next.notify(serial);
+    assert(!next.changed && serial.load() == 8);
 }
 '''
 with TemporaryDirectory(prefix="viper-gui-sync-") as dirname:
@@ -43,4 +60,4 @@ with TemporaryDirectory(prefix="viper-gui-sync-") as dirname:
                     "-Wextra", "-Werror", "-I", str(root / "src"),
                     str(cpp), "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True)
-print("PASS: GUI control-channel reconnect and native precision policies")
+print("PASS: GUI control-channel reconnect, precision and effect change tracking")

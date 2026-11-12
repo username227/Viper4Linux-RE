@@ -5,7 +5,7 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
 # CTest is the primary developer test runner: report each independent check,
 # rather than concealing dozens of checks inside four aggregate shell tests.
-# The legacy all-in-one developer wrapper is retired after full 46/46 CTest
+# The legacy all-in-one developer wrapper is retired after full-suite CTest
 # validation. The standalone package and mock runners remain as needed;
 # CTest directly registers each developer check independently.
 function(viper_add_script_test _name _script _group)
@@ -103,6 +103,17 @@ foreach(_viper_name IN ITEMS cli-controls cli-settings cli-eq-presets output-sta
 endforeach()
 
 add_custom_target(viper_native_mock_tests DEPENDS ${_viper_native_mock_targets})
+
+# Exercise request-serial coalescing without starting a PipeWire process.
+add_executable(viper_test_worker_request check-worker-request.cpp)
+target_include_directories(viper_test_worker_request PRIVATE "${_viper_test_include}")
+target_compile_options(viper_test_worker_request PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME viper_native_worker_request
+  COMMAND "$<TARGET_FILE:viper_test_worker_request>")
+set_tests_properties(viper_native_worker_request PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;native;worker")
+
 
 # Static mock contracts run directly with Python. Native checks reuse their
 # existing temp-config/mocked-IPC harness, selecting one check per CTest case.
