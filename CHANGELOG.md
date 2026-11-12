@@ -3,6 +3,64 @@
 This file summarizes the user-facing changes in each release. Internal build,
 CI and documentation-only maintenance is generally excluded from these notes.
 
+## v1.1.3
+
+### Changed
+
+- **Clearer Dynamic System controls:**
+  Bass strength is now the primary adjustment. Setting Low X to **120 Hz**
+  selects simple bass processing, while higher values enable the advanced
+  filters and additional controls. Settings that do not apply in simple mode
+  are visibly greyed out, making it easier to understand which adjustments
+  are active.
+
+- **Better handling of native Wayland limitations:**
+  The **Minimize to tray instead of taskbar** preference is now clearly marked
+  as **X11 only** and disabled when running under native Wayland. Existing
+  X11 preferences are preserved. Users can manually run with XWayland to
+  maintain minimize to tray settings.
+
+- **Refined main-window layout:**
+  The application logo is larger, and the current Audio Output is positioned
+  directly beneath the application title. The layout provides clearer visual
+  organization while retaining the existing themes and controls.
+
+### Fixed
+
+- **Master OFF now completely bypasses audio processing:**
+  Turning Master OFF now passes audio through unchanged after a brief
+  transition, without applying the limiter, output gain, channel balance or
+  their processing delay.
+
+- **Correct initial gain for ViPER Bass and ViPER Bass Mono:**
+  Both effects now apply the selected bass strength correctly when first
+  enabled, rather than briefly starting with an incorrect gain value.
+  Subsequent adjustments retain their normal smooth transitions.
+
+- **Restored proper Psychoacoustic Bass harmonic processing:**
+  Corrected a calculation that could discard small fractional values used to
+  generate bass harmonics. This restores the intended processing behavior and
+  corrects the effect's initial response.
+
+- **Fixed FET Compressor gain reduction:**
+  Corrected a signal-level calculation that could prevent the compressor from
+  responding properly to ordinary audio signals. Threshold and
+  compression-ratio adjustments now produce the intended gain reduction
+  instead of leaving much of the signal effectively uncompressed.
+
+- **More reliable Multiband Compressor initialization:**
+  The compressor now loads the selected settings for all active frequency
+  bands before enabling processing. This prevents incorrect initial values
+  when first enabling the effect or switching between three-band and five-band
+  operation. Adjustments made during playback continue to transition
+  smoothly.
+
+- **Preserved precise Dynamic System values entered through the CLI:**
+  Low X frequency values below the GUI's 120 Hz minimum are no longer
+  accidentally overwritten when the GUI reads or saves settings. The GUI
+  displays its minimum value while preserving the more precise underlying
+  setting until the user deliberately changes the slider.
+
 ## v1.1.2
 
 ### Added
