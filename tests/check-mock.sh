@@ -3,8 +3,8 @@
 # claim parity with the real upstream algorithms or test Bluetooth timing.
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
-# CTest can run each existing mock check independently. The default remains
-# the complete legacy runner used by makepkg/developer scripts.
+# CTest selects individual checks through this runner. Direct invocations
+# still run the full suite, as scripts/verify.sh does.
 viper_mock_check=${VIPER_MOCK_SINGLE_CHECK:-all}
 case "$viper_mock_check" in
     all|dynamic-eq-ui|about-and-deq-handoff|tray-contract|native-effect-routing|eq-presets|ir-reader|ddc-reader|native-effect-basic|native-effect-precision|cli-controls|cli-batch|cli-settings|cli-eq-presets|output-state) ;;

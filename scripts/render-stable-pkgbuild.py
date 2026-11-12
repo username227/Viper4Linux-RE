@@ -4,7 +4,6 @@ import argparse
 import hashlib
 from pathlib import Path
 import re
-import sys
 
 
 def render(template: str, version: str, digest: str) -> str:
