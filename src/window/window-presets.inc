@@ -94,6 +94,11 @@
     }
     void restoreFromPresetStaging() {
             if (!settings_.value("preset/valid", false).toBool()) return;
+            {
+                // A named preset replaces the complete effect state. Its
+                // component restoration helpers can call push(), but those
+                // intermediate widget states must not reach the backend.
+                const QScopedValueRollback<bool> deferPublishes(suppress_named_preset_push_, true);
             applySettings(settings_.value("preset/master_enabled", true).toBool(),
                           settings_.value("preset/enabled", true).toBool(),
                           settings_.value("preset/bass_mode", 0).toInt(),
@@ -185,6 +190,7 @@
                 refreshIrsLibrary();
                 requestIrsLoad();
             }
+            } // End deferred-publish scope before the single final push.
             push();
     }
     void resetEffectsWithConfirmation() {
