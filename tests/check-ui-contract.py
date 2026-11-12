@@ -187,7 +187,7 @@ for token in [
     'out.tube_enabled = new EffectSwitch(',
     'out.tube_model->addItems({"12AX7 (High Gain)", "12AU7 (Low Gain)", "6N1P (Medium Gain)"})',
     'addEffectPanel(effectLayout, eqToneTube.tubeGroup, "tube", tube_enabled_)',
-    'settings_.setValue("tube_enabled", tube_enabled_->isChecked())',
+    '"tube_enabled", tube_enabled_, Kind::Toggle, 0',
     'tube_changed.set(c->tube_enabled, tube_enabled_->isChecked() ? 1 : 0)',
     'void applyTubeSettings(bool enabled, int model, int drive, int mix)',
 ]: assert token in source, token
@@ -204,7 +204,7 @@ for token in (
     'out.analogx_enabled = new EffectSwitch(',
     'out.analogx_mode->addItems({"Mild", "Medium", "Strong"})',
     'addEffectPanel(effectLayout, eqToneTube.analogxGroup, "analogx", analogx_enabled_)',
-    'settings_.setValue("analogx_enabled", analogx_enabled_->isChecked())',
+    '"analogx_enabled", analogx_enabled_, Kind::Toggle, 0',
     'settings_.setValue("preset/analogx_enabled", analogx_enabled_->isChecked())',
     'analogx_changed.set(c->analogx_enabled, analogx_enabled_->isChecked() ? 1 : 0)',
     'applyAnalogXSettings(false, 0)',

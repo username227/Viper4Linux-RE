@@ -783,6 +783,7 @@ private:
 #include "window/window-correction.inc"
 #include "window/window-shell.inc"
 #include "window/window-graphic-eq.inc"
+#include "sync/gui-simple-settings.inc"
 #include "window/window-initialization.inc"
     // Always check the named control-channel object, not just the owner PID.
     // If an older object was unlinked while its owner still lived, a cached
