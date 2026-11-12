@@ -41,7 +41,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
     build-essential cmake pkg-config qt6-base-dev libx11-dev ladspa-sdk \
-    python3 pipewire binutils dpkg-dev ca-certificates xz-utils
+    python3 pipewire binutils dpkg-dev ca-certificates xz-utils git
 work=$(mktemp -d /tmp/viper4linux-deb-XXXXXXXX)
 trap 'rm -rf -- "$work"' EXIT
 tar -xJf "$archive" -C "$work"

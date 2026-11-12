@@ -39,6 +39,10 @@ assert 'DESTDIR="$pkgroot" cmake --install "$built"' in build_script
 assert '-DVIPER_ENABLE_SYSTEM_INSTALL=ON' in build_script
 assert '-DVIPER_SYSTEM_INSTALL_LAYOUT=debian' in build_script
 assert '-DVIPER_BUILD_DEVELOPER_TESTS=ON' in build_script
+# Full developer CTests include checks that invoke git in temporary repositories.
+# Require git in the *container's build dependencies*, not the installed package.
+_build_deps = build_script.split('apt-get install -y --no-install-recommends', 1)[1].split('work=$(mktemp', 1)[0].split()
+assert 'git' in _build_deps, 'Debian build container must install git for developer CTests'
 assert 'ctest --test-dir "$built" --output-on-failure --no-tests=error' in build_script
 assert 'bash tests/check-mock.sh' not in build_script
 assert 'VIPER_DEB_STAGING_BACKEND' not in build_script
