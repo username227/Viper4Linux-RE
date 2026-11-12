@@ -33,6 +33,8 @@ struct Processor {
         configure_eq(false, 10, {});
         controls = acquire_controls();
         if (controls) {
+            // A saved Master OFF starts as true, latency-free passthrough.
+            master_mix = controls->master_enabled.load(std::memory_order_relaxed) != 0 ? 1.f : 0.f;
             controls->sample_rate_hz.store(static_cast<int>(rate), std::memory_order_relaxed);
             apply_eq_from_controls();
             apply_tube_from_controls();
@@ -593,17 +595,31 @@ struct Processor {
         auto* in_l = ports[InputLeft]; auto* in_r = ports[InputRight];
         auto* out_l = ports[OutputLeft]; auto* out_r = ports[OutputRight];
         if (!out_l || !out_r) return;
+        const bool master_enabled = !controls ||
+            controls->master_enabled.load(std::memory_order_relaxed) != 0;
+        const float master_target = master_enabled ? 1.f : 0.f;
+        const float step = 1.f / std::max(1.f, rate * 0.020f);
         for (unsigned long offset = 0; offset < frames;) {
             const auto n = static_cast<uint32_t>(std::min<unsigned long>(kChunk, frames-offset));
             for (uint32_t i = 0; i < n; ++i) {
                 const auto x = offset+i;
-                dry_audio[2*i] = in_l && std::isfinite(in_l[x]) ? in_l[x] : 0.f;
-                dry_audio[2*i+1] = in_r && std::isfinite(in_r[x]) ? in_r[x] : 0.f;
+                wet_audio[2*i] = dry_audio[2*i] =
+                    in_l && std::isfinite(in_l[x]) ? in_l[x] : 0.f;
+                wet_audio[2*i+1] = dry_audio[2*i+1] =
+                    in_r && std::isfinite(in_r[x]) ? in_r[x] : 0.f;
             }
             dry.Process(dry_audio, n);
             for (uint32_t i = 0; i < n; ++i) {
-                out_l[offset+i] = std::isfinite(dry_audio[2*i]) ? dry_audio[2*i] : 0.f;
-                out_r[offset+i] = std::isfinite(dry_audio[2*i+1]) ? dry_audio[2*i+1] : 0.f;
+                if (master_mix < master_target) master_mix = std::min(master_target, master_mix + step);
+                else if (master_mix > master_target) master_mix = std::max(master_target, master_mix - step);
+                const float left = master_mix <= 0.f ? wet_audio[2*i] :
+                    master_mix >= 1.f ? dry_audio[2*i] :
+                    wet_audio[2*i] + master_mix * (dry_audio[2*i] - wet_audio[2*i]);
+                const float right = master_mix <= 0.f ? wet_audio[2*i+1] :
+                    master_mix >= 1.f ? dry_audio[2*i+1] :
+                    wet_audio[2*i+1] + master_mix * (dry_audio[2*i+1] - wet_audio[2*i+1]);
+                out_l[offset+i] = std::isfinite(left) ? left : 0.f;
+                out_r[offset+i] = std::isfinite(right) ? right : 0.f;
             }
             offset += n;
         }
@@ -781,7 +797,8 @@ struct Processor {
         p.threshold = threshold;
         p.output_volume = output;
         p.channel_pan = pan;
-        // Same output protection on both paths; master bypass never disables it.
+        // Both active DSP routes retain peak protection. True Master OFF
+        // bypasses both routes at the output rather than disabling this limiter.
         wet.ApplyMasterLimiter(p);
         dry.ApplyMasterLimiter(p);
         last_limiter_threshold = threshold;
@@ -906,6 +923,7 @@ struct Processor {
     float last_reverb_damp = -1.0f;
     float last_reverb_wet = -1.0f;
     float last_reverb_dry = -1.0f;
-    float mix = 1.0f;
+    float mix = 1.0f; // Wet vs limiter-only path, including IR safety handoffs.
+    float master_mix = 1.0f; // Active DSP vs latency-free input when Master OFF.
 };
 

@@ -104,7 +104,7 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
         out << "Master processing: " << (c.master_enabled.load() ? "ON" : "BYPASSED") << '\n';
         break;
     case Effect::Limiter:
-        heading("A", "Master Limiter", "ALWAYS ON");
+        heading("A", "Master Limiter", c.master_enabled.load() ? "ON (mandatory)" : "BYPASSED (Master OFF)");
         detail(out, "Threshold", c.limiter_threshold_permille.load() / 1000.0);
         detail(out, "Output", c.limiter_output_percent.load(), "%");
         detail(out, "Pan", c.limiter_pan_percent.load(), "%");

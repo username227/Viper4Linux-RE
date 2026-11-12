@@ -605,7 +605,7 @@
         text->setOpenExternalLinks(true);
         text->setHtml(R"HTML(<h2>Viper4Linux — Effects</h2>
 <p>These descriptions explain the available audio controls and their behavior.</p>
-<h3>Output</h3><p><b>Master Limiter:</b> Keeps output peaks under the selected threshold; remains active during bypass.</p>
+<h3>Output</h3><p><b>Master Limiter:</b> Mandatory native peak limiting, gain and balance while ViPER Master is ON. Master OFF bypasses the entire DSP, including this limiter, after a short handoff.</p>
 <p><b>Playback Gain Control (AGC):</b> Automatically adjusts changing playback levels.</p>
 <p><b>LUFS Targeting:</b> Adjusts perceived loudness toward a target over time; avoid combining with AGC without testing.</p>
 <h3>Bass</h3><p><b>ViPER Bass:</b> Low-frequency enhancement, with Natural, Pure Bass+ and Subwoofer modes.</p>

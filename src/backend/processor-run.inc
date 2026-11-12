@@ -6,6 +6,24 @@
             if (viperbass::hasInputSignal(ports[InputLeft], ports[InputRight], frames))
                 controls->input_signal_blocks.fetch_add(1, std::memory_order_relaxed);
         }
+        // Android disables the whole effect when Master is OFF. After the
+        // 20 ms handoff, bypass even the native limiter/gain/pan and its delay.
+        // This fast path also avoids DSP processing while Master remains OFF.
+        if (controls && controls->master_enabled.load(std::memory_order_relaxed) == 0 &&
+            master_mix == 0.f) {
+            auto* in_l = ports[InputLeft]; auto* in_r = ports[InputRight];
+            auto* out_l = ports[OutputLeft]; auto* out_r = ports[OutputRight];
+            if (!out_l || !out_r) return;
+            for (unsigned long i = 0; i < frames; ++i) {
+                // Read both channels before writing: even crossed in-place
+                // LADSPA port aliases remain safe.
+                const float left = in_l && std::isfinite(in_l[i]) ? in_l[i] : 0.f;
+                const float right = in_r && std::isfinite(in_r[i]) ? in_r[i] : 0.f;
+                out_l[i] = left;
+                out_r[i] = right;
+            }
+            return;
+        }
         std::unique_lock<std::mutex> wet_guard(wet_mutex, std::try_to_lock);
         if (!wet_guard.owns_lock()) {
             // Never block PipeWire while the background loader constructs FFT kernels.
@@ -136,6 +154,7 @@
         const float convolver_cross = controls ?
             std::clamp(controls->convolver_cross_percent.load(std::memory_order_relaxed), 0, 100) * 0.01f : 0.0f;
         const float target = (!ir_transition.load(std::memory_order_relaxed) && master_enabled && (bass_enabled || mono_enabled || psycho_enabled || dynamic_enabled || clarity_enabled || spectrum_enabled || tube_enabled || analogx_enabled || crossfeed_enabled || imager_enabled || speaker_enabled || ddc_enabled || fet_enabled || mb_enabled || (controls && controls->deq_enabled.load(std::memory_order_relaxed) != 0) || headphone_enabled || diff_enabled || field_enabled || reverb_enabled || agc_enabled || lufs_enabled || convolver_enabled || (controls && controls->eq_enabled.load(std::memory_order_relaxed) != 0))) ? 1.0f : 0.0f;
+        const float master_target = master_enabled ? 1.f : 0.f;
         const float safe_strength = std::clamp(strength, 0.5f, 10.0f);
         const float safe_frequency = std::clamp(frequency, 15.0f, 150.0f);
         // Apply only changed parameters. Avoid resetting an effect on every
@@ -210,10 +229,19 @@
             for (uint32_t i = 0; i < n; ++i) {
                 if (mix < target) mix = std::min(target, mix + step);
                 else if (mix > target) mix = std::max(target, mix - step);
-                const float l = dry_audio[2 * i] + mix * (wet_audio[2 * i] - dry_audio[2 * i]);
-                const float r = dry_audio[2 * i + 1] + mix * (wet_audio[2 * i + 1] - dry_audio[2 * i + 1]);
-                // Native ViPERDSP lookahead limiter handles the configured ceiling
-                // in wet AND dry paths; don't add a distortion-producing hard clip.
+                const float processed_l = dry_audio[2 * i] + mix * (wet_audio[2 * i] - dry_audio[2 * i]);
+                const float processed_r = dry_audio[2 * i + 1] + mix * (wet_audio[2 * i + 1] - dry_audio[2 * i + 1]);
+                if (master_mix < master_target) master_mix = std::min(master_target, master_mix + step);
+                else if (master_mix > master_target) master_mix = std::max(master_target, master_mix - step);
+                // Master OFF is true passthrough: neither lookahead limiter
+                // nor output volume/pan may affect the stream. Keep the usual
+                // 20 ms handoff and retain the old limiter-only IR swap path.
+                const float raw_l = in_l && std::isfinite(in_l[offset+i]) ? in_l[offset+i] : 0.f;
+                const float raw_r = in_r && std::isfinite(in_r[offset+i]) ? in_r[offset+i] : 0.f;
+                const float l = master_mix <= 0.f ? raw_l :
+                    master_mix >= 1.f ? processed_l : raw_l + master_mix * (processed_l - raw_l);
+                const float r = master_mix <= 0.f ? raw_r :
+                    master_mix >= 1.f ? processed_r : raw_r + master_mix * (processed_r - raw_r);
                 out_l[offset + i] = std::isfinite(l) ? l : 0.0f;
                 out_r[offset + i] = std::isfinite(r) ? r : 0.0f;
             }

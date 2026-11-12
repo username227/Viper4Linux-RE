@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <thread>
@@ -274,6 +275,51 @@ int main(int argc, char** argv) {
     p->convolver_enabled.store(0);
     run(.03f);
     assert(p->audio_callbacks.load() == 50);
+    // Master OFF must be true Android-style bypass, including limiter,
+    // output gain and pan. The legacy mock bypass tests used only 0.03
+    // with unity output settings and could not catch this regression.
+    std::fill(l.begin(), l.end(), 0.8f);
+    std::fill(r.begin(), r.end(), -0.8f);
+    p->master_enabled.store(0);
+    p->limiter_threshold_permille.store(300);
+    p->limiter_output_percent.store(200);
+    p->limiter_pan_percent.store(100);
+    d->run(h, 2048);
+    for (int i = 1024; i < 2048; ++i) {
+        assert(ol[i] == l[i] && orr[i] == r[i]); // exact, no 256-frame latency
+    }
+    p->limiter_output_percent.store(30);
+    p->limiter_pan_percent.store(-100);
+    d->run(h, 2048);
+    for (int i = 0; i < 2048; ++i) {
+        assert(ol[i] == l[i] && orr[i] == r[i]); // off-state edits must not leak
+    }
+    // With Master ON the limiter is still mandatory even if no optional
+    // effect is selected. A 0.3 ceiling clips this deliberately loud input.
+    p->master_enabled.store(1);
+    p->limiter_output_percent.store(200);
+    p->limiter_pan_percent.store(0);
+    d->run(h, 2048);
+    near(ol[2047], 0.3f);
+    near(orr[2047], -0.3f);
+    p->limiter_pan_percent.store(100);
+    d->run(h, 2048);
+    near(ol[2047], 0.f);
+    near(orr[2047], -0.3f);
+    p->limiter_pan_percent.store(-100);
+    d->run(h, 2048);
+    near(ol[2047], 0.3f);
+    near(orr[2047], 0.f);
+    // Restore all source samples and limiter controls for subsequent IR checks.
+    std::fill(l.begin(), l.end(), 0.03f);
+    std::fill(r.begin(), r.end(), 0.03f);
+    p->limiter_threshold_permille.store(500);
+    p->limiter_output_percent.store(100);
+    p->limiter_pan_percent.store(0);
+    d->run(h, 2048);
+    near(ol[2047], 0.03f);
+    near(orr[2047], 0.03f);
+    std::printf("PASS: Android-style Master bypass and mandatory in-chain limiter\n");
     // Live IPC kernel replacement must not require LADSPA destroy/instantiate.
     const std::string confpath = std::string(std::getenv("XDG_CONFIG_HOME")) + "/ViPERforLinux/ViPERClean.conf";
     const std::string original = std::string(std::getenv("XDG_CONFIG_HOME")) + "/impulse.irs";

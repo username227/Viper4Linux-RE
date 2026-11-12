@@ -25,7 +25,7 @@ struct alignas(64) Controls {
     std::atomic<std::int32_t> active{0};
     std::atomic<std::uint32_t> audio_callbacks{0};
     std::atomic<std::int32_t> enabled{1};
-    std::atomic<std::int32_t> master_enabled{1}; // bypass all DSP effects, preserve parameters
+    std::atomic<std::int32_t> master_enabled{1}; // true passthrough incl. limiter/gain/pan, preserve parameters
     std::atomic<std::int32_t> bass_mode{0}; // 0 Natural, 1 Pure Bass+, 2 Subwoofer
     // New bass processors default OFF. Values use scaled integers for lock-free IPC.
     std::atomic<std::int32_t> bass_mono_enabled{0};

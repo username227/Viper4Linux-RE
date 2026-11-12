@@ -25,8 +25,18 @@ expected = {
  "Playback Gain Control (AGC)": "ApplyPlaybackGainControl",
  "LUFS Targeting": "ApplyLufs",
 }
-for display,method in expected.items():
-    assert f"wet.{method}(" in s, f"{display} does not call native ViPERDSP"
+for display, method in expected.items():
+    if display == "Multiband Compressor":
+        # The startup-smoother fix intentionally routes this effect through a
+        # shared native helper to stage all bands before native enable/reset.
+        native_helper = (root / "src/viper-multiband-init.h").read_text()
+        assert '#include "viper-multiband-init.h"' in (root / "src/viper-ladspa.cpp").read_text()
+        assert "viper_multiband::apply(wet," in s, "Multiband not routed to the native helper"
+        assert native_helper.count("dsp.ApplyMultibandCompressor(") >= 2, (
+            "Multiband helper must stage before applying the enabled preset"
+        )
+    else:
+        assert f"wet.{method}(" in s, f"{display} does not call native ViPERDSP"
     assert method in (root / "tests/mock/viper/ViPER.h").read_text(), display
 assert "wet.Process(wet_audio, n);" in s
 assert "dry.Process(dry_audio, n);" in s

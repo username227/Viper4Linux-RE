@@ -82,6 +82,11 @@ int main() {
     assert(output.find("RESAMPLE ERROR") != std::string::npos);
     assert(invoke({"off"}, &output) == 0);
     assert(output == "Master processing: BYPASSED\n");
+    assert(invoke({"status", "--full"}, &output) == 0);
+    assert(output.find("Master Limiter - BYPASSED (Master OFF)") != std::string::npos);
+    assert(invoke({"on"}, &output) == 0);
+    assert(invoke({"status", "--full"}, &output) == 0);
+    assert(output.find("Master Limiter - ON (mandatory)") != std::string::npos);
     server.stop_server();
     assert(invoke({"eq-presets"}) == 0); // Does not need a DSP channel.
     assert(invoke({"eq-preset", "Acoustic"}) == 1);

@@ -35,15 +35,15 @@ auto createOutputPanels(QWidget* parent, AddSlider addSlider) {
     using Slider = decltype(addSlider(static_cast<QFormLayout*>(nullptr), "", 0, 0));
     OutputPanels<Slider> out;
 
-    // Output processing — native limiter is always present, so show its
-    // switch as ON but inactive. Its card remains independently collapsible.
+    // The native limiter is mandatory while Master is ON. Its indicator is
+    // fixed ON, but Master OFF bypasses the entire ViPER processing stage.
     auto* limiter_group = new QGroupBox("Master Limiter", parent);
     auto* limiter_form = new QFormLayout(limiter_group);
     out.limiter_indicator = new EffectSwitch(limiter_group);
     out.limiter_indicator->setChecked(true);
     out.limiter_indicator->setEnabled(false);
-    out.limiter_indicator->setToolTip("The native Master Limiter is permanently active. Adjust its threshold, output level and balance below.");
-    limiter_form->addRow("Limiter always active", out.limiter_indicator);
+    out.limiter_indicator->setToolTip("The Master Limiter is always active while ViPER Master is ON. Master OFF bypasses the limiter, output gain and balance.");
+    limiter_form->addRow("Limiter active with Master ON", out.limiter_indicator);
     out.limiter_threshold = addSlider(limiter_form, "Peak threshold", 300, 1000); // thousandths
     out.limiter_threshold.slider->setToolTip("Linear peak threshold, -10.46 to 0 dBFS; default -6.02 dBFS.");
     out.limiter_gain = addSlider(limiter_form, "Output gain", 1, 200); // percent
