@@ -31,9 +31,8 @@ build() {
 }
 
 check() {
-    cd "$srcdir/viper4linux-re-$pkgver"
-    # Fast, isolated package checks. Full regressions run in release CI.
-    bash tests/check-package.sh
+    # Fast CTest package checks (not the full developer mock suite).
+    ctest --test-dir "$srcdir/viper4linux-build" --output-on-failure --no-tests=error
     nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
 }
 

@@ -40,8 +40,9 @@ installation was performed by that test.
 and build dependencies, CMake dependency discovery (including Qt6 Widgets and
 Network), the README's source-build package list, pinned ViPERDSP handling,
 downstream patches, sole-source CMake staging and backend
-launcher contracts. It is invoked by `tests/check-package.sh` from both
-normal package `check()` and the full developer suite. It is intentionally
+launcher contracts. It is invoked by both the standalone `tests/check-package.sh` script
+and the CTest `package` group used in stable package `check()` and the
+full developer suite. It is intentionally
 compatible with a unified release archive, which has no `.gitmodules`.
 `tests/check-arch-install.py` independently stages a mock stable and VCS
 package directly through CMake, validating paths, permissions, dynamic
@@ -49,12 +50,26 @@ Python files, failure behavior and stable/VCS custom notice directories. A separ
 real-build staging test compares the complete manifests of two independently
 staged CMake installations.
 
-The packaged `check()` suite is intentionally short and offline. For
-native DSP and GUI regression coverage, run
-`bash tests/check-developer.sh`. Arch release preparation additionally
-builds the actual package and checks the LADSPA export. The separate
-published AUR VCS recipe remains maintainer-owned; these repository tests
-do not claim to validate its exact `pkgver()` or AUR metadata.
+The packaged `check()` suite is intentionally short and offline.
+CMake's standard `BUILD_TESTING=ON` default registers 12 package checks.
+The stable release PKGBUILD runs `ctest --output-on-failure
+--no-tests=error`, providing standard numbered results and failing if zero
+tests are found. No custom package-test CMake flag or native mock build is
+needed. Use `-DBUILD_TESTING=OFF` only when intentionally disabling tests.
+The older `tests/check-package.sh` remains available to existing callers.
+
+For complete native DSP and GUI regression coverage, enable
+`VIPER_BUILD_DEVELOPER_TESTS=ON`, build, then run
+`ctest --test-dir BUILD_DIR --output-on-failure`. The full
+`bash tests/check-developer.sh` runner remains available for legacy scripts.
+Arch release preparation additionally runs the full developer CTest suite in
+the already-compiled Arch package build tree. Both native Debian-family builds
+enable the developer test targets and run CTest before staging their packages.
+The existing source-staging, LADSPA export and disposable-container installation
+checks remain separate. The separate published AUR VCS recipe remains
+maintainer-owned and **does not automatically adopt this new CTest gate**;
+its PKGBUILD and `.SRCINFO` must be reviewed separately. These repository
+tests do not claim to validate that recipe's exact `pkgver()` or metadata.
 
 For an AUR update, regenerate `.SRCINFO` in that package's Git checkout
 using `makepkg --printsrcinfo > .SRCINFO` and push both changed files.

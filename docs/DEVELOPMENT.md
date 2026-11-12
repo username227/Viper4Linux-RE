@@ -269,25 +269,56 @@ For complete DSP mock and regression tests, use CTest or the preserved
 standalone `tests/check-developer.sh` CI script. For a system package,
 see [Arch packaging](ARCH-PACKAGING.md).
 
-Routine Arch package builds run a deliberately small, deterministic smoke suite
-after compiling the application. It checks launcher process handling, offline
-package staging and physical Audio Output memory/identity logic, and verifies
-the LADSPA entry point. It does not start PipeWire or compile the isolated
-mock DSP again.
+The standard CMake `include(CTest)` integration enables `BUILD_TESTING=ON`
+by default, registering 12 fast, offline package checks without extra flags.
+Routine stable Arch `makepkg check()` runs `ctest --output-on-failure
+--no-tests=error` plus LADSPA export verification.
+The native developer mock suite remains opt-in and is not compiled by normal
+package builds. To disable all CTest registration, configure with
+`-DBUILD_TESTING=OFF`. The separately maintained `-git` AUR recipe needs
+an independent update before its regular builds use the same CTest interface.
 
 For the complete native DSP, GUI, preset, snapshot and release-contract
-regressions, run the developer suite explicitly when changing those systems:
+regressions, **CTest is the standard developer test runner**. Configure an
+isolated developer build, compile its native/mock test binaries, then run CTest:
 
 ```bash
-bash tests/check-developer.sh
+cmake -S . -B build-ctest -DCMAKE_BUILD_TYPE=Release -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake --build build-ctest
+ctest --test-dir build-ctest --output-on-failure
 ```
 
-The developer script includes the package smoke checks and isolated mock tests,
-but excludes repeated static checks already run by the mock script. Release
-candidate CI runs the full suite *in addition to* normal Arch package checks.
-A passing package smoke check does not certify a DSP change; run the developer
-suite before merging native DSP or snapshot changes. Rebuilding an AUR package
-should not force every user to run those expensive, more fragile tests.
+CTest registers the independent Python contract checks and native mock checks
+with individual numbered results, elapsed time and a final summary instead of
+hiding all checks inside four aggregate cases. Python `unittest` modules
+(including `test_output_*.py`) have separate CTest entries; each module's
+individual assertions remain visible through verbose output.
+
+Useful options:
+
+```bash
+ctest --test-dir build-ctest -N                 # list registered checks without running
+ctest --test-dir build-ctest -L package --output-on-failure
+ctest --test-dir build-ctest -L mock --output-on-failure
+ctest --test-dir build-ctest -R backend --output-on-failure
+ctest --test-dir build-ctest -V                 # full output, including passing checks
+```
+
+The existing `bash tests/check-developer.sh` remains a complete standalone
+fallback for scripts and legacy CI; `tests/check-package.sh` remains the
+equivalent fast shell-based package gate for callers that have not switched
+to CTest. No actual test assertions were removed. CTest runs the same mock
+harness with isolated temporary preferences and IPC, not the user's live
+PipeWire or installed backend.
+Release-contract checks are registered only when the corresponding GitHub
+workflow file is present (it may be absent from unified source archives).
+
+Release candidate CI runs the full developer CTest suite *in addition to*
+normal Arch package checks, and native Debian builds run the full CTest suite
+before package staging. A passing package smoke check does not certify a DSP
+change; run the developer suite before merging native DSP or snapshot changes.
+Rebuilding an AUR package should not force every user to run expensive,
+developer-only checks.
 
 
 A full live acceptance test must cover Qt rendering, real PipeWire audio,

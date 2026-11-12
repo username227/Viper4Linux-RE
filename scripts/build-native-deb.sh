@@ -51,6 +51,7 @@ tree="$work/viper4linux-re-$version"
 }
 built="$work/build"
 cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release \
+    -DVIPER_BUILD_DEVELOPER_TESTS=ON \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
     -DVIPER_SYSTEM_INSTALL_LAYOUT=debian
@@ -59,16 +60,9 @@ for program in viper-gui viper-ctl viper_dsp_ladspa.so; do
     [[ -s "$built/$program" ]] || { echo "Missing compiled file: $program" >&2; exit 1; }
 done
 nm -D "$built/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
-(
-    cd "$tree"
-    bash tests/check-mock.sh
-    python3 tests/check-launcher.py
-    python3 tests/check-theme-contract.py
-    python3 tests/check-ui-contract.py
-    python3 tests/check-tray-contract.py
-    python3 tests/check-named-presets-contract.py
-    python3 tests/check-preset-reset-contract.py
-)
+# Run the complete offline suite as individual, timed CTest cases. No audio,
+# system install or host DSP instance is started during these checks.
+ctest --test-dir "$built" --output-on-failure --no-tests=error
 pkgroot="$work/package"
 mkdir -p "$pkgroot/DEBIAN"
 # All native application payload paths and Debian documentation are supplied
