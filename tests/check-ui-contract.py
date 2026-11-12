@@ -270,7 +270,7 @@ assert 'apply_dynamic_eq_from_controls();' in backend
 assert 'std::lock_guard<std::mutex> guard(wet_mutex);' in backend
 print('PASS: Dynamic EQ static preview, independent click editor, native filter handoff, tab ampersand')
 
-# Stable, native Qt resources for theme-specific header and fixed blue WM icon.
+# Qt resources, enlarged two-row header, and application icon identity.
 from pathlib import Path as _BrandPath
 brand_root = _BrandPath(__file__).resolve().parent.parent
 brand_gui = read_gui_sources(brand_root)
@@ -279,12 +279,22 @@ brand_qrc = (brand_root / "resources/viper4linux-icons.qrc").read_text()
 assert 'resources/viper4linux-icons.qrc' in brand_cmake
 assert 'PROPERTIES AUTORCC ON' in brand_cmake
 assert 'app.setWindowIcon(QIcon(":/viper4linux/blue.png"))' in brand_gui
-assert 'setWindowIcon(QIcon(":/viper4linux/blue.png"))' in brand_gui
+# Suppress the duplicate native decoration icon locally, not the app icon.
+assert 'setWindowIcon(QIcon(titleBarIcon))' in brand_gui
+assert 'titleBarIcon.fill(Qt::transparent)' in brand_gui
+# The Audio Output remains directly under the program name, not the icon.
+assert '#include <QGridLayout>' in brand_gui
+assert 'headerGrid->addWidget(header_icon_, 0, 0, 2, 1, Qt::AlignVCenter)' in brand_gui
+assert 'headerGrid->addWidget(title, 0, 1)' in brand_gui
+assert 'headerGrid->addWidget(audio_output_label_, 1, 1, 1, 4)' in brand_gui
+assert 'headerGrid->setColumnStretch(1, 1)' in brand_gui
+assert 'layout->addWidget(audio_output_label_)' not in brand_gui
+assert 'header_icon_->setFixedSize(58, 58)' in brand_gui
 # The main window owns the label; theme painting sets its pixmap through
 # the helper's headerIcon parameter. Both sides of the connection must survive.
 assert 'header_icon_ = new QLabel(central);' in brand_gui
 assert 'tabs_, header_icon_, status_' in brand_gui
-assert 'headerIcon->setPixmap(logo.scaled(36,36,Qt::KeepAspectRatio,Qt::SmoothTransformation))' in brand_gui
+assert 'headerIcon->setPixmap(logo.scaled(56,56,Qt::KeepAspectRatio,Qt::SmoothTransformation))' in brand_gui
 assert 'classic ? ":/viper4linux/blue.png" : ":/viper4linux/teal.png"' in brand_gui
 assert 'viper4linux-teal.png' in brand_qrc and 'viper4linux-blue.png' in brand_qrc
 for palette in ('teal','blue'):
@@ -301,7 +311,7 @@ assert 'selectBand(nearest)' in dynamic
 assert 'deq_table_->setFixedHeight(36 + deq_active_count_ * 25)' in brand_gui
 backend = processor + "\n" + (brand_root / 'src/backend/processor-run.inc').read_text()
 assert 'if (!enabled && !last_deq_enabled) return;' in backend
-print('PASS: transparent Qt-branded logos, stable blue X11 icon, selected-theme header, compact Dynamic EQ editor, disabled-edit bypass fix')
+print('PASS: two-row aligned Audio Output, enlarged theme logo, blue application icon, compact Dynamic EQ editor, disabled-edit bypass fix')
 
 # Native Cure Crossfeed: independent switch, three presets, saved state and IPC.
 for token in (

@@ -75,6 +75,7 @@
 #include <QFrame>
 #include <QFont>
 #include <QGroupBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMainWindow>
@@ -114,9 +115,12 @@ public:
     ViperWindow() : settings_("ViPERforLinux", "ViPERClean") {
         setObjectName("viperWindow");
         setWindowTitle("Viper4Linux");
-        // Keep the blue application/taskbar symbol stable across GUI themes.
-        // Set the X11 WM icon from Qt, not by a .desktop file workaround.
-        setWindowIcon(QIcon(":/viper4linux/blue.png"));
+        // Avoid duplicating the large logo in Cinnamon's native title bar.
+        // Keep the blue QApplication, .desktop and system-tray icons intact.
+        // Taskbar behavior with a transparent per-window icon needs live testing.
+        QPixmap titleBarIcon(1, 1);
+        titleBarIcon.fill(Qt::transparent);
+        setWindowIcon(QIcon(titleBarIcon));
         setMinimumSize(440, 440);
         resize(740, 800);
         auto* central = new QWidget(this);
@@ -129,17 +133,21 @@ public:
         font.setPointSize(font.pointSize() + 6);
         font.setBold(true);
         title->setFont(font);
-        auto* titleRow = new QHBoxLayout();
+        // The logo fills both header rows, while Audio Output begins beneath
+        // the title, not under the logo. The lower text spans all right columns.
+        auto* headerGrid = new QGridLayout();
+        headerGrid->setHorizontalSpacing(8);
+        headerGrid->setVerticalSpacing(2);
         header_icon_ = new QLabel(central);
         header_icon_->setObjectName("viperHeaderLogo");
-        header_icon_->setFixedSize(38, 38);
+        header_icon_->setFixedSize(58, 58);
         header_icon_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         header_icon_->setAccessibleName("Viper4Linux logo");
         header_icon_->setAlignment(Qt::AlignCenter);
-        titleRow->addWidget(header_icon_);
-        titleRow->addWidget(title, 1);
+        headerGrid->addWidget(header_icon_, 0, 0, 2, 1, Qt::AlignVCenter);
+        headerGrid->addWidget(title, 0, 1);
         auto* themeLabel = new QLabel("Theme", central);
-        titleRow->addWidget(themeLabel);
+        headerGrid->addWidget(themeLabel, 0, 2);
         theme_selector_ = new QComboBox(central);
         theme_selector_->setObjectName("viperThemeSelector");
         theme_selector_->setAccessibleName("Interface color scheme");
@@ -152,7 +160,7 @@ public:
         // font scales; the old 140px width clipped "Classic Viper" on Cinnamon.
         theme_selector_->setFixedWidth(qMax(168,
             theme_selector_->fontMetrics().horizontalAdvance("Classic Viper") + 62));
-        titleRow->addWidget(theme_selector_);
+        headerGrid->addWidget(theme_selector_, 0, 3);
         // Single compact menu instead of separate Help and About buttons.
         auto* menuButton = new QToolButton(central);
         menuButton->setObjectName("viperApplicationMenuButton");
@@ -162,14 +170,15 @@ public:
         menuButton->setFixedWidth(34);
         menuButton->setPopupMode(QToolButton::InstantPopup);
         menuButton->setMenu(makeApplicationMenu(menuButton));
-        titleRow->addWidget(menuButton);
-        layout->addLayout(titleRow);
+        headerGrid->addWidget(menuButton, 0, 4);
         // Read-only status from the background monitor. No CLI subprocesses.
         audio_output_label_ = new QLabel("Audio Output: detecting…", central);
         audio_output_label_->setObjectName("viperCurrentAudioOutput");
         audio_output_label_->setStyleSheet("color: palette(mid);");
         audio_output_label_->setToolTip("Current physical Audio Output; enable independent settings under Preferences.");
-        layout->addWidget(audio_output_label_);
+        headerGrid->addWidget(audio_output_label_, 1, 1, 1, 4);
+        headerGrid->setColumnStretch(1, 1);
+        layout->addLayout(headerGrid);
 
         // Master bypass lives outside both tabs, as in the previous working UI.
         auto* masterCard = new QFrame(central);
@@ -755,6 +764,10 @@ protected:
         const bool was_maximized = is_state_change &&
             static_cast<QWindowStateChangeEvent*>(event)->oldState().testFlag(Qt::WindowMaximized);
         QMainWindow::changeEvent(event);
+        // This handler requires the X11 window-state protocol. Native Wayland
+        // cannot notify clients of compositor-side minimization, but an
+        // explicitly selected XWayland/xcb GUI can still use this feature.
+        if (QGuiApplication::platformName() != QLatin1String("xcb")) return;
         if (!is_state_change || !isMinimized() || force_taskbar_minimize_
             || !settings_.value("ui/minimizeToTray", false).toBool()) return;
         if (!trayAvailable()) return; // Keep native taskbar behavior without a tray.

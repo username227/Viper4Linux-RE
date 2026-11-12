@@ -368,8 +368,14 @@
 
         auto* windowBox = new QGroupBox(page);
         auto* windowLayout = configureSection(windowBox, "Window & tray behavior", "prefs_window");
-        auto* minimize = new QCheckBox("Minimize to tray instead of taskbar", windowBox);
+        auto* minimize = new QCheckBox("Minimize to tray instead of taskbar (X11 only)", windowBox);
+        // Check the GUI's actual Qt platform, not XDG_SESSION_TYPE: a user
+        // can opt into XWayland manually from a Wayland desktop session.
+        const bool x11Gui = QGuiApplication::platformName() == QLatin1String("xcb");
         minimize->setChecked(settings_.value("ui/minimizeToTray", false).toBool());
+        minimize->setEnabled(x11Gui);
+        if (!x11Gui)
+            minimize->setToolTip("Native Wayland does not report title-bar minimization. Available with Qt's X11 (xcb) platform.");
         windowLayout->addWidget(minimize);
         windowLayout->addWidget(new QLabel("When the close (X) button is clicked:", windowBox));
         auto* closeGroup = new QButtonGroup(&dialog);
@@ -456,7 +462,10 @@
         if (outcome != QDialog::Accepted) return;
         settings_.setValue("ui/startupBehavior",
             startGroup->checkedId() == 2 ? "tray" : startGroup->checkedId() == 1 ? "minimized" : "show");
-        settings_.setValue("ui/minimizeToTray", minimize->isChecked());
+        // Disabled under native Wayland; never overwrite an X11-only setting
+        // when Preferences is accepted or Restore Defaults is clicked there.
+        if (x11Gui)
+            settings_.setValue("ui/minimizeToTray", minimize->isChecked());
         settings_.setValue("ui/closeBehavior",
             closeGroup->checkedId() == 2 ? "tray" : closeGroup->checkedId() == 1 ? "minimized" : "quit");
         settings_.setValue("ui/backendOnExit",
