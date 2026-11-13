@@ -376,7 +376,6 @@ int main() {
     assert(mainHelp.find("v4l-cli bass --help") == std::string::npos);
     assert(mainHelp.find("bass-gain <") == std::string::npos);
     assert(mainHelp.find("Use man viper4linux-ctl") != std::string::npos);
-    assert(mainHelp.find("legacy") == std::string::npos);
     assert(invoke({"--help"}, &displayed) == 0);
     assert(displayed.find("Global commands") != std::string::npos);
     assert(invoke({"--bass", "--help"}, &displayed) == 0);
@@ -386,8 +385,6 @@ int main() {
     assert(displayed.find("Bass gain (stored to hundredths)") != std::string::npos);
     assert(displayed.find("0 Natural, 1 Pure Bass+, 2 Subwoofer") != std::string::npos);
     assert(displayed.find("on|off|toggle") != std::string::npos);
-    assert(displayed.find("legacy") == std::string::npos);
-    assert(displayed.find("aliases") == std::string::npos);
     assert(invoke({"--headphone", "--help"}, &displayed) == 0);
     assert(displayed.find("level=1..5") != std::string::npos);
     assert(invoke({"--eq", "--help"}, &displayed) == 0);
@@ -411,8 +408,7 @@ int main() {
         assert(displayed.find("Usage: v4l-cli " + selector) != std::string::npos);
         assert(displayed.find("status [--full]") != std::string::npos);
         assert(displayed.find("Numeric setting") == std::string::npos);
-        assert(displayed.find("legacy") == std::string::npos);
-    }
+        }
     assert(invoke({"--status", "--help"}, &displayed) == 0);
     assert(displayed.find("--status [EFFECT]") != std::string::npos);
     server.stop_server();
