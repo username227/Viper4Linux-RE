@@ -83,8 +83,15 @@ int main() {
     assert(c.master_enabled.load() == 1); // Invalid later token did not bypass.
     assert(invoke({"off", "bass-gain", "2.5", "unknown-command"}) == 2);
     assert(c.master_enabled.load() == 1);
-    assert(invoke({"--eq", "bands=15", "level=12:-1.5"}) == 0);
-    assert(c.eq_band_count.load() == 15 && c.eq_levels_hundredths[11].load() == -150);
+    assert(invoke({"--eq", "bands=15", "level=2:-1.75",
+                   "level=5:2.5", "level=9:-3", "level=12:-1.5"}) == 0);
+    assert(c.eq_band_count.load() == 15);
+    assert(c.eq_levels_hundredths[1].load() == -175);
+    assert(c.eq_levels_hundredths[4].load() == 250);
+    assert(c.eq_levels_hundredths[8].load() == -300);
+    assert(c.eq_levels_hundredths[11].load() == -150);
+    assert(invoke({"--eq", "level=2:1", "level=16:2"}) == 2);
+    assert(c.eq_levels_hundredths[1].load() == -175);
     assert(invoke({"--eq", "bands=10", "level=12:-1.5"}) == 2);
     assert(c.eq_band_count.load() == 15);
 
@@ -259,18 +266,43 @@ int main() {
     assert(mainHelp.find("  --help ", globals) < effects);
     assert(mainHelp.find("  --bass ", effects) > effects);
     assert(mainHelp.find("  --headphone ", effects) > effects);
-    assert(mainHelp.find("v4l-cli bass --help") != std::string::npos);
+    assert(mainHelp.find("v4l-cli bass --help") == std::string::npos);
     assert(mainHelp.find("bass-gain <") == std::string::npos);
     assert(mainHelp.find("Use man viper4linux-ctl") != std::string::npos);
     assert(mainHelp.find("legacy") == std::string::npos);
     assert(invoke({"--help"}, &displayed) == 0);
     assert(displayed.find("Global commands") != std::string::npos);
-    assert(invoke({"bass", "--help"}, &displayed) == 0);
+    assert(invoke({"--bass", "--help"}, &displayed) == 0);
+    assert(invoke({"bass", "--help"}) == 2);
+    assert(invoke({"status", "--help"}) == 2);
     assert(displayed.find("gain=0.5..10") != std::string::npos);
+    assert(displayed.find("Bass gain (stored to hundredths)") != std::string::npos);
+    assert(displayed.find("0 Natural, 1 Pure Bass+, 2 Subwoofer") != std::string::npos);
+    assert(displayed.find("on|off|toggle") != std::string::npos);
     assert(displayed.find("legacy") == std::string::npos);
     assert(displayed.find("aliases") == std::string::npos);
     assert(invoke({"--headphone", "--help"}, &displayed) == 0);
     assert(displayed.find("level=1..5") != std::string::npos);
+    assert(invoke({"--eq", "--help"}, &displayed) == 0);
+    assert(displayed.find("level=BAND:DB") != std::string::npos);
+    assert(displayed.find("presets") != std::string::npos);
+    assert(invoke({"--field", "--help"}, &displayed) == 0);
+    assert(displayed.find("depth=0|200..950") != std::string::npos);
+    assert(invoke({"--limiter", "--help"}, &displayed) == 0);
+    assert(displayed.find(" [on|off]") == std::string::npos);
+    assert(invoke({"--ddc", "--help"}, &displayed) == 0);
+    assert(displayed.find("VDC profile in the GUI") != std::string::npos);
+    // Audit all registered numeric options and every effect page.
+    for (const auto& spec : viperbass::cli_batch::specs)
+        assert(viperbass::cli_help::descriptionFor(spec.command) != nullptr);
+    for (const auto& effect : viperbass::cli_scope::effects) {
+        const std::string selector = std::string("--") + effect.name;
+        assert(invoke({selector.c_str(), "--help"}, &displayed) == 0);
+        assert(displayed.find("Usage: v4l-cli " + selector) != std::string::npos);
+        assert(displayed.find("status [--full]") != std::string::npos);
+        assert(displayed.find("Numeric setting") == std::string::npos);
+        assert(displayed.find("legacy") == std::string::npos);
+    }
     assert(invoke({"--status", "--help"}, &displayed) == 0);
     assert(displayed.find("--status [EFFECT]") != std::string::npos);
     server.stop_server();

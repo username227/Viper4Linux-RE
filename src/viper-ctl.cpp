@@ -4,12 +4,15 @@
 #include "viper-cli-settings.h"
 #include "viper-cli-eq.h"
 #include "viper-cli-batch.h"
+#include "viper-cli-help.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -28,7 +31,7 @@ void usage(std::ostream& out = std::cerr) {
     out << "\nEach selector applies to the following options until the next selector.\n"
            "  v4l-cli --on --bass on gain=3 --headphone on level=2\n\n"
            "Numerical options use name=value; on/off inside an effect are local.\n"
-           "Use v4l-cli bass --help for Bass options, or --status --help.\n"
+           "Use v4l-cli --[EFFECT] --help for effect-specific options.\n"
            "Use man viper4linux-ctl for complete details.\n";
 }
 void usageStatus(std::ostream& out = std::cout) {
@@ -44,37 +47,50 @@ void usageStatus(std::ostream& out = std::cout) {
 void usageEffect(const viperbass::cli_scope::EffectName& effect,
                  std::ostream& out = std::cout) {
     const std::string name = effect.name;
+    const std::string actions = name == "limiter" ? "" :
+        name == "bass" ? " [on|off|toggle]" :
+        name == "eq" ? " [on|off|presets]" : " [on|off]";
     out << effect.title << "\nUsage: v4l-cli --" << name
-        << (name == "limiter" ? " [OPTION=VALUE ...] [status [--full]]\n"
-                              : " [on|off] [OPTION=VALUE ...] [status [--full]]\n")
-        << "       v4l-cli " << name << " --help\n\nOptions:\n";
+        << actions << " [OPTION=VALUE ...] [status [--full]]\n"
+           "       v4l-cli --" << name << " --help\n\nOptions:\n";
     if (name != "limiter")
-        out << "  on, off                 Enable or disable this effect\n";
+        out << "  on, off                         Enable or disable this effect\n";
     if (name == "bass")
-        out << "  toggle                  Toggle Bass on/off\n";
+        out << "  toggle                          Toggle Bass on/off\n";
     if (name == "eq")
-        out << "  presets                 List saved EQ curves\n";
+        out << "  presets                         List available EQ presets\n";
     for (const auto& spec : viperbass::cli_batch::specs) {
         const std::string command = spec.command;
         const std::string prefix = name + "-";
         if (command.compare(0, prefix.size(), prefix) != 0) continue;
         const std::string option = command.substr(prefix.size());
+        std::string argument;
         if (spec.kind == viperbass::cli_batch::Kind::EqLevel)
-            out << "  level=BAND:DB           Set band gain (-12..12 dB)\n";
+            argument = "level=BAND:DB";
         else if (spec.kind == viperbass::cli_batch::Kind::Name)
-            out << "  " << option << "=NAME               Saved preset name (quote names with spaces)\n";
+            argument = option + "=NAME";
         else if (spec.kind == viperbass::cli_batch::Kind::EqBands)
-            out << "  bands=10|15|25|31       Select EQ band count\n";
+            argument = "bands=10|15|25|31";
         else if (spec.kind == viperbass::cli_batch::Kind::MbBands)
-            out << "  bands=3|5               Select multiband count\n";
-        else
-            out << "  " << option << "=" << spec.min << ".." << spec.max
-                << (spec.kind == viperbass::cli_batch::Kind::Whole ? " (whole)" : "")
-                << '\n';
+            argument = "bands=3|5";
+        else if (command == "field-depth")
+            argument = "depth=0|200..950";
+        else {
+            std::ostringstream range;
+            range << option << '=' << spec.min << ".." << spec.max;
+            if (spec.kind == viperbass::cli_batch::Kind::Whole)
+                range << " (whole)";
+            argument = range.str();
+        }
+        const char* description = viperbass::cli_help::descriptionFor(command);
+        out << "  " << std::left << std::setw(32) << argument << "  "
+            << (description ? description : "Numeric setting") << '\n';
     }
-    out << "  status [--full]         Inspect only this effect (read-only)\n"
-           "\nUse option=value without spaces. No standalone numerical arguments.\n"
-           "Options are validated together before any edit is executed.\n";
+    out << "  status [--full]                 Inspect only this effect (read-only)\n";
+    if (const char* note = viperbass::cli_help::effectNote(name))
+        out << "\n" << note << '\n';
+    out << "\nUse option=value without spaces. No standalone numerical arguments.\n"
+           "All options are validated before any edits are made.\n";
 }
 
 float number(const char* value, float lower, float upper) {
@@ -122,16 +138,19 @@ int executeOne(int argc, char** argv) {
     }
     if (argc == 3 && std::string(argv[2]) == "--help") {
         const std::string command(argv[1]);
-        if (command == "--status" || command == "status") {
+        if (command == "--status") {
             usageStatus();
             return 0;
         }
-        const std::string effect = command.rfind("--", 0) == 0 ?
-            command.substr(2) : command;
-        if (const auto* match = viperbass::cli_scope::findEffect(effect)) {
-            usageEffect(*match);
-            return 0;
+        if (command.rfind("--", 0) == 0) {
+            if (const auto* match = viperbass::cli_scope::findEffect(command.substr(2))) {
+                usageEffect(*match);
+                return 0;
+            }
         }
+        std::cerr << "Unknown help topic '" << command
+                  << "'; use --effect --help or --status --help.\n";
+        return 2;
     }
     if (argc < 2) { usage(); return 2; }
     if (argc == 2 && std::string(argv[1]) == "eq-presets") {

@@ -12,7 +12,7 @@ viper4linux-ctl \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP control
 .br
 .B v4l-cli --status --help
 .br
-.B v4l-cli bass --help
+.B v4l-cli --EFFECT --help
 .br
 .B v4l-cli --help
 .SH DESCRIPTION
@@ -24,8 +24,8 @@ command is a symlink for viper4linux-ctl and accepts identical arguments.
 Effect commands require an active channel; they do not start PipeWire.
 Successful edits are written to the same per-user settings used by the GUI,
 including when the GUI is closed. The GUI also reads the live controls while it
-is open. Named presets and impulse-response file selection are GUI features,
-not CLI features.
+is open. The CLI can apply existing EQ presets, but creating, overwriting, or
+importing presets and selecting impulse-response files are GUI features.
 .PP
 Throughout this manual, a range such as "0 through 100" includes both ends.
 A 
@@ -42,7 +42,7 @@ are independent of the GUI tab layout.
 To see the compact global help, use
 .BR --help ;
 for individual controls use
-.BR "bass --help" ,
+.BR "--bass --help" ,
 or the corresponding effect name.
 .SH EFFECT-SCOPED SYNTAX
 Global options begin with two hyphens. Effect selectors also begin with
@@ -68,7 +68,7 @@ All value-taking options use
 .B name=value
 with no spaces around the equals sign.
 Use
-.B v4l-cli clarity --help
+.B v4l-cli --clarity --help
 for the supported options and their numeric ranges.
 Graphic EQ band gain uses
 .B level=BAND:DB
@@ -267,7 +267,7 @@ inclusive, rounded to the nearest whole hertz.
 Set effect intensity. VALUE accepts whole numbers or decimals between 0
 and 100 inclusive, representing a percentage; decimals are rounded to the
 nearest whole percentage point. Example:
-.B viper4linux-ctl --psycho intensity=30
+.B v4l-cli --psycho intensity=30
 .TP
 .BI "--psycho order=" VALUE
 Set harmonic order. VALUE accepts decimals from 2 through 5 inclusive,
@@ -331,7 +331,7 @@ the current number of bands, inclusive. DB accepts decimals from -12 through
 +12 dB inclusive, stored to the nearest hundredth of a decibel.
 Changing a band marks the EQ preset as Custom; built-in preset curves remain
 unchanged. Example:
-.B viper4linux-ctl --eq level=3:-1.75
+.B v4l-cli --eq level=3:-1.75
 .TP
 .B --eq presets
 List available built-in and user EQ presets. Works even if the DSP backend
@@ -577,9 +577,9 @@ Unknown command, wrong number of arguments, or invalid value, once the DSP
 control channel is available. Backend availability is checked first, so an
 unavailable backend can produce exit status 1 even for an invalid command.
 For example,
-.B viper4linux-ctl --tube drive=12.5
+.B v4l-cli --tube drive=12.5
 is rejected because Tube drive requires a whole number, whereas
-.B viper4linux-ctl --psycho intensity=12.5
+.B v4l-cli --psycho intensity=12.5
 is accepted and rounded to 13.
 .SH EXAMPLES
 .TP
@@ -592,36 +592,13 @@ Show only Bass parameters without changing any settings.
 .B v4l-cli --bass status --full
 Show the expanded Bass status.
 .TP
-.B v4l-cli --eq on bands=15 level=2:-1.75
-Set the 15-band graphic EQ and band 2 level, with preflight validation.
+.B v4l-cli --eq on bands=15 level=2:-1.75 level=5:2.5 level=9:-3
+Enable the 15-band graphic EQ; set bands 2, 5, and 9 to -1.75, +2.5,
+and -3 dB respectively. Repeat level=BAND:DB to adjust any number of
+bands in one invocation; the remaining levels are not edited.
+Every requested band index is validated before any setting is changed.
 .TP
-.B v4l-cli --status --help
-Show status options and syntax.
-.TP
-.B viper4linux-ctl --status
-Inspect current DSP state without modifying it.
-.TP
-.B viper4linux-ctl --bass on
-Enable Bass while leaving master processing unchanged.
-.TP
-.B viper4linux-ctl --clarity gain=2.5
-Set Clarity gain to 2.5.
-.TP
-.B viper4linux-ctl --eq bands=15
-Use the 15-band graphic EQ mode.
-.TP
-.B viper4linux-ctl --eq level=2:-1.75
-Apply -1.75 dB to EQ band 2.
-.TP
-.B v4l-cli --on --bass on --clarity gain=2.5
-Enable master processing and ViPER Bass, then set Clarity gain to 2.5
-in a single command invocation.
-.TP
-.B viper4linux-ctl --eq on bands=15 level=2:-1.75
-Enable the graphic EQ, select 15 bands, and set band 2 to -1.75 dB.
-The band index is validated against the selected 15-band layout.
-.TP
-.B viper4linux-ctl --bass mode=1 gain=3.5 --status --full
+.B v4l-cli --bass mode=1 gain=3.5 --status --full
 Set Bass mode and gain, then display detailed status to check the
 resulting live configuration.
 
