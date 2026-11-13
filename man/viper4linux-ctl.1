@@ -107,10 +107,16 @@ All commands and numeric arguments are validated before any changes are
 applied; an invalid argument anywhere in the sequence prevents earlier
 changes from being applied. Preset names and saved curves are also validated
 before an attached DSP channel is modified. Valid commands execute in their
-listed order using the same handlers as standalone commands, and each prints
-its usual output. Runtime errors (such as a settings-write failure or backend
+listed order using the same handlers as standalone commands. After all
+commands succeed, one final report shows each affected effect once, using
+its final settings. Effects are listed in first-appearance order, even if a
+later scope returns to an earlier effect. A targeted status request is merged
+with that effect; a global status request replaces the smaller confirmations
+with one complete report. Repeated EQ band edits show the final level of each
+edited band. Runtime errors (such as a settings-write failure or backend
 shutdown) can still stop the sequence after earlier commands have succeeded:
-command sequences are not transactions and do not support rollback.
+command sequences are not transactions and do not support rollback. An
+interrupted sequence reports its error instead of a successful final summary.
 .PP
 .B --status --full
 and
