@@ -64,7 +64,7 @@ package=${main_packages[0]}
 pacman -Qip "$package"
 listing=$(pacman -Qlp "$package")
 for installed in usr/bin/viper4linux usr/bin/viper4linux-gui \
-                 usr/bin/viper4linux-ctl usr/lib/ladspa/viper_dsp_ladspa.so \
+                 usr/bin/v4l-cli usr/bin/viper4linux-ctl usr/lib/ladspa/viper_dsp_ladspa.so \
                  usr/share/man/man1/viper4linux.1 \
                  usr/share/licenses/viper4linux-re/ViPERDSP-NOTICE.md; do
     grep -Fq "$installed" <<< "$listing" || {

@@ -83,7 +83,7 @@ Description: Native ViPERDSP audio processor for PipeWire
 CONTROL
 shlib_output=$(cd "$work/dpkg-shlibdeps" && dpkg-shlibdeps -O \
     -e"$pkgroot/usr/bin/viper4linux-gui" \
-    -e"$pkgroot/usr/bin/viper4linux-ctl" \
+    -e"$pkgroot/usr/bin/v4l-cli" \
     -e"$pkgroot/usr/lib/ladspa/viper_dsp_ladspa.so")
 shlib_depends=${shlib_output#shlibs:Depends=}
 [[ $shlib_depends != "$shlib_output" && -n $shlib_depends ]] || {

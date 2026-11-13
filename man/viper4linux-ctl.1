@@ -1,6 +1,6 @@
-.TH VIPER4LINUX-CTL 1 "November 2026" "ViPER4Linux-RE" "User Commands"
+.TH V4L-CLI 1 "November 2026" "ViPER4Linux-RE" "User Commands"
 .SH NAME
-viper4linux-ctl \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP controls
+v4l-cli \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP controls
 .SH SYNOPSIS
 .B viper4linux-ctl
 .I COMMAND1
@@ -16,11 +16,11 @@ viper4linux-ctl \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP control
 .RI [ COMMAND2 " [ARGUMENTS...]]"
 .RI ...
 .SH DESCRIPTION
-.B viper4linux-ctl
-operates the active per-user ViPER4Linux-RE DSP control channel.
-The shorter
 .B v4l-cli
-command is a symlink for viper4linux-ctl and accepts identical arguments.
+operates the active per-user ViPER4Linux-RE DSP control channel.
+The previous
+.B viper4linux-ctl
+name remains available as a compatibility symlink.
 Effect commands require an active channel; they do not start PipeWire.
 Successful edits are written to the same per-user settings used by the GUI,
 including when the GUI is closed. The GUI also reads the live controls while it

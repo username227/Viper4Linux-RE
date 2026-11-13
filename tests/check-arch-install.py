@@ -83,12 +83,16 @@ with tempfile.TemporaryDirectory(prefix='viper arch cmake packaging ') as tmp:
         output = dest / 'usr/lib/viper4linux' / name
         assert output.read_bytes() == (tree / 'src' / name).read_bytes(), name
         assert output.stat().st_mode & 0o777 == 0o644
-    for name in ['viper4linux', 'viper4linux-ctl', 'viper4linux-gui',
+    for name in ['viper4linux', 'v4l-cli', 'viper4linux-ctl', 'viper4linux-gui',
                  'viper4linux-output', 'viper4linux-output-state']:
         assert (dest / 'usr/bin' / name).stat().st_mode & 0o777 == 0o755
     assert (dest / 'usr/lib/viper4linux/start-backend').stat().st_mode & 0o777 == 0o755
-    assert os.readlink(dest / 'usr/bin/v4l-cli') == 'viper4linux-ctl'
-    assert os.readlink(dest / 'usr/share/man/man1/v4l-cli.1') == 'viper4linux-ctl.1'
+    assert (dest / 'usr/bin/v4l-cli').is_file()
+    assert not (dest / 'usr/bin/v4l-cli').is_symlink()
+    assert os.readlink(dest / 'usr/bin/viper4linux-ctl') == 'v4l-cli'
+    assert (dest / 'usr/share/man/man1/v4l-cli.1').is_file()
+    assert not (dest / 'usr/share/man/man1/v4l-cli.1').is_symlink()
+    assert os.readlink(dest / 'usr/share/man/man1/viper4linux-ctl.1') == 'v4l-cli.1'
     assert (dest / 'usr/lib/ladspa/viper_dsp_ladspa.so').stat().st_mode & 0o777 == 0o755
     assert (dest / 'usr/share/doc/viper4linux/docs/guide.md').read_text() == 'example\n'
     assert not (dest / 'usr/share/licenses/viper4linux-re-git/LICENSE').exists()

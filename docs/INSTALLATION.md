@@ -163,8 +163,8 @@ The launcher starts or reuses the application's audio backend and Audio Output m
 For CLI diagnostics:
 
 ```bash
-viper4linux-ctl status
-viper4linux-ctl --help
+v4l-cli status
+v4l-cli --help
 ```
 
 If the status reports **Ready to process audio**, the backend process exists but the audio-control channel is not yet ready. If it persists, consult the [user guide](USER-GUIDE.md) and backend logs (usually `~/.local/state/viper4linux/backend.log`). An advancing audio callback counter indicates processing activity, not necessarily audible sound. Audio Output memory is opt-in and disabled by default.

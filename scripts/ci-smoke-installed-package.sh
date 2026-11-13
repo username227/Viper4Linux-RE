@@ -48,9 +48,9 @@ case "$mode" in
             }
         done
         if [[ -f /usr/share/man/man1/viper4linux.1.gz ]]; then
-            test "$(readlink /usr/share/man/man1/v4l-cli.1.gz)" = viper4linux-ctl.1.gz
+            test "$(readlink /usr/share/man/man1/viper4linux-ctl.1.gz)" = v4l-cli.1.gz
         elif [[ -f /usr/share/man/man1/viper4linux.1 ]]; then
-            test "$(readlink /usr/share/man/man1/v4l-cli.1)" = viper4linux-ctl.1
+            test "$(readlink /usr/share/man/man1/viper4linux-ctl.1)" = v4l-cli.1
         else
             echo 'Arch container omitted optional manual pages; package archive entries verified.'
         fi
@@ -84,7 +84,7 @@ case "$mode" in
                 exit 1
             }
         done
-        [[ $deb_listing == *"usr/share/man/man1/v4l-cli.1.gz -> viper4linux-ctl.1.gz"* ]] || {
+        [[ $deb_listing == *"usr/share/man/man1/viper4linux-ctl.1.gz -> v4l-cli.1.gz"* ]] || {
             echo 'Native .deb archive missing manual-page alias.' >&2
             exit 1
         }
@@ -98,7 +98,7 @@ case "$mode" in
             echo 'Container dpkg policy excludes optional manual pages; archive contents verified.'
         else
             test -f /usr/share/man/man1/viper4linux.1.gz
-            test "$(readlink /usr/share/man/man1/v4l-cli.1.gz)" = viper4linux-ctl.1.gz
+            test "$(readlink /usr/share/man/man1/viper4linux-ctl.1.gz)" = v4l-cli.1.gz
         fi
         ;;
     *)
@@ -109,15 +109,17 @@ esac
 
 # Verify installed binary and data layout, but NEVER start the backend/GUI.
 echo 'Checking common installed commands, routing file, and LADSPA module...'
-for app in viper4linux viper4linux-gui viper4linux-ctl \
+for app in viper4linux viper4linux-gui v4l-cli viper4linux-ctl \
            viper4linux-output viper4linux-output-state; do
     test -x "/usr/bin/$app"
 done
 test -x /usr/lib/viper4linux/start-backend
 test -r /usr/lib/viper4linux/viper_launcher.py
 test -r /usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf
-test -L /usr/bin/v4l-cli
-test "$(readlink /usr/bin/v4l-cli)" = viper4linux-ctl
+test -f /usr/bin/v4l-cli
+test ! -L /usr/bin/v4l-cli
+test -L /usr/bin/viper4linux-ctl
+test "$(readlink /usr/bin/viper4linux-ctl)" = v4l-cli
 test -s /usr/lib/ladspa/viper_dsp_ladspa.so
 # Avoid grep -q in a pipefail pipeline: an early match can SIGPIPE nm.
 nm -D /usr/lib/ladspa/viper_dsp_ladspa.so | grep -E ' [TW] ladspa_descriptor$' >/dev/null

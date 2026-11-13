@@ -82,7 +82,7 @@ For a desktop install, users can open the matching `.deb` in their graphical
 package manager or use `sudo apt install ./filename.deb` to resolve runtime
 dependencies. They must have an operational **PipeWire** audio session;
 PulseAudio-only setups are not supported. The GUI can be started with
-`viper4linux` and the CLI with `viper4linux-ctl`.
+`viper4linux` and the CLI with `v4l-cli`.
 
 This package deliberately uses the same `viper4linux-re` package name and
 filesystem paths as the native Arch release. The published 1.0.0 source and

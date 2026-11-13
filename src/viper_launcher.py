@@ -26,6 +26,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # builds keep the original relative layout and never touch /usr.
 SYSTEM_MODE = Path(__file__).resolve().parent == Path('/usr/lib/viper4linux')
 SYSTEM_BACKEND = Path('/usr/lib/ladspa/viper_dsp_ladspa.so')
+# Keep the historical logical path in fingerprint input: the old-name
+# compatibility symlink resolves to the primary v4l-cli binary, so unchanged
+# binary bytes retain the previous fingerprint and avoid a needless restart.
 SYSTEM_CTL = Path('/usr/bin/viper4linux-ctl')
 SYSTEM_ROUTING = Path('/usr/share/viper4linux/routing-config/filter-chain.conf.d')
 PROC = Path('/proc')

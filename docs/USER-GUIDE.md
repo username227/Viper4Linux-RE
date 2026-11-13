@@ -50,18 +50,18 @@ not reboot.
 
 ## CLI and troubleshooting
 
-The installed CLI command is `viper4linux-ctl`, with the shorter `v4l-cli`
-symlink providing the same commands and options. Try:
+The installed CLI command is `v4l-cli`. The former
+`viper4linux-ctl` remains available as a compatibility symlink. Try:
 
 ```bash
-viper4linux-ctl status
 v4l-cli status
-viper4linux-ctl off
-viper4linux-ctl on
-viper4linux-ctl bass-off
-viper4linux-ctl bass-on
-viper4linux-ctl --help
-man viper4linux-ctl
+v4l-cli status
+v4l-cli off
+v4l-cli on
+v4l-cli bass-off
+v4l-cli bass-on
+v4l-cli --help
+man v4l-cli
 ```
 
 Backend status distinguishes the following conditions:
@@ -103,7 +103,7 @@ preceding the new logging format cannot be aged precisely: they are
 conservatively treated as belonging to the first subsequent timestamped
 entry. The duration is a retention period, not a fixed disk-space quota.
 
-`viper4linux-ctl status` is instantaneous and reports the current callback
+`v4l-cli status` is instantaneous and reports the current callback
 counter rather than claiming active/idle from a single sample. Run it twice
 if you need to check whether the number is increasing. The GUI observes changes
 automatically. Closing a music player does not unload or restart the DSP.
@@ -122,7 +122,7 @@ taken effect. GUI changes and CLI changes may supersede each other. The commands
 Legacy `all-on`/`all-off` and `toggle` aliases remain accepted for scripts.
 
 For Headphone Surround+, the CLI uses the **same Level 1 through Level 5**
-numbering shown by the GUI. For instance, `viper4linux-ctl headphone-level 2`
+numbering shown by the GUI. For instance, `v4l-cli headphone-level 2`
 selects GUI Level 2 (the backend stores index 1). The only supported command
 name is `headphone-level`; the older `headphone-quality` name was retired
 during the CLI cleanup. Invalid values return exit status 2 without changing
@@ -168,16 +168,16 @@ importing `.irs` and `.vdc` files, see [Presets and libraries](PRESETS-AND-LIBRA
 
 ## Automating effects with the CLI
 
-`viper4linux-ctl` can toggle every effect group and configure many common
+`v4l-cli` can toggle every effect group and configure many common
 parameters without starting the GUI. The master `on`/`off` bypass controls
 are distinct from `bass-on`/`bass-off`, and Headphone Surround+ uses the same
 one-based `headphone-level 1..5` as the GUI.
 
 ```sh
-viper4linux-ctl on
-viper4linux-ctl headphone-level 2
-viper4linux-ctl imager-on
-viper4linux-ctl imager-mid 149
+v4l-cli on
+v4l-cli headphone-level 2
+v4l-cli imager-on
+v4l-cli imager-mid 149
 ```
 
 The interface applies changes to the **running** backend. An open GUI reflects
@@ -188,4 +188,4 @@ the file in the GUI; the CLI can toggle the effect after it is loaded.
 
 The CLI returns status `0` for a successful command, `1` if no backend is
 running, and `2` for invalid commands or arguments. See
-`man viper4linux-ctl` for the available switches and argument ranges.
+`man v4l-cli` for the available switches and argument ranges.

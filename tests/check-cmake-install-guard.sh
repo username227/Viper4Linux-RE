@@ -42,7 +42,9 @@ reject 'prefix' env DESTDIR="$work/stage" cmake --install "$built" --prefix /tmp
 
 DESTDIR="$work/stage" cmake --install "$built" > "$work/success.log"
 test -x "$work/stage/usr/bin/viper4linux-gui"
-test -x "$work/stage/usr/bin/viper4linux-ctl"
+test -x "$work/stage/usr/bin/v4l-cli"
+test ! -L "$work/stage/usr/bin/v4l-cli"
+test "$(readlink "$work/stage/usr/bin/viper4linux-ctl")" = v4l-cli
 test -s "$work/stage/usr/lib/ladspa/viper_dsp_ladspa.so"
 
 echo 'PASS: CMake refuses host, symlinked, missing and wrong-prefix destinations; private DESTDIR stages successfully'

@@ -7,7 +7,7 @@ runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 [[ -r /usr/share/pipewire/filter-chain.conf ]] || {
   echo 'Missing system PipeWire filter-chain configuration' >&2; exit 1;
 }
-[[ -r /usr/lib/ladspa/viper_dsp_ladspa.so && -x /usr/bin/viper4linux-ctl ]] || {
+[[ -r /usr/lib/ladspa/viper_dsp_ladspa.so && -x /usr/bin/v4l-cli ]] || {
   echo 'Viper4Linux native backend files missing' >&2; exit 1;
 }
 command -v pipewire >/dev/null || { echo 'PipeWire executable missing' >&2; exit 1; }

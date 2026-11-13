@@ -125,7 +125,7 @@ Music players / other audio applications
         Selected physical output
        (headphones, speakers, etc.)
 
- Qt6 GUI / viper4linux-ctl
+ Qt6 GUI / v4l-cli
                  |
        Shared control interface
                  |
@@ -182,7 +182,7 @@ Launching `./viper4linux` can replace a running packaged ViPER backend.
 See the [developer guide](docs/DEVELOPMENT.md) for build and test details.
 
 Once installed, launch `viper4linux` from the application menu or terminal.
-For command-line controls, use `viper4linux-ctl --help` or `v4l-cli --help`;
+For command-line controls, use `v4l-cli --help` (the old `viper4linux-ctl` name remains an alias);
 see the [user guide](docs/USER-GUIDE.md) for operation and troubleshooting.
 
 ## Presets, profiles, and settings

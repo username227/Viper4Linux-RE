@@ -96,11 +96,11 @@ install(CODE [[
 ]])
 
 # Keep build outputs named viper-gui/viper-ctl/viper-output-state for source
-# users, but stage the existing package command names without modifying them.
+# users; stage v4l-cli as the primary command and an old-name compatibility link.
 install(PROGRAMS "$<TARGET_FILE:viper-gui>"
   DESTINATION "${CMAKE_INSTALL_BINDIR}" RENAME "viper4linux-gui")
 install(PROGRAMS "$<TARGET_FILE:viper-ctl>"
-  DESTINATION "${CMAKE_INSTALL_BINDIR}" RENAME "viper4linux-ctl")
+  DESTINATION "${CMAKE_INSTALL_BINDIR}" RENAME "v4l-cli")
 install(PROGRAMS "$<TARGET_FILE:viper-output-state>"
   DESTINATION "${CMAKE_INSTALL_BINDIR}" RENAME "viper4linux-output-state")
 install(PROGRAMS "$<TARGET_FILE:viper_dsp_ladspa>"
@@ -125,10 +125,12 @@ install(FILES "${PROJECT_SOURCE_DIR}/resources/viper4linux-blue.png"
 install(FILES "${PROJECT_SOURCE_DIR}/resources/viper4linux-blue.svg"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps"
   RENAME "viper4linux.svg")
-install(FILES
-  "${PROJECT_SOURCE_DIR}/man/viper4linux.1"
-  "${PROJECT_SOURCE_DIR}/man/viper4linux-ctl.1"
+install(FILES "${PROJECT_SOURCE_DIR}/man/viper4linux.1"
   DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
+# Keep the source filename until the separate CLI documentation branch
+# is integrated; install the primary name as the real manpage.
+install(FILES "${PROJECT_SOURCE_DIR}/man/viper4linux-ctl.1"
+  DESTINATION "${CMAKE_INSTALL_MANDIR}/man1" RENAME "v4l-cli.1")
 
 if(VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "arch")
   # GPL-3.0-only is supplied by Arch's system licenses package; do not duplicate it.
@@ -168,7 +170,7 @@ else()
   # compression after the normal install(FILES) rules, inside DESTDIR only.
   find_program(VIPER_SYSTEM_GZIP_EXECUTABLE gzip REQUIRED)
   install(CODE [[
-    foreach(_viper_man IN ITEMS viper4linux.1 viper4linux-ctl.1)
+    foreach(_viper_man IN ITEMS viper4linux.1 v4l-cli.1)
       set(_viper_man_path
         "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/man/man1/${_viper_man}")
       execute_process(
@@ -184,15 +186,15 @@ endif()
 # Relative symlinks survive package staging. Refuse conflicting destinations
 # instead of replacing unrelated files in an existing staging directory.
 if(VIPER_SYSTEM_INSTALL_LAYOUT STREQUAL "debian")
-  set(_viper_man_link "share/man/man1/v4l-cli.1.gz|viper4linux-ctl.1.gz")
+  set(_viper_man_link "share/man/man1/viper4linux-ctl.1.gz|v4l-cli.1.gz")
 else()
-  set(_viper_man_link "share/man/man1/v4l-cli.1|viper4linux-ctl.1")
+  set(_viper_man_link "share/man/man1/viper4linux-ctl.1|v4l-cli.1")
 endif()
 # The string configuration substitutes only the chosen man-page variant,
 # leaving DESTDIR evaluation to CMake's generated install script.
 set(_viper_links_code [=[
   foreach(_viper_link IN ITEMS
-      "bin/v4l-cli|viper4linux-ctl"
+      "bin/viper4linux-ctl|v4l-cli"
       "@_viper_man_link@")
     string(REPLACE "|" ";" _viper_link_parts "${_viper_link}")
     list(GET _viper_link_parts 0 _viper_relative)
