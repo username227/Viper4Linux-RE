@@ -29,17 +29,17 @@ struct ArgSpec {
 inline constexpr ArgSpec specs[] = {
         {"bass-mode",1,Kind::Whole,0,2}, {"bass-gain",1,Kind::Decimal,0.5f,10},
         {"bass-freq",1,Kind::Decimal,15,150},
-        {"mono-mode",1,Kind::Decimal,0,2}, {"mono-strength",1,Kind::Decimal,0.5f,10},
+        {"mono-mode",1,Kind::Whole,0,2}, {"mono-strength",1,Kind::Decimal,0.5f,10},
         {"mono-freq",1,Kind::Decimal,15,150},
         {"psycho-cutoff",1,Kind::Decimal,60,150}, {"psycho-intensity",1,Kind::Decimal,0,100},
-        {"psycho-order",1,Kind::Decimal,2,5}, {"psycho-original",1,Kind::Decimal,0,100},
+        {"psycho-order",1,Kind::Whole,2,5}, {"psycho-original",1,Kind::Decimal,0,100},
         {"dynamic-x-low",1,Kind::Decimal,0,2400}, {"dynamic-x-high",1,Kind::Decimal,0,12000},
         {"dynamic-y-low",1,Kind::Decimal,0,200}, {"dynamic-y-high",1,Kind::Decimal,0,300},
         {"dynamic-side-low",1,Kind::Decimal,0,100}, {"dynamic-side-high",1,Kind::Decimal,0,100},
         {"dynamic-strength",1,Kind::Decimal,0,100},
         {"eq-bands",1,Kind::EqBands,10,31}, {"eq-level",2,Kind::EqLevel,-12,12},
         {"eq-preset",1,Kind::Name},
-        {"clarity-gain",1,Kind::Decimal,0,4.5f}, {"clarity-mode",1,Kind::Decimal,0,2},
+        {"clarity-gain",1,Kind::Decimal,0,4.5f}, {"clarity-mode",1,Kind::Whole,0,2},
         {"spectrum-freq",1,Kind::Decimal,2200,8200}, {"spectrum-exciter",1,Kind::Decimal,0,6},
         {"tube-model",1,Kind::Whole,0,2}, {"tube-drive",1,Kind::Whole,0,100},
         {"tube-mix",1,Kind::Whole,0,100}, {"analogx-mode",1,Kind::Whole,0,2},
@@ -58,7 +58,9 @@ inline constexpr ArgSpec specs[] = {
         {"fet-threshold",1,Kind::Whole,-48,0}, {"fet-ratio",1,Kind::Decimal,1,10},
         {"mb-bands",1,Kind::MbBands,3,5},
         {"convolver-cross",1,Kind::Decimal,0,100},
-        {"limiter-threshold",1,Kind::Decimal,0.3f,1}, {"limiter-gain",1,Kind::Decimal,0.01f,2},
+        {"limiter-threshold",1,Kind::Decimal,-10.5f,1},
+        {"limiter-threshold-db",1,Kind::Decimal,-10.5f,0},
+        {"limiter-gain",1,Kind::Decimal,0.01f,2},
         {"limiter-pan",1,Kind::Decimal,-1,1},
         {"agc-strength",1,Kind::Decimal,0.5f,3}, {"agc-max",1,Kind::Decimal,1,10},
         {"agc-threshold",1,Kind::Decimal,0.3f,1},
@@ -106,6 +108,10 @@ inline void checkValue(const ArgSpec& spec, const Command& cmd, int& eqBands) {
         return;
     }
     const float value = decimal(cmd.args[1], spec.min, spec.max);
+    // threshold= supports GUI dBFS (-10.5..0) and native linear (0.3..1).
+    // Zero is unambiguously 0 dBFS; the positive gap is not a valid value.
+    if (cmd.args[0] == "limiter-threshold" && value > 0.f && value < 0.3f)
+        throw std::invalid_argument("limiter threshold must be -10.5..0 dBFS or 0.3..1 linear");
     if (spec.kind == Kind::Whole && std::trunc(value) != value)
         throw std::invalid_argument("expected a whole number");
     if (spec.kind == Kind::EqBands) {

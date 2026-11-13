@@ -76,6 +76,8 @@ void usageEffect(const viperbass::cli_scope::EffectName& effect,
             argument = "bands=3|5";
         else if (command == "field-depth")
             argument = "depth=0|200..950";
+        else if (command == "limiter-threshold")
+            argument = "threshold=-10.5..0|0.3..1";
         else {
             std::ostringstream range;
             range << option << '=' << spec.min << ".." << spec.max;
@@ -131,7 +133,6 @@ void show(viperbass::Controls& c, const std::string& command = "status",
     }
     viperbass::printCliReport(std::cout, c, command, band, expanded, info, selectedEffect);
 }
-}
 struct EffectSummary {
     std::string name;
     bool requestedStatus = false;
@@ -152,7 +153,8 @@ struct BatchSummary {
     EffectSummary& effect(const std::string& name) {
         for (auto& entry : effects)
             if (entry.name == name) return entry;
-        effects.push_back(EffectSummary{name});
+        effects.emplace_back();
+        effects.back().name = name;
         return effects.back();
     }
 
@@ -403,14 +405,14 @@ int executeOne(int argc, char** argv, bool emitReport = true) {
         else if (cmd == "speaker-off" && argc == 2) workerToggle(c.speaker_enabled, c.speaker_request_serial, 0);
         else if (cmd == "mono-on" && argc == 2) c.bass_mono_enabled.store(1);
         else if (cmd == "mono-off" && argc == 2) c.bass_mono_enabled.store(0);
-        else if (cmd == "mono-mode" && argc == 3) c.bass_mono_mode.store(static_cast<int>(std::lround(number(argv[2],0,2))));
+        else if (cmd == "mono-mode" && argc == 3) c.bass_mono_mode.store(whole(argv[2], 0, 2));
         else if (cmd == "mono-strength" && argc == 3) c.bass_mono_strength_centi.store(static_cast<int>(std::lround(number(argv[2],.5f,10.f)*100)));
         else if (cmd == "mono-freq" && argc == 3) c.bass_mono_frequency_hz.store(static_cast<int>(std::lround(number(argv[2],15,150))));
         else if (cmd == "psycho-on" && argc == 2) c.psycho_enabled.store(1);
         else if (cmd == "psycho-off" && argc == 2) c.psycho_enabled.store(0);
         else if (cmd == "psycho-cutoff" && argc == 3) c.psycho_cutoff_hz.store(static_cast<int>(std::lround(number(argv[2],60,150))));
         else if (cmd == "psycho-intensity" && argc == 3) c.psycho_intensity_percent.store(static_cast<int>(std::lround(number(argv[2],0,100))));
-        else if (cmd == "psycho-order" && argc == 3) c.psycho_order.store(static_cast<int>(std::lround(number(argv[2],2,5))));
+        else if (cmd == "psycho-order" && argc == 3) c.psycho_order.store(whole(argv[2], 2, 5));
         else if (cmd == "psycho-original" && argc == 3) c.psycho_original_percent.store(static_cast<int>(std::lround(number(argv[2],0,100))));
         else if (cmd == "dynamic-on" && argc == 2) c.dynamic_enabled.store(1);
         else if (cmd == "dynamic-off" && argc == 2) c.dynamic_enabled.store(0);
@@ -426,7 +428,7 @@ int executeOne(int argc, char** argv, bool emitReport = true) {
         else if (cmd == "clarity-gain" && argc == 3)
             c.clarity_gain_milli.store(static_cast<int>(std::lround(number(argv[2], 0.f, 4.5f) * 1000.f)));
         else if (cmd == "clarity-mode" && argc == 3)
-            c.clarity_mode.store(static_cast<int>(std::lround(number(argv[2], 0.f, 2.f))));
+            c.clarity_mode.store(whole(argv[2], 0, 2));
         else if (cmd == "spectrum-on" && argc == 2) c.spectrum_enabled.store(1);
         else if (cmd == "spectrum-off" && argc == 2) c.spectrum_enabled.store(0);
         else if (cmd == "spectrum-freq" && argc == 3)
@@ -456,8 +458,19 @@ int executeOne(int argc, char** argv, bool emitReport = true) {
             c.diff_mix_percent.store(static_cast<int>(std::lround(number(argv[2], 0.f, 100.f))));
         else if (cmd == "diff-lowpass" && argc == 3)
             c.diff_lp_hz.store(static_cast<int>(std::lround(number(argv[2], 0.f, 20000.f))));
-        else if (cmd == "limiter-threshold" && argc == 3)
-            c.limiter_threshold_permille.store(static_cast<int>(std::lround(number(argv[2], 0.3f, 1.f) * 1000.f)));
+        else if ((cmd == "limiter-threshold" || cmd == "limiter-threshold-db") && argc == 3) {
+            // A nonpositive threshold is dBFS (as displayed in the GUI).
+            // Positive values 0.3..1 retain the original linear CLI meaning.
+            // The explicit threshold-db option always uses dBFS.
+            const bool dbOnly = cmd == "limiter-threshold-db";
+            const double requested = number(argv[2], -10.5f, dbOnly ? 0.f : 1.f);
+            if (!dbOnly && requested > 0.0 && requested < 0.3)
+                throw std::invalid_argument("Limiter threshold must be -10.5..0 dBFS or 0.3..1 linear");
+            const double linear = (dbOnly || requested <= 0.0)
+                ? std::pow(10.0, requested / 20.0) : requested;
+            c.limiter_threshold_permille.store(std::clamp(
+                static_cast<int>(std::lround(linear * 1000.0)), 300, 1000));
+        }
         else if (cmd == "limiter-gain" && argc == 3)
             c.limiter_output_percent.store(static_cast<int>(std::lround(number(argv[2], 0.01f, 2.f) * 100.f)));
         else if (cmd == "limiter-pan" && argc == 3)

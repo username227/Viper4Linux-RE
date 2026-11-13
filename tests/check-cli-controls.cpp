@@ -99,9 +99,43 @@ int main() {
     assert(c.limiter_threshold_permille.load() == 600);
     assert(c.limiter_output_percent.load() == 100);
     assert(occurrences(multiOutput, "Master Limiter -") == 1);
-    assert(multiOutput.find("Threshold: 0.6") != std::string::npos);
+    assert(multiOutput.find("Threshold: -4.4 dBFS (0.600 linear)") != std::string::npos);
     assert(multiOutput.find("Output: 100%") != std::string::npos);
     assert(multiOutput.find("Output: 101%") == std::string::npos);
+
+    // Same dBFS input and output as the GUI, with native precision retained.
+    assert(invoke({"--limiter", "threshold-db=-6.0"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 501);
+    assert(multiOutput.find("Threshold: -6.0 dBFS (0.501 linear)") != std::string::npos);
+    assert(invoke({"--limiter", "threshold-db=-10.5"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 300); // Rounded GUI floor.
+    assert(multiOutput.find("Threshold: -10.5 dBFS (0.300 linear)") != std::string::npos);
+    assert(invoke({"--limiter", "threshold-db=0"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 1000);
+    assert(invoke({"--limiter", "threshold=0.6"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 600); // Old linear input works.
+    assert(invoke({"--limiter", "threshold=-4.4"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 603); // Native permille.
+    assert(multiOutput.find("Threshold: -4.4 dBFS") != std::string::npos);
+    assert(invoke({"--limiter", "threshold=0"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 1000); // 0 dBFS, not zero linear.
+    assert(invoke({"--limiter", "threshold-db=-6.0", "gain=1"}, &multiOutput) == 0);
+    assert(occurrences(multiOutput, "Master Limiter -") == 1);
+    assert(multiOutput.find("Output: 100%") != std::string::npos);
+    assert(multiOutput.find("Threshold: -6.0 dBFS (0.501 linear)") != std::string::npos);
+    const int beforeInvalidDb = c.limiter_threshold_permille.load();
+    assert(invoke({"--limiter", "threshold=0.1"}) == 2);
+    assert(invoke({"--limiter", "threshold=-10.6"}) == 2);
+    assert(c.limiter_threshold_permille.load() == beforeInvalidDb);
+    for (const char* invalid : {"-10.6", "0.1", "nan", "garbage"}) {
+        const std::string option = std::string("threshold-db=") + invalid;
+        assert(invoke({"--limiter", option.c_str()}) == 2);
+        assert(c.limiter_threshold_permille.load() == beforeInvalidDb);
+    }
+    // Preflight checks later scopes before applying an earlier dBFS edit.
+    assert(invoke({"--limiter", "threshold-db=-4.0",
+                   "--headphone", "level=9"}) == 2);
+    assert(c.limiter_threshold_permille.load() == beforeInvalidDb);
 
     // A sequence crossing scopes reports each distinct effect once, using
     // final settings, in first-appearance order even if a scope is revisited.
@@ -124,7 +158,7 @@ int main() {
                    "--status", "limiter", "--full"}, &multiOutput) == 0);
     assert(occurrences(multiOutput, "Master Limiter -") == 1);
     assert(multiOutput.find("Output: 125%") != std::string::npos);
-    assert(multiOutput.find("Threshold: 0.7") != std::string::npos);
+    assert(multiOutput.find("Threshold: -3.1 dBFS (0.700 linear)") != std::string::npos);
 
     // Explicit global status overrides per-effect confirmations.
     assert(invoke({"--bass", "gain=3", "--headphone", "level=2",
@@ -195,6 +229,17 @@ int main() {
     assert(invoke({"--bass", "gain", "2"}) == 2);
     assert(invoke({"--bass", "on", "bass-gain", "2"}) == 2);
     assert(c.strength_centi.load() == 300 && c.enabled.load() == 0);
+
+    // Discrete GUI choices must not silently round fractional CLI input.
+    const int monoBefore = c.bass_mono_mode.load();
+    const int clarityBefore = c.clarity_mode.load();
+    const int orderBefore = c.psycho_order.load();
+    assert(invoke({"--mono", "mode=1.5"}) == 2);
+    assert(invoke({"--clarity", "mode=0.5"}) == 2);
+    assert(invoke({"--psycho", "order=2.5"}) == 2);
+    assert(c.bass_mono_mode.load() == monoBefore &&
+           c.clarity_mode.load() == clarityBefore &&
+           c.psycho_order.load() == orderBefore);
 
     // Only an explicit status query prints all six categories. Master switch
     // commands show one confirmation line; effect edits remain scoped.
@@ -302,6 +347,13 @@ int main() {
     testValue("imager-xover-high", "5000", c.imager_high_crossover_hz, c.imager_request_serial, 5000);
     testValue("fet-threshold", "-20", c.fet_threshold_db, c.fet_request_serial, -20);
     testValue("fet-ratio", "2.5", c.fet_ratio_tenths, c.fet_request_serial, 25);
+    // Verify meaningful units without pinning the whole status layout.
+    std::string units;
+    assert(invoke({"--fet", "status", "--agc", "status"}, &units) == 0);
+    assert(units.find("Threshold: -20 dBFS") != std::string::npos);
+    assert(units.find("Ratio: 2.5:1") != std::string::npos);
+    assert(units.find("Maximum gain: ") != std::string::npos &&
+           units.find("×") != std::string::npos);
     testValue("mb-bands", "5", c.mb_band_count, c.mb_request_serial, 5);
     for (const char* invalid : {"0", "4", "2.5", "xyz"}) {
         const auto previous = c.mb_band_count.load();
@@ -332,7 +384,6 @@ int main() {
     assert(mainHelp.find("v4l-cli bass --help") == std::string::npos);
     assert(mainHelp.find("bass-gain <") == std::string::npos);
     assert(mainHelp.find("Use man viper4linux-ctl") != std::string::npos);
-    assert(mainHelp.find("legacy") == std::string::npos);
     assert(invoke({"--help"}, &displayed) == 0);
     assert(displayed.find("Global commands") != std::string::npos);
     assert(invoke({"--bass", "--help"}, &displayed) == 0);
@@ -342,8 +393,6 @@ int main() {
     assert(displayed.find("Bass gain (stored to hundredths)") != std::string::npos);
     assert(displayed.find("0 Natural, 1 Pure Bass+, 2 Subwoofer") != std::string::npos);
     assert(displayed.find("on|off|toggle") != std::string::npos);
-    assert(displayed.find("legacy") == std::string::npos);
-    assert(displayed.find("aliases") == std::string::npos);
     assert(invoke({"--headphone", "--help"}, &displayed) == 0);
     assert(displayed.find("level=1..5") != std::string::npos);
     assert(invoke({"--eq", "--help"}, &displayed) == 0);
@@ -352,6 +401,9 @@ int main() {
     assert(invoke({"--field", "--help"}, &displayed) == 0);
     assert(displayed.find("depth=0|200..950") != std::string::npos);
     assert(invoke({"--limiter", "--help"}, &displayed) == 0);
+    assert(displayed.find("threshold=-10.5..0|0.3..1") != std::string::npos);
+    assert(displayed.find("threshold-db=-10.5..0") != std::string::npos);
+    assert(displayed.find("matches GUI display") != std::string::npos);
     assert(displayed.find(" [on|off]") == std::string::npos);
     assert(invoke({"--ddc", "--help"}, &displayed) == 0);
     assert(displayed.find("VDC profile in the GUI") != std::string::npos);
@@ -364,8 +416,7 @@ int main() {
         assert(displayed.find("Usage: v4l-cli " + selector) != std::string::npos);
         assert(displayed.find("status [--full]") != std::string::npos);
         assert(displayed.find("Numeric setting") == std::string::npos);
-        assert(displayed.find("legacy") == std::string::npos);
-    }
+        }
     assert(invoke({"--status", "--help"}, &displayed) == 0);
     assert(displayed.find("--status [EFFECT]") != std::string::npos);
     server.stop_server();

@@ -54,6 +54,9 @@ int main() {
     assert(execute({"--bass", "freq=74.6"}) == 0);
     s.sync();
     assert(s.value("frequency").toInt() == 75);
+    assert(execute({"--limiter", "threshold-db=-6.0"}) == 0);
+    s.sync();
+    assert(s.value("limiter_threshold_permille").toInt() == 501);
     // Generic names were deliberately removed as a CLI-breaking cleanup.
     assert(execute({"gain", "9"}) == 2);
     assert(execute({"freq", "100"}) == 2);

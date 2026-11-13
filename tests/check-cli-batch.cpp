@@ -39,6 +39,13 @@ int main() {
     assert(!check({"--headphone", "level=2.5"}).ok);
     assert(!check({"--eq", "level=3"}).ok);
     assert(!check({"--limiter", "on"}).ok);
+    assert(check({"--limiter", "threshold-db=-6.0", "gain=1"}).count == 2);
+    assert(check({"--limiter", "threshold-db=-10.5"}).ok);
+    assert(check({"--limiter", "threshold-db=0"}).ok);
+    assert(!check({"--limiter", "threshold-db=-10.6"}).ok);
+    assert(!check({"--limiter", "threshold-db=0.1"}).ok);
+    assert(!check({"--limiter", "threshold-db=nan"}).ok);
+    assert(!check({"--limiter", "threshold-db=-6.0", "--bass", "gain=99"}).ok);
     assert(check({"on", "bass-on", "psycho-off"}).count == 3);
     assert(check({"bass-on", "analogx-off"}).count == 2);
     // Modern global commands and selectors may be chained, but not combined

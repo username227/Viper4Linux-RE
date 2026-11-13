@@ -39,6 +39,8 @@ assert '--eq level=BAND:DB' in man
 assert '.SH LEGACY NO-ARGUMENT ALIASES' in man
 canonical = man.split('.SH LEGACY NO-ARGUMENT ALIASES', 1)[0]
 assert '.BI "--bass gain=" VALUE' in canonical
+assert '.BI "--limiter threshold-db=" VALUE' in canonical
+assert '.BI "--limiter threshold=" VALUE' in canonical
 assert 'one final report' in canonical
 assert 'each affected effect once' in canonical
 assert not re.search(r'^\.BR [a-z]+-(?:on|off)', canonical, re.M)
