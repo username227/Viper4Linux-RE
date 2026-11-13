@@ -48,4 +48,22 @@ for marker in (
     'void updateDeqOverview()', 'void applySettings(bool master',
 ):
     assert all_source.count(marker) == 1, marker
+# Constructor setup remains once-only and in its existing panel order.
+correction = (root / "src/window/window-correction.inc").read_text()
+for invocation, signature in (
+    ("setupDdcLibrary(importDdc, refreshDdc);",
+     "void setupDdcLibrary(QPushButton* importDdc, QPushButton* refreshDdc)"),
+    ("setupIrsLibrary(browse, refresh);",
+     "void setupIrsLibrary(QPushButton* browse, QPushButton* refresh)"),
+):
+    assert main.count(invocation) == 1, invocation
+    assert correction.count(signature) == 1, signature
+    assert invocation not in correction
+for key in ("connect(ddc_watcher_", "connect(irs_watcher_",
+            "connect(ddc_library_", "connect(convolver_library_",
+            "connect(importDdc,", "connect(browse,"):
+    assert correction.count(key) == 1, key
+    assert key not in main, key
+assert main.index('addEffectPanel(correctionLayout, correctionDdc.group, "ddc", ddc_enabled_)') < main.index('setupDdcLibrary(importDdc, refreshDdc);')
+assert main.index('addEffectPanel(correctionLayout, correctionConvolver.group, "convolver", convolver_enabled_)') < main.index('setupIrsLibrary(browse, refresh);')
 print("PASS: stage 7 main-window integration and once-only module composition")

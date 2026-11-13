@@ -144,3 +144,95 @@
         updateIrsName(path); // even if the popup is still open and frozen
         refreshIrsLibrary();
     }
+    // Keep filesystem notifications, popup stability and import callbacks
+    // with the correction-library operations, not the GUI constructor.
+    void setupDdcLibrary(QPushButton* importDdc, QPushButton* refreshDdc) {
+        refreshDdcLibrary();
+        ddc_watcher_ = new QFileSystemWatcher(this);
+        ddc_watcher_->addPath(ddcDirectory());
+        connect(ddc_watcher_, &QFileSystemWatcher::directoryChanged, this,
+                [this](const QString&) {
+            ddc_library_dirty_ = true;
+            if (!ddc_library_->popupIsOpen()) refreshDdcLibrary();
+        });
+        connect(ddc_library_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, [this](int index) {
+            if (index >= 0) selectDdcProfile(ddc_library_->currentData().toString());
+        });
+        connect(refreshDdc, &QPushButton::clicked, this, [this] { refreshDdcLibrary(); });
+        connect(importDdc, &QPushButton::clicked, this, [this] {
+            const QString selected = QFileDialog::getOpenFileName(this, "Import ViPER-DDC profile",
+                ddcDirectory(), "ViPER correction (*.vdc *.VDC)");
+            if (selected.isEmpty()) return;
+            const QFileInfo file(selected);
+            if (!file.isFile() || !file.isReadable() ||
+                file.suffix().compare("vdc", Qt::CaseInsensitive) != 0) {
+                QMessageBox::warning(this, "VDC import", "Select a readable .vdc profile.");
+                return;
+            }
+            if (!QDir().mkpath(ddcDirectory())) {
+                QMessageBox::warning(this, "VDC import", "Could not create VDC library directory.");
+                return;
+            }
+            const QString destination = viper_library_import::copyOrSelect(selected, ddcDirectory());
+            if (destination.isEmpty()) {
+                QMessageBox::warning(this, "VDC import", "Could not copy the selected profile.");
+                return;
+            }
+            selectDdcProfile(destination);
+        });
+    }
+
+    void setupIrsLibrary(QPushButton* browse, QPushButton* refresh) {
+        refreshIrsLibrary();
+        irs_watcher_ = new QFileSystemWatcher(this);
+        irs_watcher_->addPath(irsDirectory());
+        connect(irs_watcher_, &QFileSystemWatcher::directoryChanged, this,
+                [this](const QString&) {
+            // A closed library updates as soon as Qt reports a folder change.
+            // An open popup is never rebuilt underneath the user.
+            irs_library_dirty_ = true;
+            if (!convolver_library_->popupIsOpen()) refreshIrsLibrary();
+        });
+        connect(convolver_library_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int index) {
+                if (index < 0) return;
+                selectIrPath(convolver_library_->currentData().toString());
+            });
+        connect(refresh, &QPushButton::clicked, this, [this] { refreshIrsLibrary(); settings_.sync(); requestIrsLoad(); });
+        connect(browse, &QPushButton::clicked, this, [this] {
+            const QStringList selected = QFileDialog::getOpenFileNames(this, "Import impulse responses",
+                irsDirectory(), "Impulse responses (*.irs *.IRS *.wav *.WAV);;All files (*)");
+            if (selected.isEmpty()) return;
+            if (!QDir().mkpath(irsDirectory())) {
+                QMessageBox::warning(this, "IRS import", "Could not create the IRS library directory.");
+                return;
+            }
+            QString firstImported;
+            QStringList failures;
+            for (const QString& selectedFile : selected) {
+                const QFileInfo file(selectedFile);
+                if (!file.isFile() || !file.isReadable() ||
+                    (file.suffix().compare("irs", Qt::CaseInsensitive) != 0 &&
+                     file.suffix().compare("wav", Qt::CaseInsensitive) != 0)) {
+                    failures << file.fileName() + ": not a readable .irs or .wav file";
+                    continue;
+                }
+                // Browsing a library file is a selection, not an import.
+                const QString destination = viper_library_import::copyOrSelect(selectedFile, irsDirectory());
+                if (destination.isEmpty()) {
+                    failures << file.fileName() + ": could not copy";
+                    continue;
+                }
+                if (firstImported.isEmpty()) firstImported = destination;
+            }
+            // Only the first imported file becomes active; others appear in the
+            // library for immediate switching. Keep previous choice on failure.
+            if (!firstImported.isEmpty()) selectIrPath(firstImported);
+            refreshIrsLibrary();
+            if (!failures.isEmpty()) {
+                QMessageBox::warning(this, "IRS import",
+                    "Some files could not be imported:\n" + failures.join("\n"));
+            }
+        });
+    }
