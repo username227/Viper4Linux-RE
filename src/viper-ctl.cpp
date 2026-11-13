@@ -131,7 +131,6 @@ void show(viperbass::Controls& c, const std::string& command = "status",
     }
     viperbass::printCliReport(std::cout, c, command, band, expanded, info, selectedEffect);
 }
-}
 struct EffectSummary {
     std::string name;
     bool requestedStatus = false;
@@ -152,7 +151,8 @@ struct BatchSummary {
     EffectSummary& effect(const std::string& name) {
         for (auto& entry : effects)
             if (entry.name == name) return entry;
-        effects.push_back(EffectSummary{name});
+        effects.emplace_back();
+        effects.back().name = name;
         return effects.back();
     }
 
