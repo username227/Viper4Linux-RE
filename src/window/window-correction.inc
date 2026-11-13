@@ -8,43 +8,9 @@
             ddc_library_dirty_ = true;
             return;
         }
-        QDir().mkpath(ddcDirectory());
-        if (ddc_watcher_ && !ddc_watcher_->directories().contains(ddcDirectory()))
-            ddc_watcher_->addPath(ddcDirectory());
         const QString selected = settings_.value("ddc_profile", "").toString();
-        const QDir dir(ddcDirectory());
-        QList<QPair<QString, QString>> entries;
-        entries.append({"None", QString()});
-        for (const QString& name : dir.entryList({"*.vdc", "*.VDC"},
-                QDir::Files | QDir::Readable, QDir::Name | QDir::IgnoreCase))
-            entries.append({name, dir.absoluteFilePath(name)});
-        bool selectedFound = selected.isEmpty();
-        for (const auto& entry : entries) {
-            if (entry.second == selected) { selectedFound = true; break; }
-        }
-        // Preserve older settings pointing outside the VDC directory.
-        if (!selectedFound)
-            entries.append({"External: " + QFileInfo(selected).fileName(), selected});
-        bool identical = entries.size() == ddc_library_->count();
-        if (identical) {
-            for (int i = 0; i < entries.size(); ++i) {
-                if (ddc_library_->itemText(i) != entries[i].first ||
-                    ddc_library_->itemData(i).toString() != entries[i].second) {
-                    identical = false;
-                    break;
-                }
-            }
-        }
-        const QSignalBlocker block(ddc_library_);
-        if (!identical) {
-            ddc_library_->clear();
-            for (const auto& entry : entries) {
-                const int index = ddc_library_->count();
-                ddc_library_->addItem(entry.first, entry.second);
-                ddc_library_->setItemData(index, entry.first, Qt::ToolTipRole);
-            }
-        }
-        ddc_library_->setCurrentIndex(std::max(0, ddc_library_->findData(selected)));
+        ddc_library_->refreshFiles(ddcDirectory(), {"*.vdc", "*.VDC"},
+                                   selected, ddc_watcher_);
         updateDdcFileName(selected);
         ddc_library_dirty_ = false;
     }
@@ -56,45 +22,10 @@
             irs_library_dirty_ = true;
             return;
         }
-        QDir().mkpath(irsDirectory());
-        if (irs_watcher_ && !irs_watcher_->directories().contains(irsDirectory()))
-            irs_watcher_->addPath(irsDirectory());
         const QString selected = settings_.value("convolver_kernel").toString();
-        const QDir dir(irsDirectory());
-        QList<QPair<QString, QString>> entries;
-        entries.append({"None", QString()});
-        for (const QString& name : dir.entryList({"*.irs", "*.IRS", "*.wav", "*.WAV"}, QDir::Files | QDir::Readable, QDir::Name | QDir::IgnoreCase))
-            entries.append({name, dir.absoluteFilePath(name)});
-        bool selectedFound = selected.isEmpty();
-        for (const auto& entry : entries) {
-            if (entry.second == selected) { selectedFound = true; break; }
-        }
-        if (!selectedFound)
-            entries.append({"External: " + QFileInfo(selected).fileName(), selected});
-
-        bool identical = entries.size() == convolver_library_->count();
-        if (identical) {
-            for (int i = 0; i < entries.size(); ++i) {
-                if (convolver_library_->itemText(i) != entries[i].first ||
-                    convolver_library_->itemData(i).toString() != entries[i].second) {
-                    identical = false;
-                    break;
-                }
-            }
-        }
-        const QSignalBlocker block(convolver_library_);
-        if (!identical) {
-            convolver_library_->clear();
-            for (const auto& entry : entries)
-            {
-                const int index = convolver_library_->count();
-                convolver_library_->addItem(entry.first, entry.second);
-                // The popup may elide a long entry, but its tooltip is complete.
-                convolver_library_->setItemData(index, entry.first, Qt::ToolTipRole);
-            }
-        }
-        // Preserve selection without an accidental DSP reload or a popup jump.
-        convolver_library_->setCurrentIndex(std::max(0, convolver_library_->findData(selected)));
+        convolver_library_->refreshFiles(irsDirectory(),
+            {"*.irs", "*.IRS", "*.wav", "*.WAV"}, selected, irs_watcher_);
+        // Preserve selection without an accidental DSP reload or popup jump.
         updateIrsName(selected);
         irs_library_dirty_ = false;
     }
