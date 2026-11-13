@@ -52,7 +52,7 @@ int main() {
     assert(c.eq_request_serial.load() == serial);
     // An invalid preset later in a batch must not apply earlier edits.
     c.master_enabled.store(1);
-    assert(invoke({"off", "eq-preset", "No such preset"}) == 2);
+    assert(invoke({"off", "--eq", "preset=No such preset"}) == 2);
     assert(c.master_enabled.load() == 1);
 
     // User EQ presets are different from GUI's named full-effect snapshots.

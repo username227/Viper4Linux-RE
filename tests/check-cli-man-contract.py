@@ -6,13 +6,20 @@ repo = pathlib.Path(__file__).resolve().parents[1]
 cli = (repo / 'src/viper-ctl.cpp').read_text()
 man = (repo / 'man/viper4linux-ctl.1').read_text()
 commands = set(re.findall(r'\bcmd\s*==\s*"([A-Za-z0-9-]+)"', cli))
-missing = sorted(c for c in commands if not re.search(r'(?<![\w-])' + re.escape(c) + r'(?![\w-])', man))
+# Internal operations retain old identifiers; public syntax uses scoped names.
+missing = sorted(c for c in commands if not (
+    re.search(r'(?<![\w-])' + re.escape(c) + r'(?![\w-])', man) or
+    (('-' in c) and re.search(r'--' + re.escape(c.split('-', 1)[0]) +
+         r'\s+' + re.escape(c.split('-', 1)[1]) + r'=', man))
+))
 assert len(commands) >= 85, f'CLI parser coverage dropped unexpectedly ({len(commands)})'
 assert not missing, f'Undocumented CLI commands: {missing}'
 assert '--help' in man and 'round' in man and 'inclusive' in man
 assert 'bass-gain' in commands and 'bass-freq' in commands
 assert not {'gain', 'freq'} & commands
-assert '.BI "bass-gain " VALUE' in man and '.BI "bass-freq " VALUE' in man
+assert '.BI "--bass gain=" VALUE' in man and '.BI "--bass freq=" VALUE' in man
+assert 'numerical values must use the scoped' in man
+assert '--eq level=BAND:DB' in man
 assert not re.search(r'^\.BI "(gain|freq) "', man, re.M)
 assert '.SH COMMAND SEQUENCES' in man and 'not transactions' in man
 assert 'headphone-quality' not in cli
