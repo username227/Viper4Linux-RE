@@ -112,7 +112,12 @@ expected range or choices; an invalid sequence prints only the error,
 without status reports. Valid commands execute in their
 listed order using the same handlers as standalone commands. After all
 commands succeed, one final report shows each affected effect once, using
-its final settings. Effects are listed in first-appearance order, even if a
+its final settings. For an EQ-changing batch, the CLI waits until the native
+worker acknowledges the requested EQ update before printing the summary.
+The wait ends upon acknowledgment, with a 10-second maximum. On timeout,
+the CLI reports an error; submitted settings may still be saved or applied
+later. Read-only status commands are not delayed. Effects are listed in
+first-appearance order, even if a
 later scope returns to an earlier effect. A targeted status request is merged
 with that effect; a global status request replaces the smaller confirmations
 with one complete report. Repeated EQ band edits show the final level of each

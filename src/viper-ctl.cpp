@@ -6,6 +6,7 @@
 #include "viper-cli-batch.h"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -14,6 +15,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -116,6 +118,26 @@ void workerValue(std::atomic<std::int32_t>& parameter,
                  std::atomic<std::uint32_t>& serial, int value) {
     if (parameter.exchange(value, std::memory_order_relaxed) != value)
         serial.fetch_add(1, std::memory_order_release);
+}
+// EQ coefficients are applied asynchronously by the native DSP worker.
+// Wait after successful CLI EQ edits, not for read-only status requests.
+// Production always uses ten seconds; mock CLI tests can shorten one
+// invocation without changing the public CLI or slowing CTest.
+#ifdef VIPER_MOCK_TEST_IPC
+std::chrono::steady_clock::duration eqAckTimeout = std::chrono::seconds(10);
+#else
+constexpr auto eqAckTimeout = std::chrono::seconds(10);
+#endif
+bool waitForEqApplied(const viperbass::Controls& c,
+                      std::chrono::steady_clock::duration timeout) {
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (true) {
+        if (c.eq_applied_serial.load(std::memory_order_acquire) ==
+            c.eq_request_serial.load(std::memory_order_acquire))
+            return true;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 }
 void show(viperbass::Controls& c, const std::string& command = "status",
           const char* bandText = nullptr, bool expanded = false,
@@ -586,6 +608,9 @@ int main(int argc, char** argv) {
     }
     BatchSummary summary;
     std::size_t completed = 0;
+    const auto startingEqSerial = attached
+        ? inspection.get()->eq_request_serial.load(std::memory_order_acquire) : 0u;
+    bool editedEq = false;
     for (auto& command : commands) {
         std::vector<char*> single;
         single.reserve(command.args.size() + 1);
@@ -601,7 +626,21 @@ int main(int argc, char** argv) {
             return result;
         }
         summary.collect(command);
+        const auto& name = command.args[0];
+        if (name.rfind("eq-", 0) == 0 && name != "eq-presets")
+            editedEq = true;
         ++completed;
+    }
+    // Confirm an EQ-changing batch only after the worker acknowledges the
+    // committed curve. Timeouts are runtime errors, never successful reports.
+    if (attached && editedEq &&
+        inspection.get()->eq_request_serial.load(std::memory_order_acquire) !=
+            startingEqSerial &&
+        !waitForEqApplied(*inspection.get(), eqAckTimeout)) {
+        std::cerr << "EQ update submitted, but the backend did not acknowledge it "
+                     "within 10 seconds. Settings may have been saved and the "
+                     "update may still apply; check v4l-cli --eq status --full.\n";
+        return 1;
     }
     summary.print(attached ? inspection.get() : nullptr);
     return 0;

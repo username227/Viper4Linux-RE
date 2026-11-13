@@ -3,6 +3,7 @@
 #define main viper_ctl_entry
 #include "../src/viper-ctl.cpp"
 #undef main
+#include "mock/cli-eq-ack.h"
 #include <QSettings>
 #include <QStringList>
 #include <cassert>
@@ -20,6 +21,7 @@ static int execute(std::initializer_list<const char*> args) {
 int main() {
     viperbass::Mapping server;
     assert(server.create_server());
+    MockCliEqAcknowledger eqAck(*server.get());
     QSettings s("ViPERforLinux", "ViPERClean");
     assert(execute({"status"}) == 0);
     s.sync();
@@ -122,6 +124,7 @@ int main() {
     assert(execute({"--mb", "bands=5"}) == 0);
     s.sync();
     assert(s.value("mb_band_count").toInt() == 5);
+    eqAck.stop();
     server.stop_server();
     std::cout << "PASS: CLI settings survive without GUI, invalid edits are not saved\n";
 }
