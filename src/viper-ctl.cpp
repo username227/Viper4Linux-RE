@@ -31,10 +31,8 @@ void usage(std::ostream& out = std::cerr) {
         out << "  --" << entry.name << "    " << entry.title << '\n';
     out << "\nEach selector applies to the following options until the next selector.\n"
            "  v4l-cli --on --bass on gain=3 --headphone on level=2\n\n"
-           "Numerical options use name=value; on/off inside an effect are local.\n"
-           "Use v4l-cli --[EFFECT] --help for effect-specific options.\n"
-           "One final report summarizes all affected effects after execution.\n"
-           "Use man viper4linux-ctl for complete details.\n";
+           "Use v4l-cli --[EFFECT] --help for effect-specific operation.\n"
+           "Use man v4l-cli for complete details\n";
 }
 void usageStatus(std::ostream& out = std::cout) {
     out << "Usage: v4l-cli --status [EFFECT] [--full]\n"
