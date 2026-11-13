@@ -37,6 +37,18 @@ int main() {
     assert(!check({"--bass", "gain="}).ok);
     assert(!check({"--bass", "gain=99", "--headphone", "on"}).ok);
     assert(!check({"--headphone", "level=2.5"}).ok);
+    // A late invalid value must identify the offending option and its limit
+    // while rejecting the complete command sequence before execution.
+    const auto invalidBatch = check({"--status", "limiter", "--limiter",
+                                     "threshold=-6", "gain=1", "--headphone",
+                                     "level=9", "--status", "limiter"});
+    assert(!invalidBatch.ok && invalidBatch.count == 0);
+    assert(invalidBatch.error.find("--headphone level=9") != std::string::npos);
+    assert(invalidBatch.error.find("whole number from 1 to 5") != std::string::npos);
+    const auto invalidEqBand = check({"--eq", "bands=15", "level=16:1"});
+    assert(!invalidEqBand.ok && invalidEqBand.count == 0);
+    assert(invalidEqBand.error.find("--eq level=16:1") != std::string::npos);
+    assert(invalidEqBand.error.find("1 to 15") != std::string::npos);
     assert(!check({"--eq", "level=3"}).ok);
     assert(!check({"--limiter", "on"}).ok);
     assert(check({"--limiter", "threshold-db=-6.0", "gain=1"}).count == 2);

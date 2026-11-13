@@ -106,7 +106,10 @@ effect selector. For example:
 All commands and numeric arguments are validated before any changes are
 applied; an invalid argument anywhere in the sequence prevents earlier
 changes from being applied. Preset names and saved curves are also validated
-before an attached DSP channel is modified. Valid commands execute in their
+before an attached DSP channel is modified. Invalid numeric options are
+identified by their scoped spelling and supplied value, followed by the
+expected range or choices; an invalid sequence prints only the error,
+without status reports. Valid commands execute in their
 listed order using the same handlers as standalone commands. After all
 commands succeed, one final report shows each affected effect once, using
 its final settings. Effects are listed in first-appearance order, even if a
