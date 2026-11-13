@@ -188,6 +188,10 @@ struct BatchSummary {
             return; // Preflight already rejects unknown commands.
         auto& entry = effect(name.substr(0, dash));
         if (name == "eq-preset") entry.changedPreset = true;
+        // Edits before a layout change or preset replacement belong to an
+        // earlier curve; never describe them as edits to the final layout.
+        if (name == "eq-bands" || name == "eq-preset")
+            entry.editedBands.clear();
         if (name == "eq-level") {
             const int band = std::stoi(args[1]); // Validated by preflight.
             if (std::find(entry.editedBands.begin(), entry.editedBands.end(), band)

@@ -85,6 +85,11 @@ int main() {
     assert(invoke({"--eq", "bands=10", "level=9:3"}) == 0);
     assert(c.eq_band_count.load() == 10);
     assert(c.eq_levels_hundredths[8].load() == 300);
+    // Never-used 25-band custom layout begins flat, not a copied 10-band curve.
+    assert(invoke({"--eq", "bands=25"}) == 0);
+    assert(c.eq_levels_hundredths[8].load() == 0);
+    assert(invoke({"--eq", "bands=10"}) == 0);
+    assert(c.eq_levels_hundredths[8].load() == 300);
     assert(invoke({"--eq", "bands=31"}) == 0);
     assert(c.eq_levels_hundredths[8].load() == 0);
     assert(invoke({"--eq", "level=9:-2"}) == 0);
