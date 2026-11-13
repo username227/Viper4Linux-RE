@@ -126,12 +126,16 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
         detail(out, "Pan", c.limiter_pan_percent.load(), "%");
         break;
     }
-    case Effect::Agc:
+    case Effect::Agc: {
         heading("B", "Playback Gain Control (AGC)", enabled(c.agc_enabled.load()));
         detail(out, "Strength", c.agc_strength_centi.load() / 100.0);
-        detail(out, "Maximum gain", c.agc_max_gain_centi.load() / 100.0);
+        std::ostringstream maximumGain;
+        maximumGain << std::fixed << std::setprecision(2)
+                    << c.agc_max_gain_centi.load() / 100.0 << "×";
+        detail(out, "Maximum gain", maximumGain.str().c_str());
         detail(out, "Threshold", c.agc_threshold_permille.load() / 1000.0);
         break;
+    }
     case Effect::Lufs:
         heading("C", "LUFS Targeting", enabled(c.lufs_enabled.load()));
         detail(out, "Target", c.lufs_target_tenths.load() / 10.0, " LUFS");
@@ -260,8 +264,8 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
         break;
     case Effect::Fet:
         heading("A", "FET Compressor", enabled(c.fet_enabled.load()));
-        detail(out, "Threshold", c.fet_threshold_db.load(), " dB");
-        detail(out, "Ratio", c.fet_ratio_tenths.load() / 10.0);
+        detail(out, "Threshold", c.fet_threshold_db.load(), " dBFS");
+        detail(out, "Ratio", c.fet_ratio_tenths.load() / 10.0, ":1");
         detail(out, "Knee", c.fet_knee_db.load(), " dB");
         detail(out, "Makeup", c.fet_makeup_db.load(), " dB");
         detail(out, "Attack", c.fet_attack_ms.load(), " ms");

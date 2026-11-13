@@ -222,6 +222,17 @@ int main() {
     assert(invoke({"--bass", "on", "bass-gain", "2"}) == 2);
     assert(c.strength_centi.load() == 300 && c.enabled.load() == 0);
 
+    // Discrete GUI choices must not silently round fractional CLI input.
+    const int monoBefore = c.bass_mono_mode.load();
+    const int clarityBefore = c.clarity_mode.load();
+    const int orderBefore = c.psycho_order.load();
+    assert(invoke({"--mono", "mode=1.5"}) == 2);
+    assert(invoke({"--clarity", "mode=0.5"}) == 2);
+    assert(invoke({"--psycho", "order=2.5"}) == 2);
+    assert(c.bass_mono_mode.load() == monoBefore &&
+           c.clarity_mode.load() == clarityBefore &&
+           c.psycho_order.load() == orderBefore);
+
     // Only an explicit status query prints all six categories. Master switch
     // commands show one confirmation line; effect edits remain scoped.
     std::string displayed;
@@ -328,6 +339,13 @@ int main() {
     testValue("imager-xover-high", "5000", c.imager_high_crossover_hz, c.imager_request_serial, 5000);
     testValue("fet-threshold", "-20", c.fet_threshold_db, c.fet_request_serial, -20);
     testValue("fet-ratio", "2.5", c.fet_ratio_tenths, c.fet_request_serial, 25);
+    // Verify meaningful units without pinning the whole status layout.
+    std::string units;
+    assert(invoke({"--fet", "status", "--agc", "status"}, &units) == 0);
+    assert(units.find("Threshold: -20 dBFS") != std::string::npos);
+    assert(units.find("Ratio: 2.5:1") != std::string::npos);
+    assert(units.find("Maximum gain: ") != std::string::npos &&
+           units.find("×") != std::string::npos);
     testValue("mb-bands", "5", c.mb_band_count, c.mb_request_serial, 5);
     for (const char* invalid : {"0", "4", "2.5", "xyz"}) {
         const auto previous = c.mb_band_count.load();

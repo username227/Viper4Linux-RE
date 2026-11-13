@@ -211,8 +211,8 @@ Set AGC strength. VALUE accepts decimals from 0.5 through 3 inclusive,
 stored in hundredths.
 .TP
 .BI "--agc max=" VALUE
-Set AGC maximum gain. VALUE accepts decimals from 1 through 10
-inclusive, stored in hundredths.
+Set AGC maximum gain as a multiplier (1.00× through 10.00×).
+VALUE accepts decimals from 1 through 10 inclusive, stored in hundredths.
 .TP
 .BI "--agc threshold=" VALUE
 Set AGC threshold as a linear multiplier. VALUE accepts decimals from
@@ -261,9 +261,9 @@ Set ViPER Bass frequency in hertz. VALUE accepts decimals from 15 through
 Enable or disable the independent Bass Mono effect. No arguments.
 .TP
 .BI "--mono mode=" VALUE
-Choose Bass Mono mode. VALUE accepts decimals from 0 through 2 inclusive
-and is rounded to the nearest whole-number mode: 0 = Natural,
-1 = Pure Bass+, or 2 = Subwoofer.
+Choose Bass Mono mode. VALUE must be a whole number from 0 through 2
+inclusive: 0 = Natural, 1 = Pure Bass+, or 2 = Subwoofer.
+Fractional values are rejected.
 .TP
 .BI "--mono strength=" VALUE
 Set Bass Mono strength. VALUE accepts decimals from 0.5 through 10 inclusive;
@@ -288,8 +288,8 @@ nearest whole percentage point. Example:
 .B v4l-cli --psycho intensity=30
 .TP
 .BI "--psycho order=" VALUE
-Set harmonic order. VALUE accepts decimals from 2 through 5 inclusive,
-rounded to the nearest whole-number order.
+Set harmonic order. VALUE must be a whole number from 2 through 5
+inclusive; fractional values are rejected.
 .TP
 .BI "--psycho original=" VALUE
 Set the percentage of the unprocessed signal retained by the psychoacoustic
@@ -376,8 +376,9 @@ Set Clarity gain. VALUE accepts decimals from 0 through 4.5 inclusive;
 the DSP stores thousandths and the GUI displays tenths.
 .TP
 .BI "--clarity mode=" VALUE
-Select Clarity mode. VALUE accepts decimals from 0 through 2 inclusive,
-rounded to the nearest whole-number mode (0 = Natural, 1 = Ozone, 2 = XHiFi).
+Select Clarity mode. VALUE must be a whole number from 0 through 2
+inclusive (0 = Natural, 1 = Ozone, 2 = XHiFi);
+fractional values are rejected.
 .SS "D. Spectrum Extension"
 .TP
 .B "--spectrum on | off"
@@ -527,7 +528,7 @@ Set high crossover frequency. VALUE must be a whole number between 2000 and
 Enable or disable FET Compressor. No arguments.
 .TP
 .BI "--fet threshold=" VALUE
-Set FET threshold. VALUE must be a whole number from -48 through 0 dB
+Set FET threshold. VALUE must be a whole number from -48 through 0 dBFS
 inclusive; fractional values are rejected.
 .TP
 .BI "--fet ratio=" VALUE

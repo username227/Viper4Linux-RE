@@ -30,7 +30,7 @@ inline constexpr OptionDescription descriptions[] = {
     {"eq-bands", "Graphic EQ layout (10, 15, 25 or 31 bands)"},
     {"eq-level", "Band BAND gain in dB (-12 to +12; band is 1-based)"},
     {"eq-preset", "Apply named EQ preset (quote names with spaces)"},
-    {"fet-threshold", "Compression threshold (dB)"},
+    {"fet-threshold", "Compression threshold (dBFS)"},
     {"fet-ratio", "Compression ratio (1:1 to 10:1)"},
     {"field-widen", "Field Surround widening factor"},
     {"field-mid", "Field Surround mid-image factor"},
