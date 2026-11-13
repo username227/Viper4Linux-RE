@@ -12,7 +12,7 @@ viper4linux-ctl \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP control
 .br
 .B v4l-cli --status --help
 .br
-.B v4l-cli bass --help
+.B v4l-cli --EFFECT --help
 .br
 .B v4l-cli --help
 .SH DESCRIPTION
@@ -24,8 +24,8 @@ command is a symlink for viper4linux-ctl and accepts identical arguments.
 Effect commands require an active channel; they do not start PipeWire.
 Successful edits are written to the same per-user settings used by the GUI,
 including when the GUI is closed. The GUI also reads the live controls while it
-is open. Named presets and impulse-response file selection are GUI features,
-not CLI features.
+is open. The CLI can apply existing EQ presets, but creating, overwriting, or
+importing presets and selecting impulse-response files are GUI features.
 .PP
 Throughout this manual, a range such as "0 through 100" includes both ends.
 A 
@@ -42,7 +42,7 @@ are independent of the GUI tab layout.
 To see the compact global help, use
 .BR --help ;
 for individual controls use
-.BR "bass --help" ,
+.BR "--bass --help" ,
 or the corresponding effect name.
 .SH EFFECT-SCOPED SYNTAX
 Global options begin with two hyphens. Effect selectors also begin with
@@ -68,7 +68,7 @@ All value-taking options use
 .B name=value
 with no spaces around the equals sign.
 Use
-.B v4l-cli clarity --help
+.B v4l-cli --clarity --help
 for the supported options and their numeric ranges.
 Graphic EQ band gain uses
 .B level=BAND:DB
@@ -162,7 +162,9 @@ options; use its help page (for example,
 .fi
 The detailed numeric bounds below apply to the scoped
 .B option=value
-forms. Within each effect,
+forms. For explanations of each parameter and its mode values, use
+.B "v4l-cli --EFFECT --help"
+with the appropriate effect name. Within each effect,
 .B on
 and
 .B off

@@ -26,6 +26,11 @@ missing = sorted(c for c in commands if not documented(c))
 assert len(commands) >= 85, f'CLI parser coverage dropped unexpectedly ({len(commands)})'
 assert not missing, f'Undocumented CLI commands: {missing}'
 assert '--help' in man and 'round' in man and 'inclusive' in man
+assert '.B v4l-cli --EFFECT --help' in man
+assert '.BR "--bass --help" ,' in man
+assert '.B v4l-cli --clarity --help' in man
+assert 'v4l-cli bass --help' not in man
+assert 'v4l-cli clarity --help' not in man
 assert 'bass-gain' in commands and 'bass-freq' in commands
 assert not {'gain', 'freq'} & commands
 assert '.BI "--bass gain=" VALUE' in man and '.BI "--bass freq=" VALUE' in man

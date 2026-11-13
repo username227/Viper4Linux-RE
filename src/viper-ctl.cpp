@@ -12,6 +12,7 @@
 #include <iostream>
 #include <iomanip>
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
