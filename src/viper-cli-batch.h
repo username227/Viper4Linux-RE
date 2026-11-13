@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <sstream>
 #include <string>
 #include <vector>
 #include "viper-cli-scope.h"
@@ -124,6 +125,40 @@ inline void checkValue(const ArgSpec& spec, const Command& cmd, int& eqBands) {
     if (cmd.args[0] == "field-depth" && value != 0 && value < 200)
         throw std::invalid_argument("field depth must be 0 or 200..950");
 }
+// Reconstruct the user's scoped spelling from the normalized command.
+// Diagnostic-only: keep the parser's command and execution semantics intact.
+inline std::string optionForError(const Command& cmd) {
+    const auto separator = cmd.args[0].find('-');
+    if (separator == std::string::npos || cmd.args.size() < 2)
+        return cmd.args[0];
+    std::string option = "--" + cmd.args[0].substr(0, separator) + " " +
+        cmd.args[0].substr(separator + 1) + "=" + cmd.args[1];
+    if (cmd.args[0] == "eq-level" && cmd.args.size() > 2)
+        option += ":" + cmd.args[2];
+    return option;
+}
+
+// Use the existing validation metadata to show the relevant limit, including
+// special discrete choices and the limiter's two supported units.
+inline std::string expectedForError(const ArgSpec& spec, int eqBands) {
+    const std::string command(spec.command);
+    if (spec.kind == Kind::EqBands) return "one of 10, 15, 25 or 31 bands";
+    if (spec.kind == Kind::MbBands) return "3 or 5 bands";
+    if (spec.kind == Kind::EqLevel)
+        return "BAND:DB (BAND a whole number from 1 to " + std::to_string(eqBands) +
+               "; DB from -12 to +12 dB)";
+    if (spec.kind == Kind::Name) return "a non-empty preset name";
+    if (command == "limiter-threshold")
+        return "-10.5 to 0 dBFS or 0.3 to 1 linear";
+    if (command == "limiter-threshold-db")
+        return "-10.5 to 0 dBFS";
+    if (command == "field-depth") return "0 or a number from 200 to 950";
+    std::ostringstream range;
+    range << (spec.kind == Kind::Whole ? "whole number from " : "number from ")
+          << spec.min << " to " << spec.max;
+    return range.str();
+}
+
 // argv starts at the first command (not at executable name).
 inline bool parseLegacy(int count, char* const* argv, int currentEqBands,
                         std::vector<Command>& output, std::string& error) {
@@ -149,7 +184,16 @@ inline bool parseLegacy(int count, char* const* argv, int currentEqBands,
             if (count - i < needed)
                 throw std::invalid_argument("missing argument for '" + cmd.args[0] + "'");
             for (int j = 0; j < needed; ++j) cmd.args.emplace_back(argv[i++]);
-            if (spec) checkValue(*spec, cmd, bands);
+            if (spec) {
+                try {
+                    checkValue(*spec, cmd, bands);
+                } catch (const std::exception&) {
+                    error = optionForError(cmd) + "\n  Expected: " +
+                            expectedForError(*spec, bands);
+                    output.clear();
+                    return false;
+                }
+            }
             cmd.eqBandsAfter = bands;
             output.push_back(std::move(cmd));
         }
