@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "viper-cli-scope.h"
 
 namespace viperbass::cli_batch {
 struct Command {
@@ -25,8 +26,7 @@ struct ArgSpec {
     float max = 0;
 };
 
-inline const ArgSpec* withArgs(const std::string& cmd) {
-    static constexpr ArgSpec specs[] = {
+inline constexpr ArgSpec specs[] = {
         {"bass-mode",1,Kind::Whole,0,2}, {"bass-gain",1,Kind::Decimal,0.5f,10},
         {"bass-freq",1,Kind::Decimal,15,150},
         {"mono-mode",1,Kind::Decimal,0,2}, {"mono-strength",1,Kind::Decimal,0.5f,10},
@@ -64,7 +64,8 @@ inline const ArgSpec* withArgs(const std::string& cmd) {
         {"agc-threshold",1,Kind::Decimal,0.3f,1},
         {"lufs-target",1,Kind::Decimal,-24,-8}, {"lufs-max",1,Kind::Decimal,0,12},
         {"lufs-speed",1,Kind::Whole,0,2},
-    };
+};
+inline const ArgSpec* withArgs(const std::string& cmd) {
     for (const auto& spec : specs) if (cmd == spec.command) return &spec;
     return nullptr;
 }
@@ -118,8 +119,8 @@ inline void checkValue(const ArgSpec& spec, const Command& cmd, int& eqBands) {
         throw std::invalid_argument("field depth must be 0 or 200..950");
 }
 // argv starts at the first command (not at executable name).
-inline bool parse(int count, char* const* argv, int currentEqBands,
-                  std::vector<Command>& output, std::string& error) {
+inline bool parseLegacy(int count, char* const* argv, int currentEqBands,
+                        std::vector<Command>& output, std::string& error) {
     output.clear();
     int bands = (currentEqBands == 10 || currentEqBands == 15 ||
                  currentEqBands == 25 || currentEqBands == 31) ? currentEqBands : 10;
@@ -130,8 +131,15 @@ inline bool parse(int count, char* const* argv, int currentEqBands,
             const auto* spec = withArgs(cmd.args[0]);
             if (!spec && !noArgs(cmd.args[0]))
                 throw std::invalid_argument("unknown command '" + cmd.args[0] + "'");
-            const int needed = spec ? spec->count :
-                (cmd.args[0] == "status" && i < count && std::string(argv[i]) == "--full" ? 1 : 0);
+            int needed = spec ? spec->count : 0;
+            if (cmd.args[0] == "status") {
+                // Normalized status operands are [effect] [--full].
+                // Consume them together so a later command remains separate.
+                if (i + needed < count && cli_scope::findEffect(argv[i + needed]))
+                    ++needed;
+                if (i + needed < count && std::string(argv[i + needed]) == "--full")
+                    ++needed;
+            }
             if (count - i < needed)
                 throw std::invalid_argument("missing argument for '" + cmd.args[0] + "'");
             for (int j = 0; j < needed; ++j) cmd.args.emplace_back(argv[i++]);
@@ -145,5 +153,20 @@ inline bool parse(int count, char* const* argv, int currentEqBands,
         return false;
     }
     return true;
+}
+// Normalize the new --effect grammar into the unchanged, fully validated
+// legacy operations. Nothing is executed until the entire batch is valid.
+inline bool parse(int count, char* const* argv, int currentEqBands,
+                  std::vector<Command>& output, std::string& error) {
+    std::vector<std::string> normalized;
+    if (!cli_scope::normalize(count, argv, normalized, error)) {
+        output.clear();
+        return false;
+    }
+    std::vector<char*> arguments;
+    arguments.reserve(normalized.size());
+    for (auto& word : normalized) arguments.push_back(word.data());
+    return parseLegacy(static_cast<int>(arguments.size()), arguments.data(),
+                       currentEqBands, output, error);
 }
 } // namespace viperbass::cli_batch

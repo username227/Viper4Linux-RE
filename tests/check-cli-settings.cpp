@@ -37,6 +37,8 @@ int main() {
     s.sync();
     const QStringList statusKeys = s.allKeys();
     assert(execute({"status"}) == 0);
+    assert(execute({"--status", "bass"}) == 0);
+    assert(execute({"--bass", "status", "--full"}) == 0);
     s.sync();
     assert(s.allKeys() == statusKeys);
     assert(execute({"bass-gain", "2.38"}) == 0);

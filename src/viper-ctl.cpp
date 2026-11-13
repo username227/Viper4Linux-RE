@@ -16,126 +16,65 @@
 
 namespace {
 void usage(std::ostream& out = std::cerr) {
-    out << R"V4LHELP(Usage: viper4linux-ctl COMMAND1 [ARGUMENTS...] [COMMAND2 [ARGUMENTS...]] ...
-
-Global commands:
-  on                                       Enable master DSP processing
-  off                                      Bypass master DSP processing
-  status                                   Show current DSP settings; add --full for detailed values
-  all-on / all-off                         Legacy aliases for on / off
-
-Effect-specific commands (alphabetical):
-  agc-max <1..10>                          Set automatic gain control maximum gain
-  agc-off                                  Disable automatic gain control
-  agc-on                                   Enable automatic gain control
-  agc-strength <0.5..3>                    Set automatic gain control strength
-  agc-threshold <0.3..1>                   Set automatic gain control threshold
-  analogx-mode <0..2>                      Set AnalogX mode
-  analogx-off                              Disable AnalogX
-  analogx-on                               Enable AnalogX
-  bass-freq <15..150>                      Set ViPER Bass frequency
-  bass-gain <0.5..10>                      Set ViPER Bass gain
-  bass-mode <0..2>                         Set ViPER Bass mode
-  bass-off                                 Disable ViPER Bass
-  bass-on                                  Enable ViPER Bass
-  bass-toggle                              Toggle ViPER Bass processing
-  clarity-gain <0..4.5>                    Set ViPER Clarity gain
-  clarity-mode <0..2>                      Set ViPER Clarity mode
-  clarity-off                              Disable ViPER Clarity
-  clarity-on                               Enable ViPER Clarity
-  convolver-cross <0..100>                 Set convolver cross-channel mix
-  convolver-off                            Disable convolver
-  convolver-on                             Enable convolver
-  crossfeed-mode <0..2>                    Set crossfeed mode
-  crossfeed-off                            Disable crossfeed
-  crossfeed-on                             Enable crossfeed
-  ddc-off                                  Disable ViPER-DDC
-  ddc-on                                   Enable ViPER-DDC
-  deq-off                                  Disable Dynamic EQ
-  deq-on                                   Enable Dynamic EQ
-  diff-delay <1..20>                       Set differential surround delay
-  diff-lowpass <0..20000>                  Set differential surround low-pass cutoff
-  diff-mix <0..100>                        Set differential surround mix
-  diff-off                                 Disable differential surround
-  diff-on                                  Enable differential surround
-  diff-reverse <0..1>                      Set differential reverse routing (0 or 1)
-  dynamic-off                              Disable dynamic bass
-  dynamic-on                               Enable dynamic bass
-  dynamic-side-high <0..100>               Set dynamic bass side high
-  dynamic-side-low <0..100>                Set dynamic bass side low
-  dynamic-strength <0..100>                Set dynamic bass strength
-  dynamic-x-high <0..12000>                Set dynamic bass x high
-  dynamic-x-low <0..2400>                  Set dynamic bass x low
-  dynamic-y-high <0..300>                  Set dynamic bass y high
-  dynamic-y-low <0..200>                   Set dynamic bass y low
-  eq-bands <10|15|25|31>                   Select 10, 15, 25, or 31 graphic EQ bands
-  eq-level <BAND> <dB>                     Set a graphic EQ band's gain in dB
-  eq-off                                   Disable graphic EQ
-  eq-on                                    Enable graphic EQ
-  eq-preset <NAME>                         Apply an existing graphic EQ curve
-  eq-presets                               List available graphic EQ curves
-  fet-off                                  Disable FET compressor
-  fet-on                                   Enable FET compressor
-  fet-ratio <1..10>                        Set FET compressor ratio
-  fet-threshold <-48..0>                   Set FET compressor threshold
-  field-depth <0..950>                     Set field depth (0 or 200–950)
-  field-mid <1..2>                         Set field surround mid-image factor
-  field-off                                Disable field surround
-  field-on                                 Enable field surround
-  field-widen <0..8>                       Set field surround widening
-  headphone-level <1..5>                   Set Headphone Surround+ level (1–5)
-  headphone-off                            Disable Headphone Surround+
-  headphone-on                             Enable Headphone Surround+
-  imager-high <0..200>                     Set stereo imager high-band width
-  imager-low <0..200>                      Set stereo imager low-band width
-  imager-mid <0..200>                      Set stereo imager mid-image factor
-  imager-off                               Disable stereo imager
-  imager-on                                Enable stereo imager
-  imager-xover-high <2000..8000>           Set stereo imager xover high
-  imager-xover-low <80..400>               Set stereo imager xover low
-  limiter-gain <0.01..2>                   Set master limiter gain
-  limiter-pan <-1..1>                      Set master limiter stereo pan
-  limiter-threshold <0.3..1>               Set master limiter threshold
-  lufs-max <0..12>                         Set LUFS targeting maximum gain
-  lufs-off                                 Disable LUFS targeting
-  lufs-on                                  Enable LUFS targeting
-  lufs-speed <0..2>                        Set LUFS targeting speed
-  lufs-target <-24..-8>                    Set LUFS targeting target level
-  mb-bands <3|5>                           Select 3 or 5 compressor bands
-  mb-off                                   Disable multiband compressor
-  mb-on                                    Enable multiband compressor
-  mono-freq <15..150>                      Set Bass Mono frequency
-  mono-mode <0..2>                         Set Bass Mono mode
-  mono-off                                 Disable Bass Mono
-  mono-on                                  Enable Bass Mono
-  mono-strength <0.5..10>                  Set Bass Mono strength
-  psycho-cutoff <60..150>                  Set psychoacoustic bass cutoff frequency
-  psycho-intensity <0..100>                Set psychoacoustic bass intensity
-  psycho-off                               Disable psychoacoustic bass
-  psycho-on                                Enable psychoacoustic bass
-  psycho-order <2..5>                      Set psychoacoustic bass harmonic order
-  psycho-original <0..100>                 Set psychoacoustic bass original signal percentage
-  reverb-damp <0..100>                     Set reverberation damping
-  reverb-dry <0..100>                      Set reverberation dry mix
-  reverb-off                               Disable reverberation
-  reverb-on                                Enable reverberation
-  reverb-room <0..100>                     Set reverberation room size
-  reverb-wet <0..100>                      Set reverberation wet mix
-  reverb-width <0..100>                    Set reverberation width
-  speaker-off                              Disable speaker correction
-  speaker-on                               Enable speaker correction
-  spectrum-exciter <0..6>                  Set spectrum extension harmonic strength
-  spectrum-freq <2200..8200>               Set spectrum extension frequency
-  spectrum-off                             Disable spectrum extension
-  spectrum-on                              Enable spectrum extension
-  tube-drive <0..100>                      Set tube simulator drive
-  tube-mix <0..100>                        Set tube simulator mix
-  tube-model <0..2>                        Set tube simulator model
-  tube-off                                 Disable tube simulator
-  tube-on                                  Enable tube simulator
-Commands can be chained: v4l-cli on bass-on clarity-gain 2.5
-Use man viper4linux-ctl for exact units, constraints and examples.
-)V4LHELP";
+    out << "Usage: v4l-cli [GLOBAL] [--EFFECT OPTION...] ...\n\n"
+           "Global commands:\n"
+           "  --on                  Enable master DSP processing\n"
+           "  --off                 Bypass master DSP processing\n"
+           "  --status              Inspect live DSP status (optional effect, --full)\n"
+           "  --help                Show this help\n\n"
+           "Effect selectors (alphabetical):\n";
+    for (const auto& entry : viperbass::cli_scope::effects)
+        out << "  --" << entry.name << "    " << entry.title << '\n';
+    out << "\nEach selector applies to the following options until the next selector.\n"
+           "  v4l-cli --on --bass on gain=3 --headphone on level=2\n\n"
+           "Numerical options use name=value; on/off inside an effect are local.\n"
+           "Use v4l-cli bass --help for Bass options, or --status --help.\n"
+           "Use man viper4linux-ctl for complete details and legacy syntax.\n";
+}
+void usageStatus(std::ostream& out = std::cout) {
+    out << "Usage: v4l-cli --status [EFFECT] [--full]\n"
+           "       v4l-cli --status --full\n"
+           "       v4l-cli --bass status [--full]\n\n"
+           "Without an effect, prints the full DSP status report.\n"
+           "EFFECT may be any effect selector name without the -- prefix.\n"
+           "--full includes extended detail where available.\n"
+           "Status is read-only; it never modifies DSP controls or saved settings.\n"
+           "The backend control channel must be active for effect-specific values.\n";
+}
+void usageEffect(const viperbass::cli_scope::EffectName& effect,
+                 std::ostream& out = std::cout) {
+    const std::string name = effect.name;
+    out << effect.title << "\nUsage: v4l-cli --" << name
+        << (name == "limiter" ? " [OPTION=VALUE ...] [status [--full]]\n"
+                              : " [on|off] [OPTION=VALUE ...] [status [--full]]\n")
+        << "       v4l-cli " << name << " --help\n\nOptions:\n";
+    if (name != "limiter")
+        out << "  on, off                 Enable or disable this effect\n";
+    if (name == "bass")
+        out << "  toggle                  Toggle Bass on/off\n";
+    if (name == "eq")
+        out << "  presets                 List saved EQ curves\n";
+    for (const auto& spec : viperbass::cli_batch::specs) {
+        const std::string command = spec.command;
+        const std::string prefix = name + "-";
+        if (command.compare(0, prefix.size(), prefix) != 0) continue;
+        const std::string option = command.substr(prefix.size());
+        if (spec.kind == viperbass::cli_batch::Kind::EqLevel)
+            out << "  level=BAND:DB           Set band gain (-12..12 dB)\n";
+        else if (spec.kind == viperbass::cli_batch::Kind::Name)
+            out << "  " << option << "=NAME               Saved preset name (quote names with spaces)\n";
+        else if (spec.kind == viperbass::cli_batch::Kind::EqBands)
+            out << "  bands=10|15|25|31       Select EQ band count\n";
+        else if (spec.kind == viperbass::cli_batch::Kind::MbBands)
+            out << "  bands=3|5               Select multiband count\n";
+        else
+            out << "  " << option << "=" << spec.min << ".." << spec.max
+                << (spec.kind == viperbass::cli_batch::Kind::Whole ? " (whole)" : "")
+                << '\n';
+    }
+    out << "  status [--full]         Inspect only this effect (read-only)\n"
+           "\nLegacy prefix commands remain supported.\n"
+           "Options are validated together before any edit is executed.\n";
 }
 
 float number(const char* value, float lower, float upper) {
@@ -162,7 +101,8 @@ void workerValue(std::atomic<std::int32_t>& parameter,
         serial.fetch_add(1, std::memory_order_release);
 }
 void show(viperbass::Controls& c, const std::string& command = "status",
-          const char* bandText = nullptr, bool expanded = false) {
+          const char* bandText = nullptr, bool expanded = false,
+          const std::string& selectedEffect = {}) {
     const int band = command == "eq-level" && bandText ? std::atoi(bandText) : -1;
     viperbass::cli_report::FullDetails info;
     if (expanded) {
@@ -172,13 +112,26 @@ void show(viperbass::Controls& c, const std::string& command = "status",
         info.ddcProfile = settings.value("ddc_profile").toString().toStdString();
         info.convolverKernel = settings.value("convolver_kernel").toString().toStdString();
     }
-    viperbass::printCliReport(std::cout, c, command, band, expanded, info);
+    viperbass::printCliReport(std::cout, c, command, band, expanded, info, selectedEffect);
 }
 }
 int executeOne(int argc, char** argv) {
     if (argc == 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) {
         usage(std::cout);
         return 0;
+    }
+    if (argc == 3 && std::string(argv[2]) == "--help") {
+        const std::string command(argv[1]);
+        if (command == "--status" || command == "status") {
+            usageStatus();
+            return 0;
+        }
+        const std::string effect = command.rfind("--", 0) == 0 ?
+            command.substr(2) : command;
+        if (const auto* match = viperbass::cli_scope::findEffect(effect)) {
+            usageEffect(*match);
+            return 0;
+        }
     }
     if (argc < 2) { usage(); return 2; }
     if (argc == 2 && std::string(argv[1]) == "eq-presets") {
@@ -207,10 +160,18 @@ int executeOne(int argc, char** argv) {
     auto& c = *mapping.get();
     const std::string cmd(argv[1]);
     try {
-        if (cmd == "status" && (argc == 2 ||
-                (argc == 3 && std::string(argv[2]) == "--full"))) {
-            show(c, cmd, nullptr, argc == 3);
-            return 0;
+        if (cmd == "status") {
+            const bool selected = argc >= 3 &&
+                viperbass::cli_scope::findEffect(argv[2]) != nullptr;
+            const bool expanded = (selected && argc == 4 &&
+                std::string(argv[3]) == "--full") ||
+                (!selected && argc == 3 && std::string(argv[2]) == "--full");
+            if (argc == 2 || (selected && argc == 3) ||
+                (selected && argc == 4 && expanded) ||
+                (!selected && argc == 3 && expanded)) {
+                show(c, cmd, nullptr, expanded, selected ? argv[2] : "");
+                return 0;
+            }
         }
         if ((cmd == "on" || cmd == "all-on") && argc == 2) c.master_enabled.store(1);
         else if ((cmd == "off" || cmd == "all-off") && argc == 2) c.master_enabled.store(0);
@@ -429,7 +390,8 @@ int executeOne(int argc, char** argv) {
 // failures can still interrupt a partially executed sequence (not atomic).
 int main(int argc, char** argv) {
     if (argc < 2 || (argc == 2 &&
-        (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")))
+        (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) ||
+        (argc == 3 && std::string(argv[2]) == "--help"))
         return executeOne(argc, argv);
 
     viperbass::Mapping inspection;

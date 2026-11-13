@@ -88,6 +88,25 @@ int main() {
     assert(invoke({"eq-bands", "10", "eq-level", "12", "-1.5"}) == 2);
     assert(c.eq_band_count.load() == 15);
 
+    // Effect-scoped syntax is translated before the unchanged DSP handlers.
+    c.master_enabled.store(0);
+    c.enabled.store(0);
+    c.headphone_enabled.store(0);
+    assert(invoke({"--on", "--bass", "on", "gain=3", "freq=60",
+                   "--headphone", "on", "level=2"}) == 0);
+    assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
+    assert(c.strength_centi.load() == 300 && c.frequency_hz.load() == 60);
+    assert(c.headphone_enabled.load() == 1 && c.headphone_quality.load() == 1);
+    assert(invoke({"--off", "--bass", "on"}) == 0);
+    assert(c.master_enabled.load() == 0 && c.enabled.load() == 1);
+    assert(invoke({"--bass", "off", "--on"}) == 0);
+    assert(c.master_enabled.load() == 1 && c.enabled.load() == 0);
+    assert(invoke({"--bass", "on", "gain=4", "--headphone", "level=9"}) == 2);
+    assert(c.enabled.load() == 0 && c.strength_centi.load() == 300);
+    assert(invoke({"--bass", "gain=3", "--headphone", "level=2.5"}) == 2);
+    assert(c.strength_centi.load() == 300);
+    assert(invoke({"--limiter", "on"}) == 2);
+
     // Only an explicit status query prints all six categories. Master switch
     // commands show one confirmation line; effect edits remain scoped.
     std::string displayed;
@@ -97,6 +116,17 @@ int main() {
     assert(invoke({"headphone-on"}, &displayed) == 0);
     assert(displayed.find("B. Headphone Surround+ - ON") != std::string::npos);
     assert(displayed.find("ViPER Bass") == std::string::npos);
+    assert(invoke({"status"}, &displayed) == 0);
+    assert(invoke({"--status", "bass"}, &displayed) == 0);
+    assert(displayed.find("ViPER Bass") != std::string::npos);
+    assert(displayed.find("Headphone Surround+") == std::string::npos);
+    assert(invoke({"status", "bass"}, &displayed) == 0);
+    assert(displayed.find("ViPER Bass") != std::string::npos);
+    assert(invoke({"--bass", "status", "--full"}, &displayed) == 0);
+    assert(displayed.find("ViPER Bass") != std::string::npos);
+    assert(displayed.find("Headphone Surround+") == std::string::npos);
+    assert(invoke({"--status", "--full"}, &displayed) == 0);
+    assert(displayed.find("Headphone Surround+") != std::string::npos);
     assert(invoke({"status"}, &displayed) == 0);
     for (const char* tab : {"1. Output", "2. Bass", "3. EQ & Tone", "4. Spatial",
                              "5. Dynamics", "6. Sound Correction"})
@@ -192,25 +222,27 @@ int main() {
 
     std::ostringstream help;
     usage(help);
-    const auto global = help.str().find("Global commands:");
-    const auto effectList = help.str().find("Effect-specific commands (alphabetical):");
-    assert(global != std::string::npos && effectList > global);
-    assert(help.str().find("  on ", global) < help.str().find("  off ", global));
-    assert(help.str().find("  off ", global) < help.str().find("  status ", global));
-    assert(help.str().find("  status ", global) < effectList);
-    assert(help.str().find("  agc-max ", effectList) > effectList);
-    assert(help.str().find("  toggle ") == std::string::npos);
-    assert(help.str().find("COMMAND1 [ARGUMENTS...] [COMMAND2 [ARGUMENTS...]] ...") != std::string::npos);
-    assert(help.str().find("  bass-toggle ") != std::string::npos);
-    assert(help.str().find("bass-on") != std::string::npos);
-    assert(help.str().find("bass-off") != std::string::npos);
-    assert(help.str().find("bass-on/off") == std::string::npos);
-    assert(help.str().find("all-on") != std::string::npos);
-    assert(help.str().find("headphone-level <1..5>") != std::string::npos);
-    assert(help.str().find("headphone-quality <0..4>") == std::string::npos);
-    assert(help.str().find("ddc-on") != std::string::npos);
-    assert(help.str().find("speaker-off") != std::string::npos);
-    assert(help.str().find("Use man viper4linux-ctl") != std::string::npos);
+    const std::string mainHelp = help.str();
+    const auto globals = mainHelp.find("Global commands:");
+    const auto effects = mainHelp.find("Effect selectors (alphabetical):");
+    assert(globals != std::string::npos && globals < effects);
+    assert(mainHelp.find("  --on ", globals) < effects);
+    assert(mainHelp.find("  --off ", globals) < effects);
+    assert(mainHelp.find("  --status ", globals) < effects);
+    assert(mainHelp.find("  --help ", globals) < effects);
+    assert(mainHelp.find("  --bass ", effects) > effects);
+    assert(mainHelp.find("  --headphone ", effects) > effects);
+    assert(mainHelp.find("v4l-cli bass --help") != std::string::npos);
+    assert(mainHelp.find("bass-gain <") == std::string::npos);
+    assert(mainHelp.find("Use man viper4linux-ctl") != std::string::npos);
+    assert(invoke({"--help"}, &displayed) == 0);
+    assert(displayed.find("Global commands") != std::string::npos);
+    assert(invoke({"bass", "--help"}, &displayed) == 0);
+    assert(displayed.find("gain=0.5..10") != std::string::npos);
+    assert(invoke({"--headphone", "--help"}, &displayed) == 0);
+    assert(displayed.find("level=1..5") != std::string::npos);
+    assert(invoke({"--status", "--help"}, &displayed) == 0);
+    assert(displayed.find("--status [EFFECT]") != std::string::npos);
     server.stop_server();
 
     // Exercise the no-audio case without touching /proc or live PipeWire.
@@ -230,6 +262,8 @@ int main() {
     std::string result;
     assert(invoke({"status"}, &result) == 0);
     assert(result.find("READY TO PROCESS AUDIO") != std::string::npos);
+    assert(invoke({"--status"}, &result) == 0);
+    assert(invoke({"--status", "bass"}) == 1); // No effect values without IPC.
     assert(result.find("PID 12345") != std::string::npos);
     assert(invoke({"off"}) == 1); // No silent success for disconnected effects.
     // A marked process that isn't PipeWire must never be treated as our backend.
