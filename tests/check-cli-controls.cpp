@@ -3,6 +3,7 @@
 #define main viper_ctl_entry
 #include "../src/viper-ctl.cpp"
 #undef main
+#include "mock/cli-eq-ack.h"
 
 #include <cassert>
 #include <filesystem>
@@ -46,6 +47,13 @@ static void run(const char* command) {
 int main() {
     viperbass::Mapping server;
     assert(server.create_server());
+    MockCliEqAcknowledger eqAck(*server.get());
+    // Exercise timeout and immediate acknowledgment without waiting ten seconds.
+    viperbass::Controls unacknowledged;
+    unacknowledged.eq_request_serial.store(1);
+    assert(!waitForEqApplied(unacknowledged, std::chrono::milliseconds(0)));
+    unacknowledged.eq_applied_serial.store(1);
+    assert(waitForEqApplied(unacknowledged, std::chrono::milliseconds(0)));
     auto& c = *server.get();
     assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
 
@@ -419,6 +427,7 @@ int main() {
         }
     assert(invoke({"--status", "--help"}, &displayed) == 0);
     assert(displayed.find("--status [EFFECT]") != std::string::npos);
+    eqAck.stop();
     server.stop_server();
 
     // Exercise the no-audio case without touching /proc or live PipeWire.

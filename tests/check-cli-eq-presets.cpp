@@ -3,6 +3,7 @@
 #define main viper_ctl_entry
 #include "../src/viper-ctl.cpp"
 #undef main
+#include "mock/cli-eq-ack.h"
 #include <QSettings>
 #include <cassert>
 #include <iostream>
@@ -33,6 +34,7 @@ int main() {
 
     viperbass::Mapping server;
     assert(server.create_server());
+    MockCliEqAcknowledger eqAck(*server.get());
     auto& c = *server.get();
     c.eq_band_count.store(15);
     c.eq_enabled.store(0);
@@ -134,6 +136,7 @@ int main() {
     assert(invoke({"on"}, &output) == 0);
     assert(invoke({"status", "--full"}, &output) == 0);
     assert(output.find("Master Limiter - ON (mandatory)") != std::string::npos);
+    eqAck.stop();
     server.stop_server();
     assert(invoke({"eq-presets"}) == 0); // Does not need a DSP channel.
     assert(invoke({"--eq", "preset=Acoustic"}) == 1);
