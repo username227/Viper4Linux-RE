@@ -347,10 +347,12 @@ int executeOne(int argc, char** argv, bool emitReport = true) {
             const auto v = number(argv[2], 10.f, 31.f);
             if (v != 10.f && v != 15.f && v != 25.f && v != 31.f)
                 throw std::invalid_argument("EQ mode must be 10, 15, 25, or 31");
-            c.eq_band_count.store(static_cast<int>(v));
-            // CLI changes use existing level indices; the GUI maintains
-            // independent saved layouts when selecting a different mode.
-            c.eq_request_serial.fetch_add(1, std::memory_order_release);
+            QSettings settings("ViPERforLinux", "ViPERClean");
+            std::string error;
+            if (!viperbass::cli_eq::switchBands(settings, c, static_cast<int>(v), error)) {
+                std::cerr << "EQ layout: " << error << '\n';
+                return 1;
+            }
         }
         else if (cmd == "eq-level" && argc == 4) {
             const auto index = number(argv[2], 1.f, 31.f);
@@ -555,13 +557,28 @@ int main(int argc, char** argv) {
     }
     if (attached) {
         QSettings settings("ViPERforLinux", "ViPERClean");
+        settings.sync();
+        QString previewPreset = settings.value("eq/selected_preset", "custom").toString();
+        int previewBands = viper_eq::validBands(inspection.get()->eq_band_count.load());
         for (const auto& command : commands) {
-            if (command.args[0] == "eq-preset" &&
-                !viperbass::cli_eq::choose(settings, *inspection.get(),
-                    QString::fromUtf8(command.args[1].c_str()), error,
-                    true, command.eqBandsAfter)) {
-                std::cerr << "EQ preset: " << error << '\n';
-                return 2;
+            const auto& name = command.args[0];
+            if (name == "eq-level") previewPreset = "custom";
+            if (name == "eq-preset") {
+                const QString requested = QString::fromUtf8(command.args[1].c_str());
+                if (!viperbass::cli_eq::choose(settings, *inspection.get(), requested,
+                                              error, true, command.eqBandsAfter)) {
+                    std::cerr << "EQ preset: " << error << '\n';
+                    return 2;
+                }
+                previewPreset = requested;
+            } else if (name == "eq-bands") {
+                if (command.eqBandsAfter != previewBands &&
+                    !viperbass::cli_eq::choose(settings, *inspection.get(), previewPreset,
+                                              error, true, command.eqBandsAfter)) {
+                    std::cerr << "EQ layout: " << error << '\n';
+                    return 2;
+                }
+                previewBands = command.eqBandsAfter;
             }
         }
     }

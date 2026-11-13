@@ -66,6 +66,48 @@ int main() {
     assert(s.value("eq/selected_preset").toString() == "user:My Curve");
     assert(c.eq_levels_hundredths[1].load() != 0);
 
+    // A named user preset stays selected when switching layouts and is
+    // interpolated to the new set of frequencies, as in the GUI.
+    const int userGain15 = c.eq_levels_hundredths[1].load();
+    assert(invoke({"--eq", "bands=31"}) == 0);
+    assert(c.eq_band_count.load() == 31);
+    s.sync();
+    assert(s.value("eq/selected_preset").toString() == "user:My Curve");
+    assert(s.value("eq_levels_31").toString().split(',').size() == 31);
+    assert(invoke({"--eq", "bands=15"}) == 0);
+    assert(c.eq_levels_hundredths[1].load() == userGain15);
+    s.sync();
+    assert(s.value("eq/selected_preset").toString() == "user:My Curve");
+
+    // An unedited 31-band Flat layout remains separate from a custom 10-band
+    // boost, and both custom curves survive round-tripping between layouts.
+    assert(invoke({"--eq", "bands=31", "preset=Flat"}) == 0);
+    assert(invoke({"--eq", "bands=10", "level=9:3"}) == 0);
+    assert(c.eq_band_count.load() == 10);
+    assert(c.eq_levels_hundredths[8].load() == 300);
+    assert(invoke({"--eq", "bands=31"}) == 0);
+    assert(c.eq_levels_hundredths[8].load() == 0);
+    assert(invoke({"--eq", "level=9:-2"}) == 0);
+    assert(invoke({"--eq", "bands=10"}) == 0);
+    assert(c.eq_levels_hundredths[8].load() == 300);
+    assert(invoke({"--eq", "bands=31"}) == 0);
+    assert(c.eq_levels_hundredths[8].load() == -200);
+    s.sync();
+    assert(s.value("eq_levels_10").toString().split(',').at(8) == "300");
+    assert(s.value("eq_levels_31").toString().split(',').at(8) == "-200");
+    assert(s.value("eq/selected_preset").toString() == "custom");
+
+    // Built-ins use their exact 10/31-band tables, not interpolated values.
+    assert(invoke({"--eq", "preset=Acoustic"}) == 0);
+    assert(c.eq_levels_hundredths[5].load() == 450); // 31-band band 6
+    assert(invoke({"--eq", "bands=10"}) == 0);
+    assert(c.eq_levels_hundredths[5].load() == 50);  // 10-band band 6
+    s.sync();
+    assert(s.value("eq/selected_preset").toString() == "builtin:Acoustic");
+    assert(invoke({"--eq", "bands=31"}) == 0);
+    assert(c.eq_levels_hundredths[5].load() == 450);
+    assert(invoke({"--eq", "preset=My Curve"}) == 0); // Restore status test context.
+
     assert(invoke({"status"}, &output) == 0);
     assert(output.find("Band 1 (") == std::string::npos);
     assert(invoke({"status", "--full"}, &output) == 0);

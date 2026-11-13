@@ -66,7 +66,7 @@ inline bool persistCliSettings(const std::string& cmd, const Controls& c) {
         flag("eq_enabled", c.eq_enabled);
         const int bands = value(c.eq_band_count);
         s.setValue("eq_band_count", bands);
-        if (cmd == "eq-bands" || cmd == "eq-level") {
+        if (cmd == "eq-level") {
             s.setValue("eq/selected_preset", "custom");
             std::string levels;
             for (int i = 0; i < bands; ++i) {
