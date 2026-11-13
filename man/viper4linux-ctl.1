@@ -176,10 +176,22 @@ change that effect alone.
 .SH "1. OUTPUT"
 .SS "A. Master Limiter"
 .TP
+.BI "--limiter threshold-db=" VALUE
+Set the Master Limiter peak threshold in dBFS, using the same units displayed
+by the GUI. VALUE accepts decimals from -10.5 through 0 dBFS inclusive.
+For example,
+.B --limiter threshold-db=-6.0
+is approximately equivalent to a linear threshold of 0.501. The conversion
+is rounded to the DSP's nearest thousandth, within its 0.300 to 1.000
+range. The GUI displays one decimal place, so its reading may not
+reproduce the precise entered value.
+.TP
 .BI "--limiter threshold=" VALUE
-Set limiter threshold. VALUE accepts decimals from 0.3 through 1 inclusive
-as a linear multiplier; the DSP stores thousandths. The limiter has no
-independent enable/disable command and operates only while Master is ON.
+Set the same threshold with a linear amplitude multiplier from 0.3 through
+1 inclusive, retained for existing scripts. The CLI status shows both the
+GUI-style dBFS value and the native linear setting.
+The limiter has no independent enable/disable command and operates only
+while Master is ON.
 .TP
 .BI "--limiter gain=" VALUE
 Set limiter output gain. VALUE accepts decimals from 0.01 through 2

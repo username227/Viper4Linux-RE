@@ -3,8 +3,12 @@
 // No DSP writes, ABI changes, background process, or Qt dependencies.
 #include "viper-control.h"
 #include "viper-eq-presets.h"
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <initializer_list>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 namespace viperbass {
@@ -94,6 +98,17 @@ inline void detail(std::ostream& out, const char* label, const char* value) {
     out << "      " << label << ": " << value << '\n';
 }
 
+// Match the GUI's one-decimal dBFS display without changing its native
+// thousandths-of-linear-amplitude representation in the shared DSP controls.
+inline std::string limiterThresholdDisplay(int permille) {
+    const double linear = std::clamp(permille, 300, 1000) / 1000.0;
+    std::ostringstream value;
+    value << std::fixed << std::setprecision(1)
+          << 20.0 * std::log10(linear) << " dBFS ("
+          << std::setprecision(3) << linear << " linear)";
+    return value.str();
+}
+
 inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
                    int eqBand = -1, bool expanded = false, const FullDetails& info = {}) {
     const auto heading = [&](const char* letter, const char* name, const char* state) {
@@ -105,7 +120,8 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
         break;
     case Effect::Limiter:
         heading("A", "Master Limiter", c.master_enabled.load() ? "ON (mandatory)" : "BYPASSED (Master OFF)");
-        detail(out, "Threshold", c.limiter_threshold_permille.load() / 1000.0);
+        const auto threshold = limiterThresholdDisplay(c.limiter_threshold_permille.load());
+        detail(out, "Threshold", threshold.c_str());
         detail(out, "Output", c.limiter_output_percent.load(), "%");
         detail(out, "Pan", c.limiter_pan_percent.load(), "%");
         break;

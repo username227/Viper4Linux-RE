@@ -99,9 +99,35 @@ int main() {
     assert(c.limiter_threshold_permille.load() == 600);
     assert(c.limiter_output_percent.load() == 100);
     assert(occurrences(multiOutput, "Master Limiter -") == 1);
-    assert(multiOutput.find("Threshold: 0.6") != std::string::npos);
+    assert(multiOutput.find("Threshold: -4.4 dBFS (0.600 linear)") != std::string::npos);
     assert(multiOutput.find("Output: 100%") != std::string::npos);
     assert(multiOutput.find("Output: 101%") == std::string::npos);
+
+    // Same dBFS input and output as the GUI, with native precision retained.
+    assert(invoke({"--limiter", "threshold-db=-6.0"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 501);
+    assert(multiOutput.find("Threshold: -6.0 dBFS (0.501 linear)") != std::string::npos);
+    assert(invoke({"--limiter", "threshold-db=-10.5"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 300); // Rounded GUI floor.
+    assert(multiOutput.find("Threshold: -10.5 dBFS (0.300 linear)") != std::string::npos);
+    assert(invoke({"--limiter", "threshold-db=0"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 1000);
+    assert(invoke({"--limiter", "threshold=0.6"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 600); // Old linear input works.
+    assert(invoke({"--limiter", "threshold-db=-6.0", "gain=1"}, &multiOutput) == 0);
+    assert(occurrences(multiOutput, "Master Limiter -") == 1);
+    assert(multiOutput.find("Output: 100%") != std::string::npos);
+    assert(multiOutput.find("Threshold: -6.0 dBFS (0.501 linear)") != std::string::npos);
+    const int beforeInvalidDb = c.limiter_threshold_permille.load();
+    for (const char* invalid : {"-10.6", "0.1", "nan", "garbage"}) {
+        const std::string option = std::string("threshold-db=") + invalid;
+        assert(invoke({"--limiter", option.c_str()}) == 2);
+        assert(c.limiter_threshold_permille.load() == beforeInvalidDb);
+    }
+    // Preflight checks later scopes before applying an earlier dBFS edit.
+    assert(invoke({"--limiter", "threshold-db=-4.0",
+                   "--headphone", "level=9"}) == 2);
+    assert(c.limiter_threshold_permille.load() == beforeInvalidDb);
 
     // A sequence crossing scopes reports each distinct effect once, using
     // final settings, in first-appearance order even if a scope is revisited.
@@ -124,7 +150,7 @@ int main() {
                    "--status", "limiter", "--full"}, &multiOutput) == 0);
     assert(occurrences(multiOutput, "Master Limiter -") == 1);
     assert(multiOutput.find("Output: 125%") != std::string::npos);
-    assert(multiOutput.find("Threshold: 0.7") != std::string::npos);
+    assert(multiOutput.find("Threshold: -3.1 dBFS (0.700 linear)") != std::string::npos);
 
     // Explicit global status overrides per-effect confirmations.
     assert(invoke({"--bass", "gain=3", "--headphone", "level=2",
@@ -352,6 +378,9 @@ int main() {
     assert(invoke({"--field", "--help"}, &displayed) == 0);
     assert(displayed.find("depth=0|200..950") != std::string::npos);
     assert(invoke({"--limiter", "--help"}, &displayed) == 0);
+    assert(displayed.find("threshold=0.3..1") != std::string::npos);
+    assert(displayed.find("threshold-db=-10.5..0") != std::string::npos);
+    assert(displayed.find("matches GUI display") != std::string::npos);
     assert(displayed.find(" [on|off]") == std::string::npos);
     assert(invoke({"--ddc", "--help"}, &displayed) == 0);
     assert(displayed.find("VDC profile in the GUI") != std::string::npos);

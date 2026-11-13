@@ -458,6 +458,14 @@ int executeOne(int argc, char** argv, bool emitReport = true) {
             c.diff_lp_hz.store(static_cast<int>(std::lround(number(argv[2], 0.f, 20000.f))));
         else if (cmd == "limiter-threshold" && argc == 3)
             c.limiter_threshold_permille.store(static_cast<int>(std::lround(number(argv[2], 0.3f, 1.f) * 1000.f)));
+        else if (cmd == "limiter-threshold-db" && argc == 3) {
+            // GUI displays 20*log10(linear) to one decimal place. Accept its
+            // rounded -10.5 dBFS minimum and clamp only the final DSP value.
+            const double db = number(argv[2], -10.5f, 0.f);
+            const double linear = std::pow(10.0, db / 20.0);
+            c.limiter_threshold_permille.store(std::clamp(
+                static_cast<int>(std::lround(linear * 1000.0)), 300, 1000));
+        }
         else if (cmd == "limiter-gain" && argc == 3)
             c.limiter_output_percent.store(static_cast<int>(std::lround(number(argv[2], 0.01f, 2.f) * 100.f)));
         else if (cmd == "limiter-pan" && argc == 3)
