@@ -118,13 +118,14 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
     case Effect::Master:
         out << "Master processing: " << (c.master_enabled.load() ? "ON" : "BYPASSED") << '\n';
         break;
-    case Effect::Limiter:
+    case Effect::Limiter: {
         heading("A", "Master Limiter", c.master_enabled.load() ? "ON (mandatory)" : "BYPASSED (Master OFF)");
         const auto threshold = limiterThresholdDisplay(c.limiter_threshold_permille.load());
         detail(out, "Threshold", threshold.c_str());
         detail(out, "Output", c.limiter_output_percent.load(), "%");
         detail(out, "Pan", c.limiter_pan_percent.load(), "%");
         break;
+    }
     case Effect::Agc:
         heading("B", "Playback Gain Control (AGC)", enabled(c.agc_enabled.load()));
         detail(out, "Strength", c.agc_strength_centi.load() / 100.0);
