@@ -14,7 +14,8 @@
 #include <string>
 #include <vector>
 
-static int invoke(std::initializer_list<const char*> args, std::string* output = nullptr) {
+static int invoke(std::initializer_list<const char*> args, std::string* output = nullptr,
+                  std::string* errorOutput = nullptr) {
     std::vector<std::string> words = {"viper4linux-ctl"};
     for (const auto* arg : args) words.emplace_back(arg);
     std::vector<char*> argv;
@@ -27,6 +28,7 @@ static int invoke(std::initializer_list<const char*> args, std::string* output =
     std::cout.rdbuf(old_out);
     std::cerr.rdbuf(old_err);
     if (output) *output = captured.str();
+    if (errorOutput) *errorOutput = errors.str();
     return result;
 }
 
@@ -427,7 +429,24 @@ int main() {
         }
     assert(invoke({"--status", "--help"}, &displayed) == 0);
     assert(displayed.find("--status [EFFECT]") != std::string::npos);
+    // End-to-end timeout regression: shared controls remain active, but the
+    // native EQ worker never acknowledges the new request. No real audio runs.
     eqAck.stop();
+    const auto beforeEqRequest = c.eq_request_serial.load();
+    c.eq_applied_serial.store(beforeEqRequest, std::memory_order_release);
+    eqAckTimeout = std::chrono::milliseconds(0);
+    std::string timeoutOutput, timeoutError;
+    assert(invoke({"--eq", "level=1:-3.25"}, &timeoutOutput, &timeoutError) == 1);
+    assert(timeoutOutput.empty()); // No misleading success report on timeout.
+    assert(timeoutError.find("did not acknowledge it within 10 seconds") !=
+           std::string::npos);
+    assert(c.eq_request_serial.load() == beforeEqRequest + 1);
+    assert(c.eq_applied_serial.load() == beforeEqRequest);
+    QSettings savedEq("ViPERforLinux", "ViPERClean");
+    savedEq.sync();
+    const QString savedLayout = QString("eq_levels_%1").arg(c.eq_band_count.load());
+    assert(savedEq.value(savedLayout).toString().split(',').at(0) == "-325");
+    eqAckTimeout = std::chrono::seconds(10);
     server.stop_server();
 
     // Exercise the no-audio case without touching /proc or live PipeWire.

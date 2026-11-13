@@ -121,6 +121,13 @@ void workerValue(std::atomic<std::int32_t>& parameter,
 }
 // EQ coefficients are applied asynchronously by the native DSP worker.
 // Wait after successful CLI EQ edits, not for read-only status requests.
+// Production always uses ten seconds; mock CLI tests can shorten one
+// invocation without changing the public CLI or slowing CTest.
+#ifdef VIPER_MOCK_TEST_IPC
+std::chrono::steady_clock::duration eqAckTimeout = std::chrono::seconds(10);
+#else
+constexpr auto eqAckTimeout = std::chrono::seconds(10);
+#endif
 bool waitForEqApplied(const viperbass::Controls& c,
                       std::chrono::steady_clock::duration timeout) {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
@@ -629,7 +636,7 @@ int main(int argc, char** argv) {
     if (attached && editedEq &&
         inspection.get()->eq_request_serial.load(std::memory_order_acquire) !=
             startingEqSerial &&
-        !waitForEqApplied(*inspection.get(), std::chrono::seconds(10))) {
+        !waitForEqApplied(*inspection.get(), eqAckTimeout)) {
         std::cerr << "EQ update submitted, but the backend did not acknowledge it "
                      "within 10 seconds. Settings may have been saved and the "
                      "update may still apply; check v4l-cli --eq status --full.\n";
