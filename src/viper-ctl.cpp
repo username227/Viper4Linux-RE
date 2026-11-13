@@ -32,6 +32,7 @@ void usage(std::ostream& out = std::cerr) {
            "  v4l-cli --on --bass on gain=3 --headphone on level=2\n\n"
            "Numerical options use name=value; on/off inside an effect are local.\n"
            "Use v4l-cli --[EFFECT] --help for effect-specific options.\n"
+           "One final report summarizes all affected effects after execution.\n"
            "Use man viper4linux-ctl for complete details.\n";
 }
 void usageStatus(std::ostream& out = std::cout) {
@@ -131,7 +132,122 @@ void show(viperbass::Controls& c, const std::string& command = "status",
     viperbass::printCliReport(std::cout, c, command, band, expanded, info, selectedEffect);
 }
 }
-int executeOne(int argc, char** argv) {
+struct EffectSummary {
+    std::string name;
+    bool requestedStatus = false;
+    bool expanded = false;
+    bool changedPreset = false;
+    std::vector<int> editedBands;
+};
+
+// Collect report requests while executing in order. Output is read from
+// shared memory once, after all commands have succeeded, so no intermediate
+// settings are ever presented as the final configuration.
+struct BatchSummary {
+    std::vector<EffectSummary> effects;
+    bool globalStatus = false;
+    bool globalExpanded = false;
+    bool listPresets = false;
+
+    EffectSummary& effect(const std::string& name) {
+        for (auto& entry : effects)
+            if (entry.name == name) return entry;
+        effects.push_back(EffectSummary{name});
+        return effects.back();
+    }
+
+    void collect(const viperbass::cli_batch::Command& command) {
+        const auto& args = command.args;
+        const std::string& name = args[0];
+        if (name == "eq-presets") {
+            listPresets = true;
+            return;
+        }
+        if (name == "status") {
+            const bool expanded =
+                std::find(args.begin(), args.end(), "--full") != args.end();
+            if (args.size() > 1 && viperbass::cli_scope::findEffect(args[1])) {
+                auto& entry = effect(args[1]);
+                entry.requestedStatus = true;
+                entry.expanded = entry.expanded || expanded;
+            } else {
+                globalStatus = true;
+                globalExpanded = globalExpanded || expanded;
+            }
+            return;
+        }
+        if (name == "on" || name == "off" ||
+            name == "all-on" || name == "all-off") {
+            (void)effect("master");
+            return;
+        }
+        const auto dash = name.find('-');
+        if (dash == std::string::npos)
+            return; // Preflight already rejects unknown commands.
+        auto& entry = effect(name.substr(0, dash));
+        if (name == "eq-preset") entry.changedPreset = true;
+        if (name == "eq-level") {
+            const int band = std::stoi(args[1]); // Validated by preflight.
+            if (std::find(entry.editedBands.begin(), entry.editedBands.end(), band)
+                == entry.editedBands.end())
+                entry.editedBands.push_back(band);
+        }
+    }
+
+    void print(viperbass::Controls* controls) const {
+        if (controls) {
+            auto& c = *controls;
+            if (globalStatus) {
+                // A complete requested status supersedes overlapping effect
+                // reports; --full is preserved even when requested earlier.
+                show(c, "status", nullptr, globalExpanded);
+            } else {
+                for (const auto& entry : effects) {
+                    if (entry.name == "master") {
+                        show(c, "on");
+                    } else if (entry.requestedStatus) {
+                        show(c, "status", nullptr, entry.expanded, entry.name);
+                    } else if (entry.name == "eq" &&
+                               entry.editedBands.size() == 1) {
+                        const std::string band =
+                            std::to_string(entry.editedBands.front());
+                        show(c, "eq-level", band.c_str());
+                    } else {
+                        show(c, entry.name + "-on");
+                    }
+                    // A regular EQ report shows only one selected band. When
+                    // multiple bands were changed, confirm all of their final
+                    // gains without printing an entire 15/25/31-band status.
+                    if (entry.name == "eq" &&
+                        entry.editedBands.size() > 1 && !entry.expanded) {
+                        for (const int band : entry.editedBands) {
+                            std::cout << "      Edited band " << band << ": "
+                                      << c.eq_levels_hundredths[band - 1].load() / 100.0
+                                      << " dB\n";
+                        }
+                    }
+                    if (entry.changedPreset && !entry.expanded) {
+                        QSettings settings("ViPERforLinux", "ViPERClean");
+                        std::cout << "      Selected EQ preset: "
+                                  << settings.value("eq/selected_preset")
+                                         .toString().toStdString() << '\n';
+                    }
+                }
+            }
+        } else if (globalStatus) {
+            const auto pid = viperbass::detected_backend_pid();
+            if (pid > 0)
+                std::cout << "ViPER backend: READY TO PROCESS AUDIO (PID "
+                          << pid << ") | DSP control channel: not active yet\n";
+        }
+        if (listPresets) {
+            QSettings settings("ViPERforLinux", "ViPERClean");
+            viperbass::cli_eq::list(settings, std::cout);
+        }
+    }
+};
+}
+int executeOne(int argc, char** argv, bool emitReport = true) {
     if (argc == 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) {
         usage(std::cout);
         return 0;
@@ -155,7 +271,7 @@ int executeOne(int argc, char** argv) {
     if (argc < 2) { usage(); return 2; }
     if (argc == 2 && std::string(argv[1]) == "eq-presets") {
         QSettings settings("ViPERforLinux", "ViPERClean");
-        viperbass::cli_eq::list(settings, std::cout);
+        if (emitReport) viperbass::cli_eq::list(settings, std::cout);
         return 0;
     }
     viperbass::Mapping mapping;
@@ -163,8 +279,9 @@ int executeOne(int argc, char** argv) {
         const auto pid = viperbass::detected_backend_pid();
         if (std::string(argv[1]) == "status" &&
             (argc == 2 || (argc == 3 && std::string(argv[2]) == "--full")) && pid > 0) {
-            std::cout << "ViPER backend: READY TO PROCESS AUDIO (PID " << pid
-                      << ") | DSP control channel: not active yet\n";
+            if (emitReport)
+                std::cout << "ViPER backend: READY TO PROCESS AUDIO (PID " << pid
+                          << ") | DSP control channel: not active yet\n";
             return 0; // Process is running; a script can distinguish ready from offline.
         }
         if (pid > 0) {
@@ -188,7 +305,8 @@ int executeOne(int argc, char** argv) {
             if (argc == 2 || (selected && argc == 3) ||
                 (selected && argc == 4 && expanded) ||
                 (!selected && argc == 3 && expanded)) {
-                show(c, cmd, nullptr, expanded, selected ? argv[2] : "");
+                if (emitReport)
+                    show(c, cmd, nullptr, expanded, selected ? argv[2] : "");
                 return 0;
             }
         }
@@ -395,8 +513,8 @@ int executeOne(int argc, char** argv) {
         std::cerr << "Live DSP controls updated, but the saved CLI settings could not be written.\n";
         return 1;
     }
-    show(c, cmd, argc > 2 ? argv[2] : nullptr);
-    if (cmd == "eq-preset") {
+    if (emitReport) show(c, cmd, argc > 2 ? argv[2] : nullptr);
+    if (emitReport && cmd == "eq-preset") {
         QSettings settings("ViPERforLinux", "ViPERClean");
         std::cout << "Selected EQ preset: "
                   << settings.value("eq/selected_preset").toString().toStdString() << '\n';
@@ -434,13 +552,25 @@ int main(int argc, char** argv) {
             }
         }
     }
+    BatchSummary summary;
+    std::size_t completed = 0;
     for (auto& command : commands) {
         std::vector<char*> single;
         single.reserve(command.args.size() + 1);
         single.push_back(argv[0]);
         for (auto& argument : command.args) single.push_back(argument.data());
-        const int result = executeOne(static_cast<int>(single.size()), single.data());
-        if (result != 0) return result;
+        const int result = executeOne(static_cast<int>(single.size()),
+                                      single.data(), false);
+        if (result != 0) {
+            if (completed > 0)
+                std::cerr << "Sequence stopped after " << completed
+                          << " completed operation(s); earlier changes may have "
+                             "taken effect. Use v4l-cli --status to inspect.\n";
+            return result;
+        }
+        summary.collect(command);
+        ++completed;
     }
+    summary.print(attached ? inspection.get() : nullptr);
     return 0;
 }

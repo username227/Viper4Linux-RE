@@ -29,6 +29,16 @@ static int invoke(std::initializer_list<const char*> args, std::string* output =
     return result;
 }
 
+static int occurrences(const std::string& text, const std::string& match) {
+    int count = 0;
+    std::size_t pos = 0;
+    while ((pos = text.find(match, pos)) != std::string::npos) {
+        ++count;
+        pos += match.size();
+    }
+    return count;
+}
+
 static void run(const char* command) {
     assert(invoke({command}) == 0);
 }
@@ -79,6 +89,59 @@ int main() {
            c.psycho_enabled.load() == 0);
     assert(multiOutput.find("Master processing: ON") != std::string::npos);
     assert(multiOutput.find("ViPER Bass - ON") != std::string::npos);
+    assert(occurrences(multiOutput, "ViPER Bass -") == 1);
+    assert(occurrences(multiOutput, "Psychoacoustic Bass -") == 1);
+    assert(occurrences(multiOutput, "Master processing:") == 1);
+
+    // Only final values are reported: no intermediate 101% gain snapshot.
+    c.limiter_output_percent.store(101);
+    assert(invoke({"--limiter", "threshold=0.6", "gain=1"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 600);
+    assert(c.limiter_output_percent.load() == 100);
+    assert(occurrences(multiOutput, "Master Limiter -") == 1);
+    assert(multiOutput.find("Threshold: 0.6") != std::string::npos);
+    assert(multiOutput.find("Output: 100%") != std::string::npos);
+    assert(multiOutput.find("Output: 101%") == std::string::npos);
+
+    // A sequence crossing scopes reports each distinct effect once, using
+    // final settings, in first-appearance order even if a scope is revisited.
+    assert(invoke({"--bass", "on", "gain=2.5",
+                   "--headphone", "on", "level=3",
+                   "--bass", "gain=3"}, &multiOutput) == 0);
+    assert(occurrences(multiOutput, "ViPER Bass -") == 1);
+    assert(occurrences(multiOutput, "Headphone Surround+ -") == 1);
+    assert(multiOutput.find("Strength: 3") != std::string::npos);
+    assert(multiOutput.find("Surround level: 3") != std::string::npos);
+    assert(multiOutput.find("ViPER Bass -") <
+           multiOutput.find("Headphone Surround+ -"));
+
+    // Targeted status merges with a changed effect, and reflects edits
+    // made even when the status token appears earlier in the invocation.
+    assert(invoke({"--status", "bass", "--bass", "gain=4"}, &multiOutput) == 0);
+    assert(occurrences(multiOutput, "ViPER Bass -") == 1);
+    assert(multiOutput.find("Strength: 4") != std::string::npos);
+    assert(invoke({"--limiter", "gain=1.25", "threshold=0.7",
+                   "--status", "limiter", "--full"}, &multiOutput) == 0);
+    assert(occurrences(multiOutput, "Master Limiter -") == 1);
+    assert(multiOutput.find("Output: 125%") != std::string::npos);
+    assert(multiOutput.find("Threshold: 0.7") != std::string::npos);
+
+    // Explicit global status overrides per-effect confirmations.
+    assert(invoke({"--bass", "gain=3", "--headphone", "level=2",
+                   "--status", "--full"}, &multiOutput) == 0);
+    assert(occurrences(multiOutput, "ViPER4Linux-RE - DSP status") == 1);
+    assert(occurrences(multiOutput, "ViPER Bass -") == 1);
+    assert(occurrences(multiOutput, "Headphone Surround+ -") == 1);
+
+    // Edited EQ bands are shown together without intermediate reports.
+    assert(invoke({"--eq", "bands=15", "level=2:-1.75",
+                   "level=5:2.5", "level=2:1.25"}, &multiOutput) == 0);
+    assert(occurrences(multiOutput, "Graphic Equalizer -") == 1);
+    assert(occurrences(multiOutput, "Edited band 2:") == 1);
+    assert(multiOutput.find("Edited band 2: 1.25 dB") != std::string::npos);
+    assert(multiOutput.find("Edited band 5: 2.5 dB") != std::string::npos);
+    assert(multiOutput.find("Edited band 2: -1.75") == std::string::npos);
+
     assert(invoke({"off", "bass-gain", "bad"}, &multiOutput) == 2);
     assert(c.master_enabled.load() == 1); // Invalid later token did not bypass.
     assert(invoke({"off", "bass-gain", "2.5", "unknown-command"}) == 2);

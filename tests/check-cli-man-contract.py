@@ -34,10 +34,13 @@ assert 'v4l-cli clarity --help' not in man
 assert 'bass-gain' in commands and 'bass-freq' in commands
 assert not {'gain', 'freq'} & commands
 assert '.BI "--bass gain=" VALUE' in man and '.BI "--bass freq=" VALUE' in man
-assert 'numerical values must use the scoped' in man
+# Scoped numeric parameters must appear as option=value commands.
 assert '--eq level=BAND:DB' in man
 assert '.SH LEGACY NO-ARGUMENT ALIASES' in man
 canonical = man.split('.SH LEGACY NO-ARGUMENT ALIASES', 1)[0]
+assert '.BI "--bass gain=" VALUE' in canonical
+assert 'one final report' in canonical
+assert 'each affected effect once' in canonical
 assert not re.search(r'^\.BR [a-z]+-(?:on|off)', canonical, re.M)
 assert 'bass-gain 3' not in canonical
 assert 'headphone-level 2' not in canonical
