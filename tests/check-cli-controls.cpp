@@ -116,7 +116,10 @@ int main() {
     // Only an initial unscoped bare master command is allowed to mix.
     assert(invoke({"on", "--bass", "on"}) == 0);
     assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
+    // Restore both manipulated flags before the independent worker-serial
+    // assertions below, which expect each switch to start disabled.
     c.enabled.store(0);
+    c.analogx_enabled.store(0);
     // A numeric positional command is rejected even when placed after an effect.
     assert(invoke({"bass-gain", "2"}) == 2);
     assert(invoke({"--bass", "gain", "2"}) == 2);
