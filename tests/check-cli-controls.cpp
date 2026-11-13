@@ -59,9 +59,9 @@ int main() {
     run("all-on");
     assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
 
-    assert(invoke({"bass-gain", "2.35"}) == 0);
+    assert(invoke({"--bass", "gain=2.35"}) == 0);
     assert(c.strength_centi.load() == 235);
-    assert(invoke({"bass-freq", "72.6"}) == 0);
+    assert(invoke({"--bass", "freq=72.6"}) == 0);
     assert(c.frequency_hz.load() == 73);
     // No compatibility aliases for generic Bass gain and frequency names.
     assert(invoke({"gain", "5"}) == 2);
@@ -83,10 +83,48 @@ int main() {
     assert(c.master_enabled.load() == 1); // Invalid later token did not bypass.
     assert(invoke({"off", "bass-gain", "2.5", "unknown-command"}) == 2);
     assert(c.master_enabled.load() == 1);
-    assert(invoke({"eq-bands", "15", "eq-level", "12", "-1.5"}) == 0);
+    assert(invoke({"--eq", "bands=15", "level=12:-1.5"}) == 0);
     assert(c.eq_band_count.load() == 15 && c.eq_levels_hundredths[11].load() == -150);
-    assert(invoke({"eq-bands", "10", "eq-level", "12", "-1.5"}) == 2);
+    assert(invoke({"--eq", "bands=10", "level=12:-1.5"}) == 2);
     assert(c.eq_band_count.load() == 15);
+
+    // Effect-scoped syntax is translated before the unchanged DSP handlers.
+    c.master_enabled.store(0);
+    c.enabled.store(0);
+    c.headphone_enabled.store(0);
+    assert(invoke({"--on", "--bass", "on", "gain=3", "freq=60",
+                   "--headphone", "on", "level=2"}) == 0);
+    assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
+    assert(c.strength_centi.load() == 300 && c.frequency_hz.load() == 60);
+    assert(c.headphone_enabled.load() == 1 && c.headphone_quality.load() == 1);
+    assert(invoke({"--off", "--bass", "on"}) == 0);
+    assert(c.master_enabled.load() == 0 && c.enabled.load() == 1);
+    assert(invoke({"--bass", "off", "--on"}) == 0);
+    assert(c.master_enabled.load() == 1 && c.enabled.load() == 0);
+    assert(invoke({"--bass", "on", "gain=4", "--headphone", "level=9"}) == 2);
+    assert(c.enabled.load() == 0 && c.strength_centi.load() == 300);
+    assert(invoke({"--bass", "gain=3", "--headphone", "level=2.5"}) == 2);
+    assert(c.strength_centi.load() == 300);
+    assert(invoke({"--limiter", "on"}) == 2);
+    // Mixing must fail before a legacy switch or scoped command can write.
+    c.enabled.store(0);
+    c.analogx_enabled.store(1);
+    assert(invoke({"bass-on", "--analogx", "off"}) == 2);
+    assert(invoke({"--bass", "on", "analogx-off"}) == 2);
+    assert(invoke({"--on", "bass-on"}) == 2);
+    assert(c.enabled.load() == 0 && c.analogx_enabled.load() == 1);
+    // Only an initial unscoped bare master command is allowed to mix.
+    assert(invoke({"on", "--bass", "on"}) == 0);
+    assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
+    // Restore both manipulated flags before the independent worker-serial
+    // assertions below, which expect each switch to start disabled.
+    c.enabled.store(0);
+    c.analogx_enabled.store(0);
+    // A numeric positional command is rejected even when placed after an effect.
+    assert(invoke({"bass-gain", "2"}) == 2);
+    assert(invoke({"--bass", "gain", "2"}) == 2);
+    assert(invoke({"--bass", "on", "bass-gain", "2"}) == 2);
+    assert(c.strength_centi.load() == 300 && c.enabled.load() == 0);
 
     // Only an explicit status query prints all six categories. Master switch
     // commands show one confirmation line; effect edits remain scoped.
@@ -97,6 +135,17 @@ int main() {
     assert(invoke({"headphone-on"}, &displayed) == 0);
     assert(displayed.find("B. Headphone Surround+ - ON") != std::string::npos);
     assert(displayed.find("ViPER Bass") == std::string::npos);
+    assert(invoke({"status"}, &displayed) == 0);
+    assert(invoke({"--status", "bass"}, &displayed) == 0);
+    assert(displayed.find("ViPER Bass") != std::string::npos);
+    assert(displayed.find("Headphone Surround+") == std::string::npos);
+    assert(invoke({"status", "bass"}, &displayed) == 0);
+    assert(displayed.find("ViPER Bass") != std::string::npos);
+    assert(invoke({"--bass", "status", "--full"}, &displayed) == 0);
+    assert(displayed.find("ViPER Bass") != std::string::npos);
+    assert(displayed.find("Headphone Surround+") == std::string::npos);
+    assert(invoke({"--status", "--full"}, &displayed) == 0);
+    assert(displayed.find("Headphone Surround+") != std::string::npos);
     assert(invoke({"status"}, &displayed) == 0);
     for (const char* tab : {"1. Output", "2. Bass", "3. EQ & Tone", "4. Spatial",
                              "5. Dynamics", "6. Sound Correction"})
@@ -114,7 +163,8 @@ int main() {
     // shared memory / ViPERDSP retain their existing zero-based indices.
     for (int level = 1; level <= 5; ++level) {
         const std::string value = std::to_string(level);
-        assert(invoke({"headphone-level", value.c_str()}) == 0);
+        const std::string option = "level=" + value;
+        assert(invoke({"--headphone", option.c_str()}) == 0);
         assert(c.headphone_quality.load() == level - 1);
         std::string status;
         assert(invoke({"status"}, &status) == 0);
@@ -126,7 +176,8 @@ int main() {
     assert(c.headphone_quality.load() == 4);
     for (const char* invalid : {"0", "6", "-1", "2.5", "3.25", "abc", "2x", "nan"}) {
         const int before = c.headphone_quality.load();
-        assert(invoke({"headphone-level", invalid}) == 2);
+        const std::string option = std::string("level=") + invalid;
+        assert(invoke({"--headphone", option.c_str()}) == 2);
         assert(c.headphone_quality.load() == before);
     }
     assert(invoke({"headphone-level"}) == 2);
@@ -160,9 +211,13 @@ int main() {
                                std::atomic<std::int32_t>& atom,
                                std::atomic<std::uint32_t>& serial, int expected) {
         const auto before = serial.load();
-        assert(invoke({cmd, arg}) == 0);
+        const std::string legacy(cmd);
+        const auto dash = legacy.find('-');
+        const std::string selector = "--" + legacy.substr(0, dash);
+        const std::string option = legacy.substr(dash + 1) + "=" + arg;
+        assert(invoke({selector.c_str(), option.c_str()}) == 0);
         assert(atom.load() == expected && serial.load() == before + 1);
-        assert(invoke({cmd, arg}) == 0);
+        assert(invoke({selector.c_str(), option.c_str()}) == 0);
         assert(serial.load() == before + 1);
     };
     testValue("tube-model", "2", c.tube_model, c.tube_request_serial, 2);
@@ -181,36 +236,43 @@ int main() {
     for (const char* invalid : {"0", "4", "2.5", "xyz"}) {
         const auto previous = c.mb_band_count.load();
         const auto serial = c.mb_request_serial.load();
-        assert(invoke({"mb-bands", invalid}) == 2);
+        const std::string option = std::string("bands=") + invalid;
+        assert(invoke({"--mb", option.c_str()}) == 2);
         assert(c.mb_band_count.load() == previous && c.mb_request_serial.load() == serial);
     }
     for (const char* invalid : {"3", "1.5", "nan"}) {
         const auto previous = c.tube_model.load();
-        assert(invoke({"tube-model", invalid}) == 2);
+        const std::string option = std::string("model=") + invalid;
+        assert(invoke({"--tube", option.c_str()}) == 2);
         assert(c.tube_model.load() == previous);
     }
 
     std::ostringstream help;
     usage(help);
-    const auto global = help.str().find("Global commands:");
-    const auto effectList = help.str().find("Effect-specific commands (alphabetical):");
-    assert(global != std::string::npos && effectList > global);
-    assert(help.str().find("  on ", global) < help.str().find("  off ", global));
-    assert(help.str().find("  off ", global) < help.str().find("  status ", global));
-    assert(help.str().find("  status ", global) < effectList);
-    assert(help.str().find("  agc-max ", effectList) > effectList);
-    assert(help.str().find("  toggle ") == std::string::npos);
-    assert(help.str().find("COMMAND1 [ARGUMENTS...] [COMMAND2 [ARGUMENTS...]] ...") != std::string::npos);
-    assert(help.str().find("  bass-toggle ") != std::string::npos);
-    assert(help.str().find("bass-on") != std::string::npos);
-    assert(help.str().find("bass-off") != std::string::npos);
-    assert(help.str().find("bass-on/off") == std::string::npos);
-    assert(help.str().find("all-on") != std::string::npos);
-    assert(help.str().find("headphone-level <1..5>") != std::string::npos);
-    assert(help.str().find("headphone-quality <0..4>") == std::string::npos);
-    assert(help.str().find("ddc-on") != std::string::npos);
-    assert(help.str().find("speaker-off") != std::string::npos);
-    assert(help.str().find("Use man viper4linux-ctl") != std::string::npos);
+    const std::string mainHelp = help.str();
+    const auto globals = mainHelp.find("Global commands:");
+    const auto effects = mainHelp.find("Effect selectors (alphabetical):");
+    assert(globals != std::string::npos && globals < effects);
+    assert(mainHelp.find("  --on ", globals) < effects);
+    assert(mainHelp.find("  --off ", globals) < effects);
+    assert(mainHelp.find("  --status ", globals) < effects);
+    assert(mainHelp.find("  --help ", globals) < effects);
+    assert(mainHelp.find("  --bass ", effects) > effects);
+    assert(mainHelp.find("  --headphone ", effects) > effects);
+    assert(mainHelp.find("v4l-cli bass --help") != std::string::npos);
+    assert(mainHelp.find("bass-gain <") == std::string::npos);
+    assert(mainHelp.find("Use man viper4linux-ctl") != std::string::npos);
+    assert(mainHelp.find("legacy") == std::string::npos);
+    assert(invoke({"--help"}, &displayed) == 0);
+    assert(displayed.find("Global commands") != std::string::npos);
+    assert(invoke({"bass", "--help"}, &displayed) == 0);
+    assert(displayed.find("gain=0.5..10") != std::string::npos);
+    assert(displayed.find("legacy") == std::string::npos);
+    assert(displayed.find("aliases") == std::string::npos);
+    assert(invoke({"--headphone", "--help"}, &displayed) == 0);
+    assert(displayed.find("level=1..5") != std::string::npos);
+    assert(invoke({"--status", "--help"}, &displayed) == 0);
+    assert(displayed.find("--status [EFFECT]") != std::string::npos);
     server.stop_server();
 
     // Exercise the no-audio case without touching /proc or live PipeWire.
@@ -230,6 +292,8 @@ int main() {
     std::string result;
     assert(invoke({"status"}, &result) == 0);
     assert(result.find("READY TO PROCESS AUDIO") != std::string::npos);
+    assert(invoke({"--status"}, &result) == 0);
+    assert(invoke({"--status", "bass"}) == 1); // No effect values without IPC.
     assert(result.find("PID 12345") != std::string::npos);
     assert(invoke({"off"}) == 1); // No silent success for disconnected effects.
     // A marked process that isn't PipeWire must never be treated as our backend.

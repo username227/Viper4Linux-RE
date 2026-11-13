@@ -301,7 +301,8 @@ inline void section(std::ostream& out, const Controls& c, const char* name,
 
 inline void printCliReport(std::ostream& out, const Controls& c,
                            const std::string& cmd, int eqBand = -1,
-                           bool expanded = false, const cli_report::FullDetails& info = {}) {
+                           bool expanded = false, const cli_report::FullDetails& info = {},
+                            const std::string& selectedEffect = {}) {
     using namespace cli_report;
     // Only an explicit status query prints the complete six-tab report.
     // The master switch and its legacy aliases confirm the new state briefly.
@@ -311,6 +312,11 @@ inline void printCliReport(std::ostream& out, const Controls& c,
     }
     if (cmd != "status") {
         effect(out, c, fromCommand(cmd), false, eqBand);
+        return;
+    }
+    // A targeted query reuses the real effect renderer, without any edits.
+    if (!selectedEffect.empty()) {
+        effect(out, c, fromCommand(selectedEffect + "-on"), true, -1, expanded, info);
         return;
     }
     out << "ViPER4Linux-RE - DSP status\n";

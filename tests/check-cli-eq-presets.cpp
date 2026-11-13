@@ -36,7 +36,7 @@ int main() {
     auto& c = *server.get();
     c.eq_band_count.store(15);
     c.eq_enabled.store(0);
-    assert(invoke({"eq-preset", "Acoustic"}, &output) == 0);
+    assert(invoke({"--eq", "preset=Acoustic"}, &output) == 0);
     assert(c.eq_enabled.load() == 0); // Picking a preset does not enable EQ.
     assert(c.eq_levels_hundredths[0].load() == 450);
     assert(c.eq_levels_hundredths[3].load() == 400);
@@ -45,14 +45,14 @@ int main() {
     assert(s.value("eq_levels_15").toString().split(',').size() == 15);
     assert(output.find("Selected EQ preset: builtin:Acoustic") != std::string::npos);
 
-    assert(invoke({"eq-preset", "Flat"}) == 0);
+    assert(invoke({"--eq", "preset=Flat"}) == 0);
     for (int i=0; i<15; ++i) assert(c.eq_levels_hundredths[i].load() == 0);
     const auto serial = c.eq_request_serial.load();
-    assert(invoke({"eq-preset", "No such preset"}) == 2);
+    assert(invoke({"--eq", "preset=No such preset"}) == 2);
     assert(c.eq_request_serial.load() == serial);
     // An invalid preset later in a batch must not apply earlier edits.
     c.master_enabled.store(1);
-    assert(invoke({"off", "eq-preset", "No such preset"}) == 2);
+    assert(invoke({"off", "--eq", "preset=No such preset"}) == 2);
     assert(c.master_enabled.load() == 1);
 
     // User EQ presets are different from GUI's named full-effect snapshots.
@@ -61,7 +61,7 @@ int main() {
     s.sync();
     assert(invoke({"eq-presets"}, &output) == 0);
     assert(output.find("My Curve") != std::string::npos);
-    assert(invoke({"eq-preset", "My Curve"}) == 0);
+    assert(invoke({"--eq", "preset=My Curve"}) == 0);
     s.sync();
     assert(s.value("eq/selected_preset").toString() == "user:My Curve");
     assert(c.eq_levels_hundredths[1].load() != 0);
@@ -89,6 +89,6 @@ int main() {
     assert(output.find("Master Limiter - ON (mandatory)") != std::string::npos);
     server.stop_server();
     assert(invoke({"eq-presets"}) == 0); // Does not need a DSP channel.
-    assert(invoke({"eq-preset", "Acoustic"}) == 1);
+    assert(invoke({"--eq", "preset=Acoustic"}) == 1);
     std::cout << "PASS: EQ built-in/user presets, full status, error mapping, and offline listing\n";
 }
