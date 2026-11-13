@@ -106,6 +106,17 @@ int main() {
     assert(invoke({"--bass", "gain=3", "--headphone", "level=2.5"}) == 2);
     assert(c.strength_centi.load() == 300);
     assert(invoke({"--limiter", "on"}) == 2);
+    // Mixing must fail before a legacy switch or scoped command can write.
+    c.enabled.store(0);
+    c.analogx_enabled.store(1);
+    assert(invoke({"bass-on", "--analogx", "off"}) == 2);
+    assert(invoke({"--bass", "on", "analogx-off"}) == 2);
+    assert(invoke({"--on", "bass-on"}) == 2);
+    assert(c.enabled.load() == 0 && c.analogx_enabled.load() == 1);
+    // Only an initial unscoped bare master command is allowed to mix.
+    assert(invoke({"on", "--bass", "on"}) == 0);
+    assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
+    c.enabled.store(0);
     // A numeric positional command is rejected even when placed after an effect.
     assert(invoke({"bass-gain", "2"}) == 2);
     assert(invoke({"--bass", "gain", "2"}) == 2);
@@ -248,10 +259,13 @@ int main() {
     assert(mainHelp.find("v4l-cli bass --help") != std::string::npos);
     assert(mainHelp.find("bass-gain <") == std::string::npos);
     assert(mainHelp.find("Use man viper4linux-ctl") != std::string::npos);
+    assert(mainHelp.find("legacy") == std::string::npos);
     assert(invoke({"--help"}, &displayed) == 0);
     assert(displayed.find("Global commands") != std::string::npos);
     assert(invoke({"bass", "--help"}, &displayed) == 0);
     assert(displayed.find("gain=0.5..10") != std::string::npos);
+    assert(displayed.find("legacy") == std::string::npos);
+    assert(displayed.find("aliases") == std::string::npos);
     assert(invoke({"--headphone", "--help"}, &displayed) == 0);
     assert(displayed.find("level=1..5") != std::string::npos);
     assert(invoke({"--status", "--help"}, &displayed) == 0);

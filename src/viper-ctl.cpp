@@ -29,7 +29,7 @@ void usage(std::ostream& out = std::cerr) {
            "  v4l-cli --on --bass on gain=3 --headphone on level=2\n\n"
            "Numerical options use name=value; on/off inside an effect are local.\n"
            "Use v4l-cli bass --help for Bass options, or --status --help.\n"
-           "Use man viper4linux-ctl for complete details and legacy syntax.\n";
+           "Use man viper4linux-ctl for complete details.\n";
 }
 void usageStatus(std::ostream& out = std::cout) {
     out << "Usage: v4l-cli --status [EFFECT] [--full]\n"
@@ -73,8 +73,7 @@ void usageEffect(const viperbass::cli_scope::EffectName& effect,
                 << '\n';
     }
     out << "  status [--full]         Inspect only this effect (read-only)\n"
-           "\nUse option=value without spaces. Older zero-argument aliases remain available.\n"
-           "Positional numerical arguments are rejected.\n"
+           "\nUse option=value without spaces. No standalone numerical arguments.\n"
            "Options are validated together before any edit is executed.\n";
 }
 

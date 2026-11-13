@@ -97,7 +97,9 @@ for status usage.
 There are no GUI-tab-level status selectors.
 .SH COMMAND SEQUENCES
 Global and effect-scoped commands can be combined in one invocation
-and execute in the order written. For example:
+and execute in the order written. Legacy aliases are not allowed in a
+new-syntax invocation, except a bare master on/off before the first
+effect selector. For example:
 .PP
 .B v4l-cli --on --bass on gain=2.5 --psycho off
 .PP
@@ -543,47 +545,6 @@ or supported WAV impulse response in the GUI.
 Set the percentage of cross-channel convolution mixing. This control is
 separate from the wet/dry settings of other effects. VALUE accepts decimals
 from 0 through 100 percent inclusive, rounded to the nearest whole percentage point.
-.SH LEGACY NO-ARGUMENT ALIASES
-Old no-argument commands remain accepted for existing scripts.
-Before any effect selector, bare
-.B on
-and
-.B off
-operate on master processing; their aliases
-.B all-on
-and
-.B all-off
-are also supported.
-The unprefixed
-.B status
-and
-.B status --full
-forms remain read-only global queries, and
-.B eq-presets
-lists available EQ curves.
-.PP
-Effect switches can also be written as
-.IB EFFECT -on
-or
-.IB EFFECT -off
-(for example,
-.BR bass-on " and " headphone-off ).
-The
-.B bass-toggle
-alias remains supported. These are compatibility spellings of
-no-argument operations, not another syntax for numerical options.
-.PP
-Legacy commands requiring a separate value are
-.B not
-accepted. For example,
-.B bass-gain 3
-and
-.B headphone-level 2
-are rejected; use
-.B --bass gain=3
-and
-.B --headphone level=2
-instead. There are no standalone numerical arguments.
 .SH SETTINGS AND PRECISION
 CLI edits are applied to the live control channel, then saved to the GUI's
 per-user Qt settings store. The short-lived CLI tool reports a nonzero exit
@@ -664,6 +625,45 @@ The band index is validated against the selected 15-band layout.
 Set Bass mode and gain, then display detailed status to check the
 resulting live configuration.
 
+.SH LEGACY NO-ARGUMENT ALIASES
+Only old commands taking no values remain available, and they may be
+combined with one another. Legacy commands and the new double-hyphen
+syntax cannot appear in the same invocation, except that bare
+.B on
+or
+.B off
+may precede the first effect selector as a master command.
+.TP
+.B "on, off; all-on, all-off"
+Equivalent to
+.B "--on, --off"
+for master processing.
+.TP
+.B "status; status --full; status bass"
+Equivalent to
+.B "--status; --status --full; --status bass"
+respectively.
+.TP
+.B eq-presets
+Equivalent to
+.B "--eq presets" .
+.TP
+.B "EFFECT-on, EFFECT-off"
+Equivalent to
+.B "--EFFECT on, --EFFECT off"
+(for example,
+.BR "bass-on" " = " "--bass on" ).
+.TP
+.B bass-toggle
+Equivalent to
+.B "--bass toggle" .
+.PP
+These names are for old no-argument scripts only; use the scoped syntax
+for new scripts. Value-taking old commands such as
+.B bass-gain 3
+are rejected: use
+.B --bass gain=3
+instead. There are no standalone numerical arguments.
 .SH SEE ALSO
 .BR viper4linux (1),
 .BR pipewire (1)

@@ -158,14 +158,46 @@ inline bool parseLegacy(int count, char* const* argv, int currentEqBands,
 // legacy operations. Nothing is executed until the entire batch is valid.
 inline bool parse(int count, char* const* argv, int currentEqBands,
                   std::vector<Command>& output, std::string& error) {
-    // Only no-argument legacy aliases remain. Value-bearing commands use
-    // --effect option=value; positional numbers are never accepted.
+    // Preflight separates the two public grammars. Legacy no-argument
+    // commands may be chained together; they may not be mixed with scoped
+    // commands. Bare master on/off before the first effect selector are the
+    // only compatibility exception.
+    bool modern = false;
+    bool legacy = false;
+    bool selectedEffect = false;
     for (int i = 0; i < count; ++i) {
-        if (withArgs(argv[i])) {
-            error = "Value-taking legacy command '" + std::string(argv[i]) +
+        const std::string word(argv[i]);
+        if (withArgs(word)) {
+            error = "Value-taking legacy command '" + word +
                     "' is not supported; use --effect option=value";
             output.clear();
             return false;
+        }
+        const bool selector = word.size() > 2 &&
+            word.compare(0, 2, "--") == 0 &&
+            cli_scope::findEffect(word.substr(2)) != nullptr;
+        const bool global = word == "--on" || word == "--off" ||
+                            word == "--status";
+        if (selector || global) {
+            modern = true;
+            if (legacy) {
+                error = "Cannot mix legacy commands with scoped syntax";
+                output.clear();
+                return false;
+            }
+            if (selector) selectedEffect = true;
+        }
+        const bool scopedOperation = selectedEffect &&
+            (word == "on" || word == "off" || word == "status");
+        const bool legacyCommand = noArgs(word) && !scopedOperation &&
+            word != "on" && word != "off";
+        if (legacyCommand) {
+            legacy = true;
+            if (modern) {
+                error = "Cannot mix legacy commands with scoped syntax";
+                output.clear();
+                return false;
+            }
         }
     }
     std::vector<std::string> normalized;

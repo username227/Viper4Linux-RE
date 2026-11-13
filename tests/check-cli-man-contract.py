@@ -38,6 +38,9 @@ assert 'bass-gain 3' not in canonical
 assert 'headphone-level 2' not in canonical
 assert '.B "--bass on | off"' in canonical
 assert 'There are no standalone numerical arguments.' in man
+assert 'Legacy commands and the new double-hyphen' in man
+assert 'same invocation' in man
+assert man.index('.SH LEGACY NO-ARGUMENT ALIASES') > man.index('.SH EXAMPLES')
 assert not re.search(r'^\.BI "(gain|freq) "', man, re.M)
 assert '.SH COMMAND SEQUENCES' in man and 'not transactions' in man
 assert 'headphone-quality' not in cli

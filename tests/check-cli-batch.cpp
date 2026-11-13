@@ -27,7 +27,7 @@ int main() {
     assert(check({"--bass", "on", "--on", "gain=3", "--off"}).count == 4);
     assert(check({"--bass", "status", "--full"}).count == 1);
     assert(check({"--status", "bass", "--full", "--on"}).count == 2);
-    assert(check({"status", "bass", "--full", "--on"}).count == 2);
+    assert(!check({"status", "bass", "--full", "--on"}).ok);
     assert(check({"--status", "bass", "--on"}).count == 2);
     assert(check({"--eq", "bands=15", "level=12:-1.5"}).count == 2);
     assert(!check({"--eq", "bands=10", "level=12:-1.5"}).ok);
@@ -37,8 +37,22 @@ int main() {
     assert(!check({"--eq", "level=3"}).ok);
     assert(!check({"--limiter", "on"}).ok);
     assert(check({"on", "bass-on", "psycho-off"}).count == 3);
+    assert(check({"bass-on", "analogx-off"}).count == 2);
+    // Modern global commands and selectors may be chained, but not combined
+    // with legacy effect switches. Initial bare master on/off is the exception.
+    assert(check({"on", "--bass", "on"}).count == 2);
+    assert(check({"off", "--headphone", "on"}).count == 2);
+    assert(check({"--bass", "on", "--on", "gain=3", "--off"}).count == 4);
+    assert(!check({"bass-on", "--analogx", "off"}).ok);
+    assert(!check({"--bass", "on", "analogx-off"}).ok);
+    assert(!check({"bass-toggle", "--on"}).ok);
+    assert(!check({"--on", "bass-on"}).ok);
+    assert(!check({"--status", "bass", "bass-on"}).ok);
+    assert(!check({"bass-on", "--status", "bass"}).ok);
+    assert(!check({"status", "--full", "--bass", "on"}).ok);
+    assert(!check({"eq-presets", "--eq", "on"}).ok);
     assert(!check({"bass-gain", "2.5", "bass-freq", "75", "headphone-off"}).ok);
-    assert(check({"--bass", "gain=2.5", "freq=75", "headphone-off"}).count == 3);
+    assert(!check({"--bass", "gain=2.5", "freq=75", "headphone-off"}).ok);
     assert(!check({"eq-bands", "15", "eq-level", "12", "-1.5"}).ok);
     assert(check({"--eq", "bands=15", "level=12:-1.5"}).ok);
     assert(!check({"eq-bands", "10", "eq-level", "12", "-1.5"}).ok);
@@ -53,7 +67,7 @@ int main() {
     assert(!check({"on", "bass-gain"}).ok);
     assert(check({"status", "--full", "bass-on"}).count == 2);
     assert(!check({"eq-preset", "Bass Booster", "headphone-on"}).ok);
-    assert(check({"--eq", "preset=Bass Booster", "headphone-on"}).count == 2);
+    assert(!check({"--eq", "preset=Bass Booster", "headphone-on"}).ok);
     assert(!check({"eq-level", "3", "1.75"}, 10).ok);
     assert(check({"--eq", "level=3:1.75"}, 10).count == 1);
     assert(!check({"eq-level", "31", "1.0"}, 15).ok);
