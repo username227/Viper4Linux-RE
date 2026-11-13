@@ -592,8 +592,11 @@ Show only Bass parameters without changing any settings.
 .B v4l-cli --bass status --full
 Show the expanded Bass status.
 .TP
-.B v4l-cli --eq on bands=15 level=2:-1.75
-Set the 15-band graphic EQ and band 2 level, with preflight validation.
+.B v4l-cli --eq on bands=15 level=2:-1.75 level=5:2.5 level=9:-3
+Enable the 15-band graphic EQ; set bands 2, 5, and 9 to -1.75, +2.5,
+and -3 dB respectively. Repeat level=BAND:DB to adjust any number of
+bands in one invocation; the remaining levels are not edited.
+Every requested band index is validated before any setting is changed.
 .TP
 .B v4l-cli --status --help
 Show status options and syntax.
@@ -616,10 +619,6 @@ Apply -1.75 dB to EQ band 2.
 .B v4l-cli --on --bass on --clarity gain=2.5
 Enable master processing and ViPER Bass, then set Clarity gain to 2.5
 in a single command invocation.
-.TP
-.B viper4linux-ctl --eq on bands=15 level=2:-1.75
-Enable the graphic EQ, select 15 bands, and set band 2 to -1.75 dB.
-The band index is validated against the selected 15-band layout.
 .TP
 .B viper4linux-ctl --bass mode=1 gain=3.5 --status --full
 Set Bass mode and gain, then display detailed status to check the

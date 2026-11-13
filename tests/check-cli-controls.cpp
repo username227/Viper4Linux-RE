@@ -83,8 +83,15 @@ int main() {
     assert(c.master_enabled.load() == 1); // Invalid later token did not bypass.
     assert(invoke({"off", "bass-gain", "2.5", "unknown-command"}) == 2);
     assert(c.master_enabled.load() == 1);
-    assert(invoke({"--eq", "bands=15", "level=12:-1.5"}) == 0);
-    assert(c.eq_band_count.load() == 15 && c.eq_levels_hundredths[11].load() == -150);
+    assert(invoke({"--eq", "bands=15", "level=2:-1.75",
+                   "level=5:2.5", "level=9:-3", "level=12:-1.5"}) == 0);
+    assert(c.eq_band_count.load() == 15);
+    assert(c.eq_levels_hundredths[1].load() == -175);
+    assert(c.eq_levels_hundredths[4].load() == 250);
+    assert(c.eq_levels_hundredths[8].load() == -300);
+    assert(c.eq_levels_hundredths[11].load() == -150);
+    assert(invoke({"--eq", "level=2:1", "level=16:2"}) == 2);
+    assert(c.eq_levels_hundredths[1].load() == -175);
     assert(invoke({"--eq", "bands=10", "level=12:-1.5"}) == 2);
     assert(c.eq_band_count.load() == 15);
 

@@ -29,7 +29,10 @@ int main() {
     assert(check({"--status", "bass", "--full", "--on"}).count == 2);
     assert(!check({"status", "bass", "--full", "--on"}).ok);
     assert(check({"--status", "bass", "--on"}).count == 2);
-    assert(check({"--eq", "bands=15", "level=12:-1.5"}).count == 2);
+    assert(check({"--eq", "bands=15", "level=2:-1.75",
+                  "level=5:2.5", "level=9:-3"}).count == 4);
+    assert(!check({"--eq", "bands=15", "level=2:-1.75",
+                   "level=16:1"}).ok);
     assert(!check({"--eq", "bands=10", "level=12:-1.5"}).ok);
     assert(!check({"--bass", "gain="}).ok);
     assert(!check({"--bass", "gain=99", "--headphone", "on"}).ok);
