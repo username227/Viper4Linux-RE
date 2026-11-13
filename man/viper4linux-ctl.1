@@ -2,19 +2,23 @@
 .SH NAME
 viper4linux-ctl \- inspect and adjust ViPER4Linux-RE's live PipeWire DSP controls
 .SH SYNOPSIS
-.B viper4linux-ctl
-.I COMMAND1
-.RI [ ARGUMENTS ...]
-.RI [ COMMAND2 " [ARGUMENTS...]]"
-.RI ...
-.br
-.B viper4linux-ctl --help
-.br
 .B v4l-cli
-.I COMMAND1
-.RI [ ARGUMENTS ...]
-.RI [ COMMAND2 " [ARGUMENTS...]]"
-.RI ...
+.RI [ --on | --off ]
+.RI [ --EFFECT " option[=value] ... ] ..."
+.br
+.B v4l-cli --status
+.RI [ EFFECT ]
+.RI [ --full ]
+.br
+.B v4l-cli --status --help
+.br
+.B v4l-cli bass --help
+.br
+.B v4l-cli --help
+.br
+.B viper4linux-ctl
+.I LEGACY-COMMAND
+.RI [ ARGUMENTS ] ...
 .SH DESCRIPTION
 .B viper4linux-ctl
 operates the active per-user ViPER4Linux-RE DSP control channel.
@@ -35,17 +39,84 @@ has no fractional part (for example, 3 or 3.0). Where a command accepts
 the value must lie within the stated inclusive range, and the command uses
 nearest-integer rounding with halfway values rounded away from zero.
 Some controls use fractional internal units instead; those are described
-individually. Invalid values return exit status 2 and leave the setting
-unchanged. The six numbered command sections follow the GUI tabs in order;
-within each section, letters identify individual effect groups.
-To see compact command help, use
-.BR --help .
-.SH COMMAND SEQUENCES
-Multiple CLI commands may be supplied in one invocation, separated by spaces.
-Each command consumes its documented number of arguments; quote names with
-spaces as usual in the shell. Example:
+individually. Invalid values return exit status 2 and leave the setting unchanged.
+The full reference below follows the GUI's six tabs; these groupings
+are only presentation, not additional CLI scopes. Effect selectors
+are independent of the GUI tab layout.
+To see the compact global help, use
+.BR --help ;
+for individual controls use
+.BR "bass --help" ,
+or the corresponding effect name.
+.SH EFFECT-SCOPED SYNTAX (PREFERRED)
+Global options begin with two hyphens. Effect selectors also begin with
+two hyphens, followed by the effect's name. Within a selected effect,
+.B on
+and
+.B off
+apply only to that effect; numerical parameters use
+.IB name = value
+without a space surrounding the equals sign. An effect selector remains
+current until another effect selector appears. For example:
 .PP
-.B v4l-cli on bass-on psycho-off bass-gain 2.5
+.B v4l-cli --on --bass on gain=3 freq=60 --headphone on level=2
+.PP
+This executes six operations in order: master on, Bass on, Bass gain,
+Bass frequency, Headphone Surround+ on, and headphone level.
+The unscoped
+.B --on
+and
+.B --off
+always target master processing, even when placed between effect options.
+For existing scripts, bare
+.B on
+and
+.B off
+remain master controls when no effect has yet been selected.
+The old hyphenated commands, such as
+.B bass-gain 3
+and
+.B headphone-level 2
+remain accepted for backward compatibility.
+.PP
+Effect-specific options are the suffixes of the corresponding legacy
+commands listed in the reference below. For instance,
+.B clarity-gain 2.5
+becomes
+.BR "--clarity gain=2.5" .
+Use
+.B v4l-cli clarity --help
+for the supported options and their numeric ranges.
+Graphic EQ band gain uses
+.B level=BAND:DB
+(for example,
+.BR "--eq bands=15 level=2:-1.5" ).
+A selected preset with spaces must be quoted as one shell argument, e.g.
+.BR "preset=\\"Bass Booster\\"" .
+.PP
+The
+.B --limiter
+selector provides numeric parameters but no independent on/off action:
+the mandatory limiter follows master processing.
+.SS "Read-only status"
+.B --status
+without an effect prints the complete DSP report. For a single effect,
+use
+.B --status bass
+or
+.BR "--bass status" .
+Appending
+.B --full
+includes expanded detail when available. No effect-specific query writes
+a setting or modifies the DSP. Use
+.B --status --help
+for status usage.
+There are no GUI-tab-level status selectors.
+.SH COMMAND SEQUENCES
+Both legacy command sequences and mixed global/effect-scoped commands are
+supported. Commands run in the order written. For example:
+.PP
+.B v4l-cli --on --bass on gain=2.5 --psycho off
 .PP
 All commands and numeric arguments are validated before any changes are
 applied; an invalid argument anywhere in the sequence prevents earlier
@@ -56,17 +127,26 @@ its usual output. Runtime errors (such as a settings-write failure or backend
 shutdown) can still stop the sequence after earlier commands have succeeded:
 command sequences are not transactions and do not support rollback.
 .PP
-.B status --full
+.B --status --full
+and
+.B --status bass
 may appear in a sequence, as may
-.BR eq-presets .
+.BR "--eq presets" .
+The existing
+.B status --full
+and
+.B eq-presets
+forms remain supported.
 .SH GLOBAL COMMANDS AND BACKEND STATUS
+The preferred forms are shown below; the bare legacy equivalents remain
+supported. Global master options can appear anywhere in a sequence.
 .TP
-.B status
+.B --status
 Print the six-section live DSP summary, showing effect states, principal
 parameters, sample rate, backend PID, and audio-block counter. This summary
 does not list every EQ band or every compressor parameter.
 .TP
-.B status --full
+.B --status --full
 Print the expanded six-section report with all active graphic EQ band
 frequencies and levels, each Dynamic EQ band, all multiband compressor
 settings, selected EQ preset, and chosen DDC/Convolver files when recorded.
@@ -75,13 +155,13 @@ The status command never changes or saves settings. A started backend with no
 DSP channel reports READY TO PROCESS AUDIO. A connected channel does not prove
 that audible music is playing; compare the counter between repeated queries.
 .TP
-.B on
+.B --on
 Enable master DSP processing. No arguments. Prints only the confirmation
 .B "Master processing: ON"
 instead of the complete status report. The native Master Limiter, output gain
 and balance become active; the limiter has no independent OFF switch.
 .TP
-.B off
+.B --off
 Bypass the entire native ViPER DSP stage, including the Master Limiter,
 output gain, balance and its lookahead delay. After a short handoff, the
 signal is passed through unchanged apart from nonfinite-sample sanitization.
@@ -96,6 +176,21 @@ and
 .B off
 commands, respectively. No arguments. They also print only the one-line
 master-processing confirmation.
+.SH EFFECT SELECTORS
+The accepted selectors are listed alphabetically. Each effect has its own
+options; use its help page (for example,
+.BR "v4l-cli --headphone --help" ).
+.nf
+--agc          --analogx       --bass         --clarity
+--convolver    --crossfeed     --ddc          --deq
+--diff         --dynamic       --eq           --fet
+--field        --headphone     --imager       --limiter
+--lufs         --mb            --mono         --psycho
+--reverb       --speaker       --spectrum     --tube
+.fi
+The detailed numeric bounds below also apply to their corresponding
+.B option=value
+forms. The old command spellings are retained as a compatibility reference.
 .SH "1. OUTPUT"
 .SS "A. Master Limiter"
 .TP
@@ -509,6 +604,21 @@ is rejected because tube-drive requires a whole number, whereas
 .B viper4linux-ctl psycho-intensity 12.5
 is accepted and rounded to 13.
 .SH EXAMPLES
+.TP
+.B v4l-cli --on --bass on gain=3 --headphone on level=2
+Enable master processing, Bass at gain 3, and Headphone Surround+ at level 2.
+.TP
+.B v4l-cli --status bass
+Show only Bass parameters without changing any settings.
+.TP
+.B v4l-cli --bass status --full
+Show the expanded Bass status.
+.TP
+.B v4l-cli --eq on bands=15 level=2:-1.75
+Set the 15-band graphic EQ and band 2 level, with preflight validation.
+.TP
+.B v4l-cli --status --help
+Show status options and syntax.
 .TP
 .B viper4linux-ctl status
 Inspect current DSP state without modifying it.
