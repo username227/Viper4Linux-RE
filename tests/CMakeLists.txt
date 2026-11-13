@@ -110,6 +110,17 @@ add_test(NAME viper_contract_named_presets_runtime
 set_tests_properties(viper_contract_named_presets_runtime PROPERTIES
   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;contracts;presets")
 
+# Library import semantics are shared by DDC and IRS, with no GUI or DSP.
+add_executable(viper_test_library_import check-library-import.cpp)
+target_include_directories(viper_test_library_import PRIVATE "${_viper_test_include}")
+target_link_libraries(viper_test_library_import PRIVATE Qt6::Core)
+target_compile_options(viper_test_library_import PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME viper_contract_library_import_runtime
+  COMMAND "$<TARGET_FILE:viper_test_library_import>")
+set_tests_properties(viper_contract_library_import_runtime PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;contracts;library")
+
 # Exact native/legacy unit projections need no Qt or live DSP.
 add_executable(viper_test_precision_units check-precision-units.cpp)
 target_include_directories(viper_test_precision_units PRIVATE "${_viper_test_include}")

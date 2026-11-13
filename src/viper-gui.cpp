@@ -58,6 +58,7 @@
 #include <QListWidget>
 #include <QUuid>
 #include <QAbstractItemView>
+#include "window/library-import.h"
 #include <QFileDialog>
 #include <QFileSystemWatcher>
 #include <QFileInfo>
@@ -418,16 +419,10 @@ public:
                 QMessageBox::warning(this, "VDC import", "Could not create VDC library directory.");
                 return;
             }
-            QString destination = QDir(ddcDirectory()).filePath(file.fileName());
-            if (QFileInfo(destination).canonicalFilePath() != file.canonicalFilePath()) {
-                unsigned serial = 2;
-                while (QFile::exists(destination))
-                    destination = QDir(ddcDirectory()).filePath(file.completeBaseName() +
-                        " (" + QString::number(serial++) + ")." + file.suffix());
-                if (!QFile::copy(selected, destination)) {
-                    QMessageBox::warning(this, "VDC import", "Could not copy the selected profile.");
-                    return;
-                }
+            const QString destination = viper_library_import::copyOrSelect(selected, ddcDirectory());
+            if (destination.isEmpty()) {
+                QMessageBox::warning(this, "VDC import", "Could not copy the selected profile.");
+                return;
             }
             selectDdcProfile(destination);
         });
@@ -483,19 +478,11 @@ public:
                     failures << file.fileName() + ": not a readable .irs or .wav file";
                     continue;
                 }
-                QString destination = QDir(irsDirectory()).filePath(file.fileName());
                 // Browsing a library file is a selection, not an import.
-                if (QFileInfo(destination).canonicalFilePath() != file.canonicalFilePath()) {
-                    const QString base = file.completeBaseName(), suffix = file.suffix();
-                    unsigned serial = 2;
-                    while (QFile::exists(destination)) {
-                        destination = QDir(irsDirectory()).filePath(base + " (" + QString::number(serial++) + ")" +
-                            (suffix.isEmpty() ? QString() : "." + suffix));
-                    }
-                    if (!QFile::copy(selectedFile, destination)) {
-                        failures << file.fileName() + ": could not copy";
-                        continue;
-                    }
+                const QString destination = viper_library_import::copyOrSelect(selectedFile, irsDirectory());
+                if (destination.isEmpty()) {
+                    failures << file.fileName() + ": could not copy";
+                    continue;
                 }
                 if (firstImported.isEmpty()) firstImported = destination;
             }

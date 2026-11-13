@@ -83,7 +83,7 @@ print('PASS: native Convolver GUI contract + six tabs, independent collapse, set
 # Live IRS library, no-restart DSP handoff and compact Help UI.
 assert 'QStandardPaths::GenericDataLocation' in source
 assert '"/viper4linux/IRS"' in source
-assert 'QFile::copy(selectedFile, destination)' in source
+assert 'viper_library_import::copyOrSelect(selectedFile, irsDirectory())' in source
 assert 'out.convolver_library = new IrsComboBox' in source
 assert 'convolver_request_serial.fetch_add(1' in source
 assert 'void showHelp()' in source
@@ -338,7 +338,7 @@ for token in [
     'out.ddc_library = new IrsComboBox(',
     'QFileSystemWatcher::directoryChanged',
     'void refreshDdcLibrary()',
-    'QFile::copy(selected, destination)',
+    'viper_library_import::copyOrSelect(selected, ddcDirectory())',
     'selectDdcProfile(destination);',
 ]:
     assert token in source, token
