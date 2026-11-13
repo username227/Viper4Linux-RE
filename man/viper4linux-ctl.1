@@ -267,7 +267,7 @@ inclusive, rounded to the nearest whole hertz.
 Set effect intensity. VALUE accepts whole numbers or decimals between 0
 and 100 inclusive, representing a percentage; decimals are rounded to the
 nearest whole percentage point. Example:
-.B viper4linux-ctl --psycho intensity=30
+.B v4l-cli --psycho intensity=30
 .TP
 .BI "--psycho order=" VALUE
 Set harmonic order. VALUE accepts decimals from 2 through 5 inclusive,
@@ -331,7 +331,7 @@ the current number of bands, inclusive. DB accepts decimals from -12 through
 +12 dB inclusive, stored to the nearest hundredth of a decibel.
 Changing a band marks the EQ preset as Custom; built-in preset curves remain
 unchanged. Example:
-.B viper4linux-ctl --eq level=3:-1.75
+.B v4l-cli --eq level=3:-1.75
 .TP
 .B --eq presets
 List available built-in and user EQ presets. Works even if the DSP backend
@@ -577,9 +577,9 @@ Unknown command, wrong number of arguments, or invalid value, once the DSP
 control channel is available. Backend availability is checked first, so an
 unavailable backend can produce exit status 1 even for an invalid command.
 For example,
-.B viper4linux-ctl --tube drive=12.5
+.B v4l-cli --tube drive=12.5
 is rejected because Tube drive requires a whole number, whereas
-.B viper4linux-ctl --psycho intensity=12.5
+.B v4l-cli --psycho intensity=12.5
 is accepted and rounded to 13.
 .SH EXAMPLES
 .TP
@@ -598,29 +598,7 @@ and -3 dB respectively. Repeat level=BAND:DB to adjust any number of
 bands in one invocation; the remaining levels are not edited.
 Every requested band index is validated before any setting is changed.
 .TP
-.B v4l-cli --status --help
-Show status options and syntax.
-.TP
-.B viper4linux-ctl --status
-Inspect current DSP state without modifying it.
-.TP
-.B viper4linux-ctl --bass on
-Enable Bass while leaving master processing unchanged.
-.TP
-.B viper4linux-ctl --clarity gain=2.5
-Set Clarity gain to 2.5.
-.TP
-.B viper4linux-ctl --eq bands=15
-Use the 15-band graphic EQ mode.
-.TP
-.B viper4linux-ctl --eq level=2:-1.75
-Apply -1.75 dB to EQ band 2.
-.TP
-.B v4l-cli --on --bass on --clarity gain=2.5
-Enable master processing and ViPER Bass, then set Clarity gain to 2.5
-in a single command invocation.
-.TP
-.B viper4linux-ctl --bass mode=1 gain=3.5 --status --full
+.B v4l-cli --bass mode=1 gain=3.5 --status --full
 Set Bass mode and gain, then display detailed status to check the
 resulting live configuration.
 
