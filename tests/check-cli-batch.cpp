@@ -37,8 +37,10 @@ int main() {
     assert(!check({"--eq", "level=3"}).ok);
     assert(!check({"--limiter", "on"}).ok);
     assert(check({"on", "bass-on", "psycho-off"}).count == 3);
-    assert(check({"bass-gain", "2.5", "bass-freq", "75", "headphone-off"}).count == 3);
-    assert(check({"eq-bands", "15", "eq-level", "12", "-1.5"}).ok);
+    assert(!check({"bass-gain", "2.5", "bass-freq", "75", "headphone-off"}).ok);
+    assert(check({"--bass", "gain=2.5", "freq=75", "headphone-off"}).count == 3);
+    assert(!check({"eq-bands", "15", "eq-level", "12", "-1.5"}).ok);
+    assert(check({"--eq", "bands=15", "level=12:-1.5"}).ok);
     assert(!check({"eq-bands", "10", "eq-level", "12", "-1.5"}).ok);
     assert(!check({"on", "bass-gain", "not-a-number"}).ok);
     assert(!check({"on", "gain", "2.5"}).ok);
@@ -50,12 +52,22 @@ int main() {
     assert(!check({"off", "field-depth", "100"}).ok);
     assert(!check({"on", "bass-gain"}).ok);
     assert(check({"status", "--full", "bass-on"}).count == 2);
-    assert(check({"eq-preset", "Bass Booster", "headphone-on"}).count == 2);
-    assert(check({"eq-level", "3", "1.75"}, 10).count == 1);
+    assert(!check({"eq-preset", "Bass Booster", "headphone-on"}).ok);
+    assert(check({"--eq", "preset=Bass Booster", "headphone-on"}).count == 2);
+    assert(!check({"eq-level", "3", "1.75"}, 10).ok);
+    assert(check({"--eq", "level=3:1.75"}, 10).count == 1);
     assert(!check({"eq-level", "31", "1.0"}, 15).ok);
     assert(!check({"eq-bands", "17"}).ok);
     assert(!check({"mb-bands", "4"}).ok);
     assert(!check({"invalid-command"}).ok);
+    // A bare number is never an argument, even for formerly supported commands.
+    assert(!check({"bass-gain", "3"}).ok);
+    assert(!check({"--bass", "gain", "3"}).ok);
+    assert(!check({"--bass", "gain", "=", "3"}).ok);
+    assert(!check({"--bass", "gain=", "3"}).ok);
+    assert(!check({"--bass", "on", "bass-gain", "3"}).ok);
+    assert(!check({"--headphone", "level", "2"}).ok);
+    assert(!check({"--eq", "level", "2", "-1.5"}).ok);
     // Every effect selector is mapped into its established command family.
     for (const auto& effect : viperbass::cli_scope::effects) {
         const std::string selector = std::string("--") + effect.name;

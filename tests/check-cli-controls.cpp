@@ -59,9 +59,9 @@ int main() {
     run("all-on");
     assert(c.master_enabled.load() == 1 && c.enabled.load() == 1);
 
-    assert(invoke({"bass-gain", "2.35"}) == 0);
+    assert(invoke({"--bass", "gain=2.35"}) == 0);
     assert(c.strength_centi.load() == 235);
-    assert(invoke({"bass-freq", "72.6"}) == 0);
+    assert(invoke({"--bass", "freq=72.6"}) == 0);
     assert(c.frequency_hz.load() == 73);
     // No compatibility aliases for generic Bass gain and frequency names.
     assert(invoke({"gain", "5"}) == 2);
@@ -83,9 +83,9 @@ int main() {
     assert(c.master_enabled.load() == 1); // Invalid later token did not bypass.
     assert(invoke({"off", "bass-gain", "2.5", "unknown-command"}) == 2);
     assert(c.master_enabled.load() == 1);
-    assert(invoke({"eq-bands", "15", "eq-level", "12", "-1.5"}) == 0);
+    assert(invoke({"--eq", "bands=15", "level=12:-1.5"}) == 0);
     assert(c.eq_band_count.load() == 15 && c.eq_levels_hundredths[11].load() == -150);
-    assert(invoke({"eq-bands", "10", "eq-level", "12", "-1.5"}) == 2);
+    assert(invoke({"--eq", "bands=10", "level=12:-1.5"}) == 2);
     assert(c.eq_band_count.load() == 15);
 
     // Effect-scoped syntax is translated before the unchanged DSP handlers.
@@ -106,6 +106,11 @@ int main() {
     assert(invoke({"--bass", "gain=3", "--headphone", "level=2.5"}) == 2);
     assert(c.strength_centi.load() == 300);
     assert(invoke({"--limiter", "on"}) == 2);
+    // A numeric positional command is rejected even when placed after an effect.
+    assert(invoke({"bass-gain", "2"}) == 2);
+    assert(invoke({"--bass", "gain", "2"}) == 2);
+    assert(invoke({"--bass", "on", "bass-gain", "2"}) == 2);
+    assert(c.strength_centi.load() == 300 && c.enabled.load() == 0);
 
     // Only an explicit status query prints all six categories. Master switch
     // commands show one confirmation line; effect edits remain scoped.
@@ -144,7 +149,8 @@ int main() {
     // shared memory / ViPERDSP retain their existing zero-based indices.
     for (int level = 1; level <= 5; ++level) {
         const std::string value = std::to_string(level);
-        assert(invoke({"headphone-level", value.c_str()}) == 0);
+        const std::string option = "level=" + value;
+        assert(invoke({"--headphone", option.c_str()}) == 0);
         assert(c.headphone_quality.load() == level - 1);
         std::string status;
         assert(invoke({"status"}, &status) == 0);
@@ -156,7 +162,8 @@ int main() {
     assert(c.headphone_quality.load() == 4);
     for (const char* invalid : {"0", "6", "-1", "2.5", "3.25", "abc", "2x", "nan"}) {
         const int before = c.headphone_quality.load();
-        assert(invoke({"headphone-level", invalid}) == 2);
+        const std::string option = std::string("level=") + invalid;
+        assert(invoke({"--headphone", option.c_str()}) == 2);
         assert(c.headphone_quality.load() == before);
     }
     assert(invoke({"headphone-level"}) == 2);
@@ -190,9 +197,13 @@ int main() {
                                std::atomic<std::int32_t>& atom,
                                std::atomic<std::uint32_t>& serial, int expected) {
         const auto before = serial.load();
-        assert(invoke({cmd, arg}) == 0);
+        const std::string legacy(cmd);
+        const auto dash = legacy.find('-');
+        const std::string selector = "--" + legacy.substr(0, dash);
+        const std::string option = legacy.substr(dash + 1) + "=" + arg;
+        assert(invoke({selector.c_str(), option.c_str()}) == 0);
         assert(atom.load() == expected && serial.load() == before + 1);
-        assert(invoke({cmd, arg}) == 0);
+        assert(invoke({selector.c_str(), option.c_str()}) == 0);
         assert(serial.load() == before + 1);
     };
     testValue("tube-model", "2", c.tube_model, c.tube_request_serial, 2);
@@ -211,12 +222,14 @@ int main() {
     for (const char* invalid : {"0", "4", "2.5", "xyz"}) {
         const auto previous = c.mb_band_count.load();
         const auto serial = c.mb_request_serial.load();
-        assert(invoke({"mb-bands", invalid}) == 2);
+        const std::string option = std::string("bands=") + invalid;
+        assert(invoke({"--mb", option.c_str()}) == 2);
         assert(c.mb_band_count.load() == previous && c.mb_request_serial.load() == serial);
     }
     for (const char* invalid : {"3", "1.5", "nan"}) {
         const auto previous = c.tube_model.load();
-        assert(invoke({"tube-model", invalid}) == 2);
+        const std::string option = std::string("model=") + invalid;
+        assert(invoke({"--tube", option.c_str()}) == 2);
         assert(c.tube_model.load() == previous);
     }
 
