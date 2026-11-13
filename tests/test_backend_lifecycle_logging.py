@@ -83,7 +83,14 @@ class BackendLifecycleLogTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0)
                     deadline = time.monotonic() + 2
                     while time.monotonic() < deadline:
-                        lines = log.read_text().splitlines()
+                        # Bash process substitution is asynchronous: the parent
+                        # can exit before the log writer has created its file.
+                        # Poll for the file as well as the closing record.
+                        try:
+                            lines = log.read_text().splitlines()
+                        except FileNotFoundError:
+                            time.sleep(0.02)
+                            continue
                         if any("output stream closed" in line for line in lines):
                             break
                         time.sleep(0.02)

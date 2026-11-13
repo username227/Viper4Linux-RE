@@ -19,9 +19,64 @@ static TestResult check(std::initializer_list<const char*> input, int bands = 10
     return {ok, parsed.size(), error};
 }
 int main() {
+    assert(!check({"--bass"}).ok);
+    assert(!check({"--bass", "--headphone", "on"}).ok);
+    assert(check({"--on", "--bass", "on", "gain=3", "freq=60",
+                  "--headphone", "on", "level=2"}).count == 6);
+    assert(check({"on", "--bass", "on", "gain=3", "--headphone", "on", "level=2"}).count == 5);
+    assert(check({"--bass", "on", "--on", "gain=3", "--off"}).count == 4);
+    assert(check({"--bass", "status", "--full"}).count == 1);
+    assert(check({"--status", "bass", "--full", "--on"}).count == 2);
+    assert(!check({"status", "bass", "--full", "--on"}).ok);
+    assert(check({"--status", "bass", "--on"}).count == 2);
+    assert(check({"--eq", "bands=15", "level=2:-1.75",
+                  "level=5:2.5", "level=9:-3"}).count == 4);
+    assert(!check({"--eq", "bands=15", "level=2:-1.75",
+                   "level=16:1"}).ok);
+    assert(!check({"--eq", "bands=10", "level=12:-1.5"}).ok);
+    assert(!check({"--bass", "gain="}).ok);
+    assert(!check({"--bass", "gain=99", "--headphone", "on"}).ok);
+    assert(!check({"--headphone", "level=2.5"}).ok);
+    // A late invalid value must identify the offending option and its limit
+    // while rejecting the complete command sequence before execution.
+    const auto invalidBatch = check({"--status", "limiter", "--limiter",
+                                     "threshold=-6", "gain=1", "--headphone",
+                                     "level=9", "--status", "limiter"});
+    assert(!invalidBatch.ok && invalidBatch.count == 0);
+    assert(invalidBatch.error.find("--headphone level=9") != std::string::npos);
+    assert(invalidBatch.error.find("whole number from 1 to 5") != std::string::npos);
+    const auto invalidEqBand = check({"--eq", "bands=15", "level=16:1"});
+    assert(!invalidEqBand.ok && invalidEqBand.count == 0);
+    assert(invalidEqBand.error.find("--eq level=16:1") != std::string::npos);
+    assert(invalidEqBand.error.find("1 to 15") != std::string::npos);
+    assert(!check({"--eq", "level=3"}).ok);
+    assert(!check({"--limiter", "on"}).ok);
+    assert(check({"--limiter", "threshold-db=-6.0", "gain=1"}).count == 2);
+    assert(check({"--limiter", "threshold-db=-10.5"}).ok);
+    assert(check({"--limiter", "threshold-db=0"}).ok);
+    assert(!check({"--limiter", "threshold-db=-10.6"}).ok);
+    assert(!check({"--limiter", "threshold-db=0.1"}).ok);
+    assert(!check({"--limiter", "threshold-db=nan"}).ok);
+    assert(!check({"--limiter", "threshold-db=-6.0", "--bass", "gain=99"}).ok);
     assert(check({"on", "bass-on", "psycho-off"}).count == 3);
-    assert(check({"bass-gain", "2.5", "bass-freq", "75", "headphone-off"}).count == 3);
-    assert(check({"eq-bands", "15", "eq-level", "12", "-1.5"}).ok);
+    assert(check({"bass-on", "analogx-off"}).count == 2);
+    // Modern global commands and selectors may be chained, but not combined
+    // with legacy effect switches. Initial bare master on/off is the exception.
+    assert(check({"on", "--bass", "on"}).count == 2);
+    assert(check({"off", "--headphone", "on"}).count == 2);
+    assert(check({"--bass", "on", "--on", "gain=3", "--off"}).count == 4);
+    assert(!check({"bass-on", "--analogx", "off"}).ok);
+    assert(!check({"--bass", "on", "analogx-off"}).ok);
+    assert(!check({"bass-toggle", "--on"}).ok);
+    assert(!check({"--on", "bass-on"}).ok);
+    assert(!check({"--status", "bass", "bass-on"}).ok);
+    assert(!check({"bass-on", "--status", "bass"}).ok);
+    assert(!check({"status", "--full", "--bass", "on"}).ok);
+    assert(!check({"eq-presets", "--eq", "on"}).ok);
+    assert(!check({"bass-gain", "2.5", "bass-freq", "75", "headphone-off"}).ok);
+    assert(!check({"--bass", "gain=2.5", "freq=75", "headphone-off"}).ok);
+    assert(!check({"eq-bands", "15", "eq-level", "12", "-1.5"}).ok);
+    assert(check({"--eq", "bands=15", "level=12:-1.5"}).ok);
     assert(!check({"eq-bands", "10", "eq-level", "12", "-1.5"}).ok);
     assert(!check({"on", "bass-gain", "not-a-number"}).ok);
     assert(!check({"on", "gain", "2.5"}).ok);
@@ -33,11 +88,50 @@ int main() {
     assert(!check({"off", "field-depth", "100"}).ok);
     assert(!check({"on", "bass-gain"}).ok);
     assert(check({"status", "--full", "bass-on"}).count == 2);
-    assert(check({"eq-preset", "Bass Booster", "headphone-on"}).count == 2);
-    assert(check({"eq-level", "3", "1.75"}, 10).count == 1);
+    assert(!check({"eq-preset", "Bass Booster", "headphone-on"}).ok);
+    assert(!check({"--eq", "preset=Bass Booster", "headphone-on"}).ok);
+    assert(!check({"eq-level", "3", "1.75"}, 10).ok);
+    assert(check({"--eq", "level=3:1.75"}, 10).count == 1);
     assert(!check({"eq-level", "31", "1.0"}, 15).ok);
     assert(!check({"eq-bands", "17"}).ok);
     assert(!check({"mb-bands", "4"}).ok);
     assert(!check({"invalid-command"}).ok);
+    // A bare number is never an argument, even for formerly supported commands.
+    assert(!check({"bass-gain", "3"}).ok);
+    assert(!check({"--bass", "gain", "3"}).ok);
+    assert(!check({"--bass", "gain", "=", "3"}).ok);
+    assert(!check({"--bass", "gain=", "3"}).ok);
+    assert(!check({"--bass", "on", "bass-gain", "3"}).ok);
+    assert(!check({"--headphone", "level", "2"}).ok);
+    assert(!check({"--eq", "level", "2", "-1.5"}).ok);
+    // Every effect selector is mapped into its established command family.
+    for (const auto& effect : viperbass::cli_scope::effects) {
+        const std::string selector = std::string("--") + effect.name;
+        assert(check({selector.c_str(), "status"}).ok);
+        assert(check({"--status", effect.name}).ok);
+        if (selector != "--limiter") {
+            assert(check({selector.c_str(), "on", "off"}).count == 2);
+        } else {
+            assert(!check({selector.c_str(), "on"}).ok);
+        }
+    }
+    // Every numeric argument already registered in the legacy validator can
+    // be written under its selector with option=value (no duplicated ranges).
+    for (const auto& spec : viperbass::cli_batch::specs) {
+        const std::string legacy = spec.command;
+        const auto dash = legacy.find('-');
+        const std::string group = legacy.substr(0, dash);
+        const std::string option = legacy.substr(dash + 1);
+        std::string value;
+        if (spec.kind == viperbass::cli_batch::Kind::Name) value = "Acoustic";
+        else if (spec.kind == viperbass::cli_batch::Kind::EqLevel) value = "2:-1.5";
+        else if (spec.kind == viperbass::cli_batch::Kind::EqBands) value = "15";
+        else if (spec.kind == viperbass::cli_batch::Kind::MbBands) value = "3";
+        else value = std::to_string(spec.min);
+        const std::string selector = "--" + group;
+        const std::string argument = option + "=" + value;
+        assert(check({selector.c_str(), argument.c_str()}).ok);
+    }
+
     std::cout << "PASS: CLI multi-command argument grouping and preflight\n";
 }

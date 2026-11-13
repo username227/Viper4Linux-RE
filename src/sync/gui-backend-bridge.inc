@@ -248,7 +248,8 @@
         eq_enabled_->setChecked(c->eq_enabled.load() != 0);
         const int remoteEqBands = validEqBands(c->eq_band_count.load());
         if (remoteEqBands != eq_active_bands_) {
-            saveEqLayout();
+            // The CLI saved the outgoing live curve before changing layouts.
+            // Local faders might be stale; do not overwrite that saved curve.
             eq_active_bands_ = remoteEqBands;
             const QSignalBlocker blockMode(eq_mode_);
             eq_mode_->setCurrentIndex(eq_mode_->findData(remoteEqBands));

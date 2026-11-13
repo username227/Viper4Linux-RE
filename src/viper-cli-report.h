@@ -3,8 +3,12 @@
 // No DSP writes, ABI changes, background process, or Qt dependencies.
 #include "viper-control.h"
 #include "viper-eq-presets.h"
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <initializer_list>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 namespace viperbass {
@@ -94,6 +98,17 @@ inline void detail(std::ostream& out, const char* label, const char* value) {
     out << "      " << label << ": " << value << '\n';
 }
 
+// Match the GUI's one-decimal dBFS display without changing its native
+// thousandths-of-linear-amplitude representation in the shared DSP controls.
+inline std::string limiterThresholdDisplay(int permille) {
+    const double linear = std::clamp(permille, 300, 1000) / 1000.0;
+    std::ostringstream value;
+    value << std::fixed << std::setprecision(1)
+          << 20.0 * std::log10(linear) << " dBFS ("
+          << std::setprecision(3) << linear << " linear)";
+    return value.str();
+}
+
 inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
                    int eqBand = -1, bool expanded = false, const FullDetails& info = {}) {
     const auto heading = [&](const char* letter, const char* name, const char* state) {
@@ -103,18 +118,24 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
     case Effect::Master:
         out << "Master processing: " << (c.master_enabled.load() ? "ON" : "BYPASSED") << '\n';
         break;
-    case Effect::Limiter:
+    case Effect::Limiter: {
         heading("A", "Master Limiter", c.master_enabled.load() ? "ON (mandatory)" : "BYPASSED (Master OFF)");
-        detail(out, "Threshold", c.limiter_threshold_permille.load() / 1000.0);
+        const auto threshold = limiterThresholdDisplay(c.limiter_threshold_permille.load());
+        detail(out, "Threshold", threshold.c_str());
         detail(out, "Output", c.limiter_output_percent.load(), "%");
         detail(out, "Pan", c.limiter_pan_percent.load(), "%");
         break;
-    case Effect::Agc:
+    }
+    case Effect::Agc: {
         heading("B", "Playback Gain Control (AGC)", enabled(c.agc_enabled.load()));
         detail(out, "Strength", c.agc_strength_centi.load() / 100.0);
-        detail(out, "Maximum gain", c.agc_max_gain_centi.load() / 100.0);
+        std::ostringstream maximumGain;
+        maximumGain << std::fixed << std::setprecision(2)
+                    << c.agc_max_gain_centi.load() / 100.0 << "×";
+        detail(out, "Maximum gain", maximumGain.str().c_str());
         detail(out, "Threshold", c.agc_threshold_permille.load() / 1000.0);
         break;
+    }
     case Effect::Lufs:
         heading("C", "LUFS Targeting", enabled(c.lufs_enabled.load()));
         detail(out, "Target", c.lufs_target_tenths.load() / 10.0, " LUFS");
@@ -243,8 +264,8 @@ inline void effect(std::ostream& out, const Controls& c, Effect e, bool full,
         break;
     case Effect::Fet:
         heading("A", "FET Compressor", enabled(c.fet_enabled.load()));
-        detail(out, "Threshold", c.fet_threshold_db.load(), " dB");
-        detail(out, "Ratio", c.fet_ratio_tenths.load() / 10.0);
+        detail(out, "Threshold", c.fet_threshold_db.load(), " dBFS");
+        detail(out, "Ratio", c.fet_ratio_tenths.load() / 10.0, ":1");
         detail(out, "Knee", c.fet_knee_db.load(), " dB");
         detail(out, "Makeup", c.fet_makeup_db.load(), " dB");
         detail(out, "Attack", c.fet_attack_ms.load(), " ms");
@@ -301,7 +322,8 @@ inline void section(std::ostream& out, const Controls& c, const char* name,
 
 inline void printCliReport(std::ostream& out, const Controls& c,
                            const std::string& cmd, int eqBand = -1,
-                           bool expanded = false, const cli_report::FullDetails& info = {}) {
+                           bool expanded = false, const cli_report::FullDetails& info = {},
+                            const std::string& selectedEffect = {}) {
     using namespace cli_report;
     // Only an explicit status query prints the complete six-tab report.
     // The master switch and its legacy aliases confirm the new state briefly.
@@ -311,6 +333,11 @@ inline void printCliReport(std::ostream& out, const Controls& c,
     }
     if (cmd != "status") {
         effect(out, c, fromCommand(cmd), false, eqBand);
+        return;
+    }
+    // A targeted query reuses the real effect renderer, without any edits.
+    if (!selectedEffect.empty()) {
+        effect(out, c, fromCommand(selectedEffect + "-on"), true, -1, expanded, info);
         return;
     }
     out << "ViPER4Linux-RE - DSP status\n";

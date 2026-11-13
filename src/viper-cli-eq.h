@@ -100,7 +100,9 @@ inline bool choose(QSettings& s, Controls& c, const QString& requested,
             }
         }
         if (values.size() != static_cast<size_t>(bands)) {
-            for (int i = 0; i < bands; ++i) values.push_back(c.eq_levels_hundredths[i].load());
+            // Match GUI loadEqLayout(): an unsaved custom layout starts flat.
+            // Never inherit gains by index from a different band count.
+            values.assign(bands, 0);
         }
     }
     if (values.size() != static_cast<size_t>(bands)) {
@@ -124,8 +126,39 @@ inline bool choose(QSettings& s, Controls& c, const QString& requested,
     }
     for (int i = 0; i < bands; ++i)
         c.eq_levels_hundredths[i].store(values[i]);
+    // Publish the completed curve and band count together at the request serial.
+    c.eq_band_count.store(bands);
     c.eq_request_serial.fetch_add(1);
     return true;
+}
+
+// Keep the outgoing curve and restore the destination from the GUI's own
+// per-layout settings. Named presets follow GUI rules: exact built-in curves,
+// log-frequency interpolation for user presets, and no remap for Custom.
+inline bool switchBands(QSettings& s, Controls& c, int requestedBands,
+                        std::string& error) {
+    const int bands = viper_eq::validBands(requestedBands);
+    const int oldBands = viper_eq::validBands(c.eq_band_count.load());
+    if (bands != requestedBands) {
+        error = "EQ layout must have 10, 15, 25 or 31 bands.";
+        return false;
+    }
+    if (bands == oldBands) return true; // Selecting the current layout is a no-op.
+
+    s.sync();
+    const QString preset = s.value("eq/selected_preset", "custom").toString();
+    // Verify the target preset before writing the outgoing layout.
+    if (!choose(s, c, preset, error, true, bands)) return false;
+    QStringList outgoing;
+    for (int i = 0; i < oldBands; ++i)
+        outgoing << QString::number(c.eq_levels_hundredths[i].load());
+    s.setValue("eq_levels_" + QString::number(oldBands), outgoing.join(','));
+    s.sync();
+    if (s.status() != QSettings::NoError) {
+        error = "Could not save the outgoing EQ layout.";
+        return false;
+    }
+    return choose(s, c, preset, error, false, bands);
 }
 
 inline void list(QSettings& s, std::ostream& out) {
