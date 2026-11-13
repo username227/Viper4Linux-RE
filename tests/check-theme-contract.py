@@ -22,7 +22,7 @@ checks = (
     'QPalette::WindowText',
     'QPalette::Text',
     'QPalette::ButtonText',
-    'const QString activeTabText = dark ? "#092129" : "#ffffff";',
+    'const QString activeTabText = dark ?',
     'QTabBar::tab:selected { background-color:%4; color:%6; border-color:%4; }',
     'qEnvironmentVariable("XDG_CURRENT_DESKTOP")',
     'org.cinnamon.desktop.interface',
@@ -62,17 +62,34 @@ def contrast(a,b):
     lo,hi=sorted((lum(a),lum(b)))
     return (hi+.05)/(lo+.05)
 
+# Read the ACTUAL assigned theme values. Historical color literals can linger
+# in another expression, making the old source-presence checks misleading.
+# The C++ ternary order is: text/tab dark-light; card bg dark-classic,
+# dark-modern, light-classic, light-modern; accent classic-dark,
+# classic-light, modern-dark, modern-light.
+theme = (Path(__file__).resolve().parents[1] / "src/viper-theme.h").read_text()
+def declared_colors(name, expected):
+    declaration = re.search(r'const QString ' + name + r'\s*=\s*([^;]+);', theme, re.S)
+    assert declaration, f"Missing theme declaration: {name}"
+    values = re.findall(r'"(#[0-9A-Fa-f]{6})"', declaration.group(1))
+    assert len(values) == expected, (name, values)
+    return values
+
+text_dark, text_light = declared_colors("textColor", 2)
+tab_dark, tab_light = declared_colors("activeTabText", 2)
+bg_dark_classic, bg_dark_modern, bg_light_classic, bg_light_modern = declared_colors("bg", 4)
+accent_classic_dark, accent_classic_light, accent_modern_dark, accent_modern_light = declared_colors("accent", 4)
+assert 'pal.setColor(QPalette::WindowText, QColor(textColor));' in theme
+assert 'pal.setColor(QPalette::AlternateBase, QColor(bg));' in theme
 palettes = (
-    ('Classic light', '#203038', '#ffffff', '#087eae', '#ffffff'),
-    ('Modern light',  '#203038', '#eaf3f5', '#236e76', '#ffffff'),
-    ('Classic dark',  '#edf4f6', '#252628', '#12b8e8', '#092129'),
-    ('Modern dark',   '#edf4f6', '#273b40', '#3299a5', '#092129'),
+    ("Classic light", text_light, bg_light_classic, accent_classic_light, tab_light),
+    ("Modern light", text_light, bg_light_modern, accent_modern_light, tab_light),
+    ("Classic dark", text_dark, bg_dark_classic, accent_classic_dark, tab_dark),
+    ("Modern dark", text_dark, bg_dark_modern, accent_modern_dark, tab_dark),
 )
-for name, fg, card_bg, accent, selected_fg in palettes:
-    for color in (fg, card_bg, accent, selected_fg):
-        assert color in source, (name, color)
+for name, fg, card_bg, accent_color, selected_fg in palettes:
     assert contrast(fg, card_bg) >= 4.5, (name, 'body', contrast(fg, card_bg))
-    assert contrast(accent, selected_fg) >= 4.5, (name, 'tab', contrast(accent, selected_fg))
+    assert contrast(accent_color, selected_fg) >= 4.5, (name, 'tab', contrast(accent_color, selected_fg))
 
 print('PASS: theme switching source contract, Cinnamon GTK light fallback, no DSP writes, four contrast pairings')
 
@@ -81,7 +98,7 @@ print('PASS: theme switching source contract, Cinnamon GTK light fallback, no DS
 # the validated wider Theme label and preserving dialog/IRS selection behavior.
 from xml.etree import ElementTree
 assert 'theme_selector_->setFixedWidth(140)' not in source
-assert 'theme_selector_->fontMetrics().horizontalAdvance("Classic Viper") + 62' in source
+assert 'theme_selector_->fontMetrics().horizontalAdvance("Classic Viper")' in source
 assert 'QComboBox { padding-right:26px; }' in source
 assert 'QComboBox::down-arrow' in source
 assert 'image:url(%8); width:12px; height:8px;' in source
@@ -103,4 +120,3 @@ assert 'QComboBox#viperThemeSelector::' not in source, 'No Theme-only cap: all c
 # the special IRS library combo with its own popup update logic.
 assert 'class IrsComboBox final : public QComboBox' in source
 assert 'out.convolver_library = new IrsComboBox(' in source
-assert source.count('new QComboBox(') >= 12

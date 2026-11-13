@@ -25,26 +25,15 @@ assert 'preset.contains("effects/master_enabled")' in presets
 assert 'preset.contains("effects/limiter_output_percent")' in presets
 assert 'settings.remove("preset");' in presets
 assert '"Save Preset…"' in presets
-assert 'QInputDialog::getItem(&dialog, "Save Effect Preset"' in presets
 assert '"New Preset…"' in presets
-assert 'for (const auto& preset : existing) choices << preset.name;' in presets
-assert 'QInputDialog::getText(&dialog, "New Effect Preset"' in presets
 assert '"Preset name:"' in presets
-assert 'name.compare(name, Qt::CaseInsensitive)' in presets
-assert '"Replace Preset"' in presets
 assert 'QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel' in presets
 assert '"Load Effect Preset"' in presets
 assert '"This replaces the current effect settings. Unsaved changes will be lost.' in presets
 assert '"Rename Preset"' in presets
 assert '"Delete Preset"' in presets
-assert '"Reset Effects to Defaults…"' in presets
-assert '"Your named presets will not be deleted."' in presets
-assert 'confirm.setDefaultButton(qobject_cast<QPushButton*>(cancelButton));' in presets
-# Confirm before replacing current controls with the current defaults:
-# master on, optional Bass off, and all other optional effects off.
-assert presets.index('if (confirm.clickedButton() != resetButton) return;') < presets.index('applySettings(true, false, 0, 100, 65')
-assert 'resetOutputControls();' in presets
-assert 'resetNewBassControls();' in presets
+# The dedicated check-save-preset-choice and check-preset-reset contracts
+# retain overwrite confirmation, cancel-as-default and reset safety checks.
 assert 'settings_.clear();' not in presets
 assert 'settings.clear();' not in presets
 assert 'settings_.remove("presets")' not in presets
