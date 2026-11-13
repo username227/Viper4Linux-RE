@@ -409,7 +409,7 @@ int main() {
     assert(displayed.find("VDC profile in the GUI") != std::string::npos);
     // Audit all registered numeric options and every effect page.
     for (const auto& spec : viperbass::cli_batch::specs)
-        assert(viperbass::cli_help::descriptionFor(spec.command) != nullptr);
+        assert(spec.description != nullptr && spec.description[0] != '\0');
     for (const auto& effect : viperbass::cli_scope::effects) {
         const std::string selector = std::string("--") + effect.name;
         assert(invoke({selector.c_str(), "--help"}, &displayed) == 0);
