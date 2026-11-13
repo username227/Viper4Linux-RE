@@ -4,7 +4,6 @@
 #include "viper-cli-settings.h"
 #include "viper-cli-eq.h"
 #include "viper-cli-batch.h"
-#include "viper-cli-help.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -85,12 +84,11 @@ void usageEffect(const viperbass::cli_scope::EffectName& effect,
                 range << " (whole)";
             argument = range.str();
         }
-        const char* description = viperbass::cli_help::descriptionFor(command);
         out << "  " << std::left << std::setw(32) << argument << "  "
-            << (description ? description : "Numeric setting") << '\n';
+            << spec.description << '\n';
     }
     out << "  status [--full]                 Inspect only this effect (read-only)\n";
-    if (const char* note = viperbass::cli_help::effectNote(name))
+    if (const char* note = viperbass::cli_scope::effectNote(name))
         out << "\n" << note << '\n';
     out << "\nUse option=value without spaces. No standalone numerical arguments.\n"
            "All options are validated before any edits are made.\n";
