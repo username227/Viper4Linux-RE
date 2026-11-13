@@ -27,7 +27,7 @@ inline constexpr OptionDescription descriptions[] = {
     {"dynamic-side-low", "Low-side contribution (%)"},
     {"dynamic-side-high", "High-side contribution (%)"},
     {"dynamic-strength", "Dynamic System strength (%)"},
-    {"eq-bands", "Graphic EQ layout (10, 15, 25 or 31 bands)"},
+    {"eq-bands", "Graphic EQ layout (10/15/25/31; restores independent curve or selected preset)"},
     {"eq-level", "Band BAND gain in dB (-12 to +12; band is 1-based)"},
     {"eq-preset", "Apply named EQ preset (quote names with spaces)"},
     {"fet-threshold", "Compression threshold (dBFS)"},

@@ -342,16 +342,23 @@ Set Dynamic System strength. VALUE accepts decimals from 0 through 100
 percent inclusive, rounded to the nearest whole percentage point.
 .SH "3. EQ & TONE"
 .SS "A. Graphic Equalizer"
-Built-in curves are identical to the GUI's original curves at each band
-count. User presets are loaded from the GUI's EQ preset library; presets for
-a different band count are log-frequency interpolated as in the GUI.
+The GUI and CLI share independent saved EQ curves for the 10-, 15-, 25-
+and 31-band layouts. A custom curve is never remapped by index or frequency
+when the layout changes. Built-in presets use their exact per-layout curves;
+saved user presets are log-frequency interpolated for a different band count,
+matching the GUI.
 .TP
 .B "--eq on | off"
 Enable or disable the graphic equalizer. No arguments.
 .TP
 .BI "--eq bands=" COUNT
 Set the number of graphic-EQ bands. COUNT must be exactly one of the whole
-numbers 10, 15, 25 or 31. This selects the active EQ layout and marks the EQ preset as Custom.
+numbers 10, 15, 25 or 31. The outgoing layout's current levels are saved,
+then the selected layout is loaded. With Custom selected, its independent
+saved levels are restored (or a flat curve if none was saved). With a named
+preset selected, the same preset stays selected and its curve for the new
+layout is applied: exact built-in curves, interpolated saved user presets.
+Switching layouts alone does not change the preset selection.
 .TP
 .B "--eq level=BAND:DB"
 Set an individual EQ band. BAND must be a whole-number index from 1 through
@@ -369,8 +376,9 @@ is stopped. No arguments.
 Apply a built-in or user EQ preset to the live EQ and save its selection.
 Names containing spaces must be quoted. A unique bare name is accepted;
 use builtin:NAME or user:NAME to resolve ambiguous names. Custom restores
-the saved custom curve for the current band layout. This does not enable
-the EQ automatically. No presets are overwritten.
+the independent saved custom curve for the current band layout (flat
+if it has never been saved). This does not enable the EQ automatically.
+No named presets are overwritten.
 .SS "B. Dynamic EQ"
 .TP
 .B "--deq on | off"
