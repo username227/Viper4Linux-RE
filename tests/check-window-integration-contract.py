@@ -66,4 +66,25 @@ for key in ("connect(ddc_watcher_", "connect(irs_watcher_",
     assert key not in main, key
 assert main.index('addEffectPanel(correctionLayout, correctionDdc.group, "ddc", ddc_enabled_)') < main.index('setupDdcLibrary(importDdc, refreshDdc);')
 assert main.index('addEffectPanel(correctionLayout, correctionConvolver.group, "convolver", convolver_enabled_)') < main.index('setupIrsLibrary(browse, refresh);')
+# The main-window footer, active tab migration, and status row are built
+# only after the effect panels and before any saved effect values are loaded.
+shell = (root / "src/window/window-shell.inc").read_text()
+assert main.count("completeMainWindowLayout(central, layout);") == 1
+assert shell.count("void completeMainWindowLayout(QWidget* central, QVBoxLayout* layout)") == 1
+assert main.index("outputLayout->insertWidget(outputLayout->count() - 1, output_warning_);") < main.index("completeMainWindowLayout(central, layout);") < main.index("save_timer_ = new QTimer(this);") < main.index("loadSavedEffectSettings();")
+for marker in (
+    'audio_restart_button_ = new QPushButton("Restart Backend", central)',
+    'presetsButton->setObjectName("viperNamedPresetsButton")',
+    'footerDivider->setObjectName("viperFooterDivider")',
+    'layout->addWidget(tabs_, 1);',
+    'layout->addLayout(footerControls);',
+    'settings_.value("ui/active_tab_name", "Output")',
+    'settings_.setValue("ui/active_tab_name",',
+    'status_ = new QLabel("Checking backend...", central)',
+    'setCentralWidget(central);',
+):
+    assert marker in shell, marker
+    assert marker not in main, marker
+assert shell.index('layout->addWidget(tabs_, 1);') < shell.index('layout->addLayout(footerControls);') < shell.index('status_ = new QLabel("Checking backend...", central)') < shell.index('setCentralWidget(central);')
+
 print("PASS: stage 7 main-window integration and once-only module composition")

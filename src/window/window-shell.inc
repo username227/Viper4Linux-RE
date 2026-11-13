@@ -285,6 +285,74 @@
         }
     }
 
+    // Complete the fixed main-window shell after all effect panels are built.
+    // Keep footer geometry, saved category selection and status placement together.
+    void completeMainWindowLayout(QWidget* central, QVBoxLayout* layout) {
+        // Keep the primary interface small; all named-preset operations and
+        // the guarded defaults reset live together in one manager dialog.
+        // Use the existing actions row: Restart Backend on the left,
+        // Presets on the right. No additional footer height is needed.
+        auto* actions = new QHBoxLayout();
+        audio_restart_button_ = new QPushButton("Restart Backend", central);
+        audio_restart_button_->setObjectName("viperRestartAudioButton");
+        audio_restart_button_->setToolTip(
+            "Restart the ViPER backend and Audio Output monitor without closing the GUI.");
+        actions->addWidget(audio_restart_button_);
+        auto* presetsButton = new QPushButton("Presets…", central);
+        presetsButton->setObjectName("viperNamedPresetsButton");
+        presetsButton->setToolTip("Save, load, rename or delete complete effect configurations.");
+        actions->addStretch();
+        actions->addWidget(presetsButton);
+
+        // The tabs own all remaining vertical space. Keep this faint divider
+        // pinned immediately above both footer buttons even on short tabs.
+        // Do not alter the main window size or the footer status placement.
+        auto* footerDivider = new QFrame(central);
+        footerDivider->setObjectName("viperFooterDivider");
+        footerDivider->setFrameShape(QFrame::HLine);
+        footerDivider->setFrameShadow(QFrame::Plain);
+        footerDivider->setLineWidth(1);
+        footerDivider->setFixedHeight(1);
+        footerDivider->setStyleSheet("QFrame#viperFooterDivider { background-color: #bcc7cf; border: none; }");
+        auto* footerControls = new QVBoxLayout();
+        footerControls->setContentsMargins(0, 0, 0, 0);
+        footerControls->setSpacing(6);
+        footerControls->addWidget(footerDivider);
+        footerControls->addLayout(actions);
+        layout->addWidget(tabs_, 1);
+        layout->addLayout(footerControls);
+        connect(presetsButton, &QPushButton::clicked, this, [this]{ showPresetManager(); });
+        connect(audio_restart_button_, &QPushButton::clicked, this,
+                [this] { restartAudioEngine(); });
+
+        // New stable name key deliberately ignores the former numeric index
+        // (Enhancements=0, Surround=1, Output=2). On first launch show Output.
+        // Preserve the user's last category even though two display names
+        // changed. No existing effect, preset or panel key is migrated.
+        QString initialTabName = settings_.value("ui/active_tab_name", "Output").toString();
+        if (initialTabName == "Enhancements") initialTabName = "EQ & Tone";
+        if (initialTabName == "Surround") initialTabName = "Spatial";
+        if (initialTabName == "IR & Correction" || initialTabName == "IR_Correction") initialTabName = "Sound Correction";
+        if (initialTabName == "EQ_Tone") initialTabName = "EQ & Tone";
+        for (int tab = 0; tab < tabs_->count(); ++tab) {
+            if (tabs_->tabText(tab) == initialTabName ||
+                (tabs_->tabText(tab) == "EQ && Tone" && initialTabName == "EQ & Tone")) {
+                tabs_->setCurrentIndex(tab);
+                break;
+            }
+        }
+        connect(tabs_, &QTabWidget::currentChanged, this, [this](int index) {
+            settings_.setValue("ui/active_tab_name",
+                tabs_->tabText(index) == "EQ && Tone" ? "EQ & Tone" : tabs_->tabText(index));
+        });
+        // Status returns to its own compact line below the actions row.
+        status_ = new QLabel("Checking backend...", central);
+        status_->setWordWrap(true); // Only long recovery/offline messages wrap.
+        layout->addWidget(status_);
+        // Both the button and the application-menu action use one restart handler.
+        setCentralWidget(central);
+    }
+
     void showPreferences() {
         QDialog dialog(this);
         dialog.setWindowTitle("Viper4Linux — Preferences");
