@@ -51,7 +51,6 @@ tree="$work/viper4linux-re-$version"
 }
 built="$work/build"
 cmake -S "$tree" -B "$built" -DCMAKE_BUILD_TYPE=Release \
-    -DVIPER_BUILD_DEVELOPER_TESTS=ON \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DVIPER_ENABLE_SYSTEM_INSTALL=ON \
     -DVIPER_SYSTEM_INSTALL_LAYOUT=debian

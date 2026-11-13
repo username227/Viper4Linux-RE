@@ -11,7 +11,7 @@ url='https://github.com/username227/viper4linux-re'
 license=('GPL-3.0-only' 'LicenseRef-ViPERDSP')
 options=('!debug')
 depends=('glibc' 'gcc-libs' 'qt6-base' 'libx11' 'pipewire' 'ladspa' 'python')
-makedepends=('cmake' 'pkgconf')
+makedepends=('cmake' 'pkgconf' 'git')
 conflicts=('viper4linux-re-git' 'viper4linux' 'viper4linux-git')
 source=("https://github.com/username227/viper4linux-re/releases/download/v${pkgver}/viper4linux-re-${pkgver}-unified-source.tar.xz")
 # Replace with the actual checksum after the workflow creates the release archive.
@@ -31,7 +31,7 @@ build() {
 }
 
 check() {
-    # Fast CTest package checks (not the full developer mock suite).
+    # Full offline CTest regression suite, including native mocks and contracts.
     ctest --test-dir "$srcdir/viper4linux-build" --output-on-failure --no-tests=error
     nm -D "$srcdir/viper4linux-build/viper_dsp_ladspa.so" | grep -Eq ' [TW] ladspa_descriptor$'
 }

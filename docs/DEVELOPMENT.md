@@ -274,22 +274,20 @@ runner. The former `tests/check-developer.sh` aggregate wrapper was retired
 after the integrated 46/46 test run. For a system package,
 see [Arch packaging](ARCH-PACKAGING.md).
 
-The standard CMake `include(CTest)` integration enables `BUILD_TESTING=ON`
-by default, registering 12 fast, offline package checks without extra flags.
-Routine stable Arch `makepkg check()` runs `ctest --output-on-failure
---no-tests=error` plus LADSPA export verification.
-The native developer mock suite remains opt-in and is not compiled by normal
-package builds. To disable all CTest registration, configure with
-`-DBUILD_TESTING=OFF`. The separately maintained `-git` AUR recipe needs
-an independent update before its regular builds use the same CTest interface.
+CMake's standard `include(CTest)` enables `BUILD_TESTING=ON` by default,
+registering and compiling the complete offline regression suite, including
+native DSP mocks, GUI contracts, presets and snapshot checks. Routine Arch
+`makepkg check()` runs the same CTest suite plus LADSPA export verification.
+No extra developer-test flag is needed. Use `-DBUILD_TESTING=OFF` only if
+intentionally disabling all test targets and registration; `makepkg --nocheck`
+skips executing tests but, by design, still builds them with default settings.
+The separately maintained `-git` AUR PKGBUILD inherits the new default once
+it builds updated source using CMake and invokes CTest in its `check()` function.
 
-For the complete native DSP, GUI, preset, snapshot and release-contract
-regressions, **CTest is the standard developer test runner**. Configure the
-normal `build/` directory with developer tests enabled, compile its native/mock
-test binaries, then run CTest:
+To run the full offline suite directly from a source checkout:
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVIPER_BUILD_DEVELOPER_TESTS=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 ./viper4linux --preflight
@@ -321,12 +319,11 @@ PipeWire or installed backend.
 Release-contract checks are registered only when the corresponding GitHub
 workflow file is present (it may be absent from unified source archives).
 
-Release candidate CI runs the full developer CTest suite *in addition to*
-normal Arch package checks, and native Debian builds run the full CTest suite
-before package staging. A passing package smoke check does not certify a DSP
-change; run the developer suite before merging native DSP or snapshot changes.
-Rebuilding an AUR package should not force every user to run expensive,
-developer-only checks.
+Release candidate CI runs the full CTest suite in normal Arch package checks,
+without repeating the same suite in a second pass. Native Debian builds also
+run the full suite before package staging. All tests are offline and isolated;
+live audio, actual output switching and manual GUI acceptance remain separate
+from automated tests.
 
 
 A full live acceptance test must cover Qt rendering, real PipeWire audio,
