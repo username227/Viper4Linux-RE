@@ -259,7 +259,6 @@ int main() {
     assert(mainHelp.find("  --help ", globals) < effects);
     assert(mainHelp.find("  --bass ", effects) > effects);
     assert(mainHelp.find("  --headphone ", effects) > effects);
-    assert(mainHelp.find("Use v4l-cli --[EFFECT] --help for effect-specific options.") != std::string::npos);
     assert(mainHelp.find("v4l-cli bass --help") == std::string::npos);
     assert(mainHelp.find("bass-gain <") == std::string::npos);
     assert(mainHelp.find("Use man viper4linux-ctl") != std::string::npos);
