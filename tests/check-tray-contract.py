@@ -58,13 +58,13 @@ assert 'viper4linux-re.desktop' in s
 assert 'QSaveFile file(target);' in s
 assert 'Exec=viper4linux' in s
 assert 'TryExec=viper4linux' in s
-assert 'if (!prepareBackendForGuiExit()) return;' in s
-assert 'qApp->quit(); // Only an explicit Stop choice signals the marked backend.' in s
+assert 'qApp->quit();' in s
 assert 'quitGui();' in s[s.index('void closeEvent(QCloseEvent* event) override {'):s.index('void changeEvent(QEvent* event) override {')]
 assert 'event->ignore();' in s[s.index('void closeEvent(QCloseEvent* event) override {'):s.index('void changeEvent(QEvent* event) override {')]
+# Backend identity and refusal-to-stop behavior are exercised with a fake
+# process in check-gui-backend-exit.py; preserve tray-specific UI checks here.
 assert 'ui/backendOnExit' in s and 'Ask every time' in s
 assert 'Remember this choice' in s and 'Stop backend' in s
-assert 'viper_gui_exit::stopMarkedBackend(backendPid, error)' in s
 # Minimize-to-tray withdraws the window without clearing its state while
 # hidden (Qt/X11 could otherwise leave a blank ghost in Cinnamon's taskbar).
 minimize_handler = s[s.index('    void changeEvent(QEvent* event) override {'):
