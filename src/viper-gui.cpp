@@ -379,8 +379,8 @@ public:
             if (index >= 0) settings_.setValue("ui/mb_selected_band", index);
         });
         addEffectPanel(dynamicsLayout, dynamicsMb.group, "multiband", mb_enabled_);
-        // UI construction extracted; keep library state, watchers and
-        // all import/refresh callbacks in the main window.
+        // Panel factories create widgets; named member methods wire the
+        // correction libraries after the effect panels are attached.
         const auto correctionDdc = viper_panels::createDdcPanel(tabs_);
         ddc_enabled_ = correctionDdc.ddc_enabled;
         ddc_library_ = correctionDdc.ddc_library;
@@ -392,40 +392,7 @@ public:
             if (ddc_library_dirty_) refreshDdcLibrary();
         };
         addEffectPanel(correctionLayout, correctionDdc.group, "ddc", ddc_enabled_);
-        refreshDdcLibrary();
-        ddc_watcher_ = new QFileSystemWatcher(this);
-        ddc_watcher_->addPath(ddcDirectory());
-        connect(ddc_watcher_, &QFileSystemWatcher::directoryChanged, this,
-                [this](const QString&) {
-            ddc_library_dirty_ = true;
-            if (!ddc_library_->popupIsOpen()) refreshDdcLibrary();
-        });
-        connect(ddc_library_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-                this, [this](int index) {
-            if (index >= 0) selectDdcProfile(ddc_library_->currentData().toString());
-        });
-        connect(refreshDdc, &QPushButton::clicked, this, [this] { refreshDdcLibrary(); });
-        connect(importDdc, &QPushButton::clicked, this, [this] {
-            const QString selected = QFileDialog::getOpenFileName(this, "Import ViPER-DDC profile",
-                ddcDirectory(), "ViPER correction (*.vdc *.VDC)");
-            if (selected.isEmpty()) return;
-            const QFileInfo file(selected);
-            if (!file.isFile() || !file.isReadable() ||
-                file.suffix().compare("vdc", Qt::CaseInsensitive) != 0) {
-                QMessageBox::warning(this, "VDC import", "Select a readable .vdc profile.");
-                return;
-            }
-            if (!QDir().mkpath(ddcDirectory())) {
-                QMessageBox::warning(this, "VDC import", "Could not create VDC library directory.");
-                return;
-            }
-            const QString destination = viper_library_import::copyOrSelect(selected, ddcDirectory());
-            if (destination.isEmpty()) {
-                QMessageBox::warning(this, "VDC import", "Could not copy the selected profile.");
-                return;
-            }
-            selectDdcProfile(destination);
-        });
+        setupDdcLibrary(importDdc, refreshDdc);
         const auto correctionSpeaker = viper_panels::createSpeakerCorrectionPanel(tabs_);
         speaker_enabled_ = correctionSpeaker.speaker_enabled;
         addEffectPanel(correctionLayout, correctionSpeaker.group, "speaker_correction", speaker_enabled_);
@@ -444,57 +411,7 @@ public:
             if (irs_library_dirty_) refreshIrsLibrary();
         };
         addEffectPanel(correctionLayout, correctionConvolver.group, "convolver", convolver_enabled_);
-        refreshIrsLibrary();
-        irs_watcher_ = new QFileSystemWatcher(this);
-        irs_watcher_->addPath(irsDirectory());
-        connect(irs_watcher_, &QFileSystemWatcher::directoryChanged, this,
-                [this](const QString&) {
-            // A closed library updates as soon as Qt reports a folder change.
-            // An open popup is never rebuilt underneath the user.
-            irs_library_dirty_ = true;
-            if (!convolver_library_->popupIsOpen()) refreshIrsLibrary();
-        });
-        connect(convolver_library_, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, [this](int index) {
-                if (index < 0) return;
-                selectIrPath(convolver_library_->currentData().toString());
-            });
-        connect(refresh, &QPushButton::clicked, this, [this] { refreshIrsLibrary(); settings_.sync(); requestIrsLoad(); });
-        connect(browse, &QPushButton::clicked, this, [this] {
-            const QStringList selected = QFileDialog::getOpenFileNames(this, "Import impulse responses",
-                irsDirectory(), "Impulse responses (*.irs *.IRS *.wav *.WAV);;All files (*)");
-            if (selected.isEmpty()) return;
-            if (!QDir().mkpath(irsDirectory())) {
-                QMessageBox::warning(this, "IRS import", "Could not create the IRS library directory.");
-                return;
-            }
-            QString firstImported;
-            QStringList failures;
-            for (const QString& selectedFile : selected) {
-                const QFileInfo file(selectedFile);
-                if (!file.isFile() || !file.isReadable() ||
-                    (file.suffix().compare("irs", Qt::CaseInsensitive) != 0 &&
-                     file.suffix().compare("wav", Qt::CaseInsensitive) != 0)) {
-                    failures << file.fileName() + ": not a readable .irs or .wav file";
-                    continue;
-                }
-                // Browsing a library file is a selection, not an import.
-                const QString destination = viper_library_import::copyOrSelect(selectedFile, irsDirectory());
-                if (destination.isEmpty()) {
-                    failures << file.fileName() + ": could not copy";
-                    continue;
-                }
-                if (firstImported.isEmpty()) firstImported = destination;
-            }
-            // Only the first imported file becomes active; others appear in the
-            // library for immediate switching. Keep previous choice on failure.
-            if (!firstImported.isEmpty()) selectIrPath(firstImported);
-            refreshIrsLibrary();
-            if (!failures.isEmpty()) {
-                QMessageBox::warning(this, "IRS import",
-                    "Some files could not be imported:\n" + failures.join("\n"));
-            }
-        });
+        setupIrsLibrary(browse, refresh);
 
         // Bass widget construction moved; card wrappers, persistence,
         // precise DSP values and shared-memory subscriptions remain here.
