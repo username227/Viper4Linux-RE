@@ -114,11 +114,19 @@ int main() {
     assert(c.limiter_threshold_permille.load() == 1000);
     assert(invoke({"--limiter", "threshold=0.6"}, &multiOutput) == 0);
     assert(c.limiter_threshold_permille.load() == 600); // Old linear input works.
+    assert(invoke({"--limiter", "threshold=-4.4"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 603); // Native permille.
+    assert(multiOutput.find("Threshold: -4.4 dBFS") != std::string::npos);
+    assert(invoke({"--limiter", "threshold=0"}, &multiOutput) == 0);
+    assert(c.limiter_threshold_permille.load() == 1000); // 0 dBFS, not zero linear.
     assert(invoke({"--limiter", "threshold-db=-6.0", "gain=1"}, &multiOutput) == 0);
     assert(occurrences(multiOutput, "Master Limiter -") == 1);
     assert(multiOutput.find("Output: 100%") != std::string::npos);
     assert(multiOutput.find("Threshold: -6.0 dBFS (0.501 linear)") != std::string::npos);
     const int beforeInvalidDb = c.limiter_threshold_permille.load();
+    assert(invoke({"--limiter", "threshold=0.1"}) == 2);
+    assert(invoke({"--limiter", "threshold=-10.6"}) == 2);
+    assert(c.limiter_threshold_permille.load() == beforeInvalidDb);
     for (const char* invalid : {"-10.6", "0.1", "nan", "garbage"}) {
         const std::string option = std::string("threshold-db=") + invalid;
         assert(invoke({"--limiter", option.c_str()}) == 2);
@@ -393,7 +401,7 @@ int main() {
     assert(invoke({"--field", "--help"}, &displayed) == 0);
     assert(displayed.find("depth=0|200..950") != std::string::npos);
     assert(invoke({"--limiter", "--help"}, &displayed) == 0);
-    assert(displayed.find("threshold=0.3..1") != std::string::npos);
+    assert(displayed.find("threshold=-10.5..0|0.3..1") != std::string::npos);
     assert(displayed.find("threshold-db=-10.5..0") != std::string::npos);
     assert(displayed.find("matches GUI display") != std::string::npos);
     assert(displayed.find(" [on|off]") == std::string::npos);

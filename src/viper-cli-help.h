@@ -41,7 +41,7 @@ inline constexpr OptionDescription descriptions[] = {
     {"imager-high", "High-band stereo width (%; 100 unchanged)"},
     {"imager-xover-low", "Low crossover frequency (Hz)"},
     {"imager-xover-high", "High crossover frequency (Hz)"},
-    {"limiter-threshold", "Master limiter threshold (linear multiplier; legacy-compatible)"},
+    {"limiter-threshold", "Master limiter threshold: negative/zero dBFS (GUI) or positive linear multiplier"},
     {"limiter-threshold-db", "Master limiter peak threshold (dBFS; matches GUI display)"},
     {"limiter-gain", "Master output gain (1 = unity)"},
     {"limiter-pan", "Output pan: -1 left, 0 center, +1 right"},

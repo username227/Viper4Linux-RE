@@ -58,7 +58,7 @@ inline constexpr ArgSpec specs[] = {
         {"fet-threshold",1,Kind::Whole,-48,0}, {"fet-ratio",1,Kind::Decimal,1,10},
         {"mb-bands",1,Kind::MbBands,3,5},
         {"convolver-cross",1,Kind::Decimal,0,100},
-        {"limiter-threshold",1,Kind::Decimal,0.3f,1},
+        {"limiter-threshold",1,Kind::Decimal,-10.5f,1},
         {"limiter-threshold-db",1,Kind::Decimal,-10.5f,0},
         {"limiter-gain",1,Kind::Decimal,0.01f,2},
         {"limiter-pan",1,Kind::Decimal,-1,1},
@@ -108,6 +108,10 @@ inline void checkValue(const ArgSpec& spec, const Command& cmd, int& eqBands) {
         return;
     }
     const float value = decimal(cmd.args[1], spec.min, spec.max);
+    // threshold= supports GUI dBFS (-10.5..0) and native linear (0.3..1).
+    // Zero is unambiguously 0 dBFS; the positive gap is not a valid value.
+    if (cmd.args[0] == "limiter-threshold" && value > 0.f && value < 0.3f)
+        throw std::invalid_argument("limiter threshold must be -10.5..0 dBFS or 0.3..1 linear");
     if (spec.kind == Kind::Whole && std::trunc(value) != value)
         throw std::invalid_argument("expected a whole number");
     if (spec.kind == Kind::EqBands) {

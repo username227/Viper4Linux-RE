@@ -76,6 +76,8 @@ void usageEffect(const viperbass::cli_scope::EffectName& effect,
             argument = "bands=3|5";
         else if (command == "field-depth")
             argument = "depth=0|200..950";
+        else if (command == "limiter-threshold")
+            argument = "threshold=-10.5..0|0.3..1";
         else {
             std::ostringstream range;
             range << option << '=' << spec.min << ".." << spec.max;
@@ -456,13 +458,16 @@ int executeOne(int argc, char** argv, bool emitReport = true) {
             c.diff_mix_percent.store(static_cast<int>(std::lround(number(argv[2], 0.f, 100.f))));
         else if (cmd == "diff-lowpass" && argc == 3)
             c.diff_lp_hz.store(static_cast<int>(std::lround(number(argv[2], 0.f, 20000.f))));
-        else if (cmd == "limiter-threshold" && argc == 3)
-            c.limiter_threshold_permille.store(static_cast<int>(std::lround(number(argv[2], 0.3f, 1.f) * 1000.f)));
-        else if (cmd == "limiter-threshold-db" && argc == 3) {
-            // GUI displays 20*log10(linear) to one decimal place. Accept its
-            // rounded -10.5 dBFS minimum and clamp only the final DSP value.
-            const double db = number(argv[2], -10.5f, 0.f);
-            const double linear = std::pow(10.0, db / 20.0);
+        else if ((cmd == "limiter-threshold" || cmd == "limiter-threshold-db") && argc == 3) {
+            // A nonpositive threshold is dBFS (as displayed in the GUI).
+            // Positive values 0.3..1 retain the original linear CLI meaning.
+            // The explicit threshold-db option always uses dBFS.
+            const bool dbOnly = cmd == "limiter-threshold-db";
+            const double requested = number(argv[2], -10.5f, dbOnly ? 0.f : 1.f);
+            if (!dbOnly && requested > 0.0 && requested < 0.3)
+                throw std::invalid_argument("Limiter threshold must be -10.5..0 dBFS or 0.3..1 linear");
+            const double linear = (dbOnly || requested <= 0.0)
+                ? std::pow(10.0, requested / 20.0) : requested;
             c.limiter_threshold_permille.store(std::clamp(
                 static_cast<int>(std::lround(linear * 1000.0)), 300, 1000));
         }

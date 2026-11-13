@@ -187,9 +187,19 @@ range. The GUI displays one decimal place, so its reading may not
 reproduce the precise entered value.
 .TP
 .BI "--limiter threshold=" VALUE
-Set the same threshold with a linear amplitude multiplier from 0.3 through
-1 inclusive, retained for existing scripts. The CLI status shows both the
-GUI-style dBFS value and the native linear setting.
+Set the Master Limiter peak threshold in either GUI-style dBFS or its
+original linear amplitude units:
+negative values from -10.5 to just below 0 mean dBFS; 0 means 0 dBFS;
+positive values from 0.3 through 1 mean linear amplitude.
+Positive values below 0.3 are invalid. For example,
+.B --limiter threshold=-4.4
+sets approximately 0.603 linear, while
+.B --limiter threshold=0.6
+retains the existing linear input behavior. Both display near -4.4 dBFS
+after rounding to the GUI's one-decimal precision. Explicit
+.B threshold-db=
+always means dBFS, including for 0.
+The CLI status shows both dBFS and the native linear setting.
 The limiter has no independent enable/disable command and operates only
 while Master is ON.
 .TP
