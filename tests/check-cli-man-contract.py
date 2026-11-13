@@ -6,12 +6,23 @@ repo = pathlib.Path(__file__).resolve().parents[1]
 cli = (repo / 'src/viper-ctl.cpp').read_text()
 man = (repo / 'man/viper4linux-ctl.1').read_text()
 commands = set(re.findall(r'\bcmd\s*==\s*"([A-Za-z0-9-]+)"', cli))
-# Internal operations retain old identifiers; public syntax uses scoped names.
-missing = sorted(c for c in commands if not (
-    re.search(r'(?<![\w-])' + re.escape(c) + r'(?![\w-])', man) or
-    (('-' in c) and re.search(r'--' + re.escape(c.split('-', 1)[0]) +
-         r'\s+' + re.escape(c.split('-', 1)[1]) + r'=', man))
-))
+# Internal handlers retain historical names, while the manual documents
+# canonical scoped operations. No old aliases need to be repeated per effect.
+effect_selectors = set(re.findall(
+    r'\{"([a-z]+)",\s*"[^"]+"\}',
+    (repo / 'src/viper-cli-scope.h').read_text()))
+def documented(command):
+    if re.search(r'(?<![\w-])' + re.escape(command) + r'(?![\w-])', man):
+        return True
+    effect, _, option = command.partition('-')
+    if effect not in effect_selectors:
+        return False
+    if option in ('on', 'off'):
+        return f'.B "--{effect} on | off"' in man
+    return re.search(r'^\.(?:BI|B) "--' + re.escape(effect) +
+                     r'\s+' + re.escape(option) + r'=', man, re.M) is not None
+
+missing = sorted(c for c in commands if not documented(c))
 assert len(commands) >= 85, f'CLI parser coverage dropped unexpectedly ({len(commands)})'
 assert not missing, f'Undocumented CLI commands: {missing}'
 assert '--help' in man and 'round' in man and 'inclusive' in man
@@ -20,6 +31,13 @@ assert not {'gain', 'freq'} & commands
 assert '.BI "--bass gain=" VALUE' in man and '.BI "--bass freq=" VALUE' in man
 assert 'numerical values must use the scoped' in man
 assert '--eq level=BAND:DB' in man
+assert '.SH LEGACY NO-ARGUMENT ALIASES' in man
+canonical = man.split('.SH LEGACY NO-ARGUMENT ALIASES', 1)[0]
+assert not re.search(r'^\.BR [a-z]+-(?:on|off)', canonical, re.M)
+assert 'bass-gain 3' not in canonical
+assert 'headphone-level 2' not in canonical
+assert '.B "--bass on | off"' in canonical
+assert 'There are no standalone numerical arguments.' in man
 assert not re.search(r'^\.BI "(gain|freq) "', man, re.M)
 assert '.SH COMMAND SEQUENCES' in man and 'not transactions' in man
 assert 'headphone-quality' not in cli

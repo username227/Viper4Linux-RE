@@ -73,7 +73,8 @@ void usageEffect(const viperbass::cli_scope::EffectName& effect,
                 << '\n';
     }
     out << "  status [--full]         Inspect only this effect (read-only)\n"
-           "\nLegacy prefix commands remain supported.\n"
+           "\nUse option=value without spaces. Older zero-argument aliases remain available.\n"
+           "Positional numerical arguments are rejected.\n"
            "Options are validated together before any edit is executed.\n";
 }
 
