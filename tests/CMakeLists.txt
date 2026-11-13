@@ -121,6 +121,20 @@ add_test(NAME viper_contract_library_import_runtime
 set_tests_properties(viper_contract_library_import_runtime PROPERTIES
   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;contracts;library")
 
+# The two correction libraries share one widget refresh implementation.
+# Offscreen Qt avoids mapping a real window or touching the audio backend.
+add_executable(viper_test_library_refresh check-library-refresh.cpp)
+target_include_directories(viper_test_library_refresh PRIVATE "${_viper_test_include}")
+target_link_libraries(viper_test_library_refresh PRIVATE Qt6::Widgets)
+target_compile_options(viper_test_library_refresh PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME viper_contract_library_refresh_runtime
+  COMMAND "$<TARGET_FILE:viper_test_library_refresh>")
+set_tests_properties(viper_contract_library_refresh_runtime PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+  ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+  LABELS "developer;contracts;library")
+
 # Exact native/legacy unit projections need no Qt or live DSP.
 add_executable(viper_test_precision_units check-precision-units.cpp)
 target_include_directories(viper_test_precision_units PRIVATE "${_viper_test_include}")

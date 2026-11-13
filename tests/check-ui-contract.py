@@ -124,12 +124,13 @@ for token in [
     'out.convolver_full_name->setWordWrapMode(QTextOption::WrapAnywhere)',
     'out.convolver_full_name->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff)',
     'out.convolver_full_name->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed)',
-    'convolver_library_->setItemData(index, entry.first, Qt::ToolTipRole)',
     'void updateIrsName(const QString& path)',
     'convolver_full_name_->setPlainText("Selected IRS: " + name)',
     'updateIrsName(path); // even if the popup is still open and frozen',
 ]:
     assert token in source, 'Missing responsive IRS GUI feature: ' + token
+# Full filename tooltips are now set by the shared IrsComboBox refresh
+# and validated by the offscreen viper_contract_library_refresh_runtime test.
 assert 'convolver_library_->setFixedWidth(' not in source
 assert 'convolver_library_->setMinimumWidth(300)' not in source
 print('PASS: responsive IRS selector, wrap-anywhere full name, item tooltips, flexible slider row')
