@@ -158,6 +158,16 @@ inline bool parseLegacy(int count, char* const* argv, int currentEqBands,
 // legacy operations. Nothing is executed until the entire batch is valid.
 inline bool parse(int count, char* const* argv, int currentEqBands,
                   std::vector<Command>& output, std::string& error) {
+    // Only no-argument legacy aliases remain. Value-bearing commands use
+    // --effect option=value; positional numbers are never accepted.
+    for (int i = 0; i < count; ++i) {
+        if (withArgs(argv[i])) {
+            error = "Value-taking legacy command '" + std::string(argv[i]) +
+                    "' is not supported; use --effect option=value";
+            output.clear();
+            return false;
+        }
+    }
     std::vector<std::string> normalized;
     if (!cli_scope::normalize(count, argv, normalized, error)) {
         output.clear();
