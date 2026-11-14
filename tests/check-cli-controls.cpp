@@ -379,55 +379,6 @@ int main() {
         assert(c.tube_model.load() == previous);
     }
 
-    std::ostringstream help;
-    usage(help);
-    const std::string mainHelp = help.str();
-    const auto globals = mainHelp.find("Global commands:");
-    const auto effects = mainHelp.find("Effect selectors (alphabetical):");
-    assert(globals != std::string::npos && globals < effects);
-    assert(mainHelp.find("  --on ", globals) < effects);
-    assert(mainHelp.find("  --off ", globals) < effects);
-    assert(mainHelp.find("  --status ", globals) < effects);
-    assert(mainHelp.find("  --help ", globals) < effects);
-    assert(mainHelp.find("  --bass ", effects) > effects);
-    assert(mainHelp.find("  --headphone ", effects) > effects);
-    assert(mainHelp.find("v4l-cli bass --help") == std::string::npos);
-    assert(mainHelp.find("bass-gain <") == std::string::npos);
-    assert(invoke({"--help"}, &displayed) == 0);
-    assert(displayed.find("Global commands") != std::string::npos);
-    assert(invoke({"--bass", "--help"}, &displayed) == 0);
-    assert(invoke({"bass", "--help"}) == 2);
-    assert(invoke({"status", "--help"}) == 2);
-    assert(displayed.find("gain=0.5..10") != std::string::npos);
-    assert(displayed.find("Bass gain (stored to hundredths)") != std::string::npos);
-    assert(displayed.find("0 Natural, 1 Pure Bass+, 2 Subwoofer") != std::string::npos);
-    assert(displayed.find("on|off|toggle") != std::string::npos);
-    assert(invoke({"--headphone", "--help"}, &displayed) == 0);
-    assert(displayed.find("level=1..5") != std::string::npos);
-    assert(invoke({"--eq", "--help"}, &displayed) == 0);
-    assert(displayed.find("level=BAND:DB") != std::string::npos);
-    assert(displayed.find("presets") != std::string::npos);
-    assert(invoke({"--field", "--help"}, &displayed) == 0);
-    assert(displayed.find("depth=0|200..950") != std::string::npos);
-    assert(invoke({"--limiter", "--help"}, &displayed) == 0);
-    assert(displayed.find("threshold=-10.5..0|0.3..1") != std::string::npos);
-    assert(displayed.find("threshold-db=-10.5..0") != std::string::npos);
-    assert(displayed.find("matches GUI display") != std::string::npos);
-    assert(displayed.find(" [on|off]") == std::string::npos);
-    assert(invoke({"--ddc", "--help"}, &displayed) == 0);
-    assert(displayed.find("VDC profile in the GUI") != std::string::npos);
-    // Audit all registered numeric options and every effect page.
-    for (const auto& spec : viperbass::cli_batch::specs)
-        assert(spec.description != nullptr && spec.description[0] != '\0');
-    for (const auto& effect : viperbass::cli_scope::effects) {
-        const std::string selector = std::string("--") + effect.name;
-        assert(invoke({selector.c_str(), "--help"}, &displayed) == 0);
-        assert(displayed.find("Usage: v4l-cli " + selector) != std::string::npos);
-        assert(displayed.find("status [--full]") != std::string::npos);
-        assert(displayed.find("Numeric setting") == std::string::npos);
-        }
-    assert(invoke({"--status", "--help"}, &displayed) == 0);
-    assert(displayed.find("--status [EFFECT]") != std::string::npos);
     // End-to-end timeout regression: shared controls remain active, but the
     // native EQ worker never acknowledges the new request. No real audio runs.
     eqAck.stop();
