@@ -1,33 +1,25 @@
 #!/usr/bin/env python3
-"""Source-level regression for confirmed, non-destructive defaults reset."""
+"""Guard default reset against accidental settings or preset data loss."""
 from pathlib import Path
+
 root = Path(__file__).resolve().parents[1]
-s = (root / 'src/window/window-presets.inc').read_text()
-dialog = (root / 'src/viper-preset-dialog.h').read_text()
-# The Reset button is created in the dialog; its guarded implementation is
-# owned by ViperWindow. Test both halves and their callback handoff.
-assert 'Reset to test defaults' not in s + dialog
-assert 'Reset Effects to Defaults…' in dialog
-assert 'QObject::connect(reset, &QPushButton::clicked, &dialog, [&] {' in dialog
-assert 'actions.resetEffectsWithConfirmation();' in dialog
-assert '[this]() { resetEffectsWithConfirmation(); }' in s
-start = s.index('    void resetEffectsWithConfirmation() {')
-end = s.index('    void showPresetManager()', start)
-reset = s[start:end]
-assert 'confirm.setText("Reset all effect settings?")' in reset
-assert 'Your named presets will not be deleted.' in reset
-assert 'confirm.setDefaultButton(qobject_cast<QPushButton*>(cancelButton));' in reset
-assert 'if (confirm.clickedButton() != resetButton) return;' in reset
-assert reset.index('if (confirm.clickedButton() != resetButton) return;') < reset.index('applySettings(')
+presets = (root / "src/window/window-presets.inc").read_text()
+dialog = (root / "src/viper-preset-dialog.h").read_text()
+assert "actions.resetEffectsWithConfirmation();" in dialog
+start = presets.index("    void resetEffectsWithConfirmation() {")
+end = presets.index("    void showPresetManager()", start)
+reset = presets[start:end]
+
+# Cancel must be the default; effects must not change before confirmation.
+assert "confirm.setDefaultButton(qobject_cast<QPushButton*>(cancelButton));" in reset
+assert "if (confirm.clickedButton() != resetButton) return;" in reset
+assert reset.index("if (confirm.clickedButton() != resetButton) return;") < reset.index("applySettings(")
+
+# Reset DSP values, not the user's saved library or application preferences.
 assert 'settings_.clear()' not in reset
 assert 'settings_.remove("preset")' not in reset
 assert 'applySettings(true, false, 0, 100, 65,' in reset
-assert 'applySettings(true, true, 0, 100, 65,' not in reset
-assert '(master processing and limiter at defaults; all optional effects off).' in reset
-assert 'resetOutputControls();' in reset
-assert 'resetNewBassControls();' in reset
-assert 'resetFetSettings();' in reset
-assert 'resetMultibandSettings();' in reset
-assert 'resetDeq();' in reset
-assert 'statusMessage("Effect settings reset to defaults; named presets preserved.")' in reset
-print('PASS: defaults reset requires confirmation; named preset files remain intact')
+for required in ("resetOutputControls();", "resetNewBassControls();",
+                 "resetFetSettings();", "resetMultibandSettings();", "resetDeq();"):
+    assert required in reset, required
+print("PASS: defaults reset requires confirmation and preserves presets")

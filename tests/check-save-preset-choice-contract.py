@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""Contract checks for choosing an existing named preset when saving."""
+"""Guard named-preset selection and overwrite confirmation, not dialog text."""
 from pathlib import Path
 
-gui = (Path(__file__).resolve().parents[1] / "src/viper-preset-dialog.h").read_text()
-start = gui.index('QObject::connect(save, &QPushButton::clicked')
-end = gui.index('QObject::connect(assign, &QPushButton::clicked', start)
-save = gui[start:end]
-assert 'QStringList choices = {"New Preset…"};' in save
-assert 'for (const auto& preset : existing) choices << preset.name;' in save
-assert 'QInputDialog::getItem' in save
-assert 'choices, 0, false, &accepted' in save  # default New Preset; no free-form list entry
-assert 'if (choice == choices.first())' in save
-assert 'QInputDialog::getText' in save[save.index('if (choice == choices.first())'):]
-assert 'preset.name.compare(name, Qt::CaseInsensitive) == 0' in save
-assert 'QMessageBox::question(&dialog, "Replace Preset"' in save
-assert save.index('QMessageBox::question(&dialog, "Replace Preset"') < save.index('snapshotToPresetStaging();')
-assert 'actions.writeNamedPreset(name, path, &error)' in save
-print("PASS: Save Preset dropdown/new/overwrite contract")
+dialog = (Path(__file__).resolve().parents[1] / "src/viper-preset-dialog.h").read_text()
+save = dialog[dialog.index("QObject::connect(save, &QPushButton::clicked"):
+              dialog.index("QObject::connect(assign, &QPushButton::clicked")]
+# A new preset is the default; choosing an existing one requires confirmation
+# before an in-memory snapshot is taken or the saved preset overwritten.
+assert "choices, 0, false, &accepted" in save
+assert "for (const auto& preset : existing) choices << preset.name;" in save
+assert "if (choice == choices.first())" in save
+assert "QMessageBox::question" in save
+assert save.index("QMessageBox::question") < save.index("snapshotToPresetStaging();")
+assert "actions.writeNamedPreset(name, path, &error)" in save
+print("PASS: new preset default and overwrite confirmation")

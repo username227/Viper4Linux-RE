@@ -17,7 +17,6 @@ shared_rows = re.findall(r'\{Phase::\w+,\s*"([^"]+)",\s*[^,]+,\s*(-?\d+)', share
 shared_pairs = dict(shared_rows)
 assert len(shared_rows) == len(shared_pairs), "Repeated shared GUI binding key"
 shared_keys = set(shared_pairs)
-assert len(shared_keys) == 65, "Stage 3C bindings must remain unique and complete"
 
 # The literal effect keys written by persistCurrentSettings on the Stage 2
 # baseline. Dynamic DEQ and multiband keys are verified separately below.

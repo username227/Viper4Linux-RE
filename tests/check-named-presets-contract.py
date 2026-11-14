@@ -1,65 +1,30 @@
 #!/usr/bin/env python3
-"""Verify named-presets UI/storage/migration guards without a Qt runtime."""
+"""Protect the GUI's non-destructive, single-publish named-preset restore."""
 from pathlib import Path
 from gui_source_contract import read_gui_sources
+
 root = Path(__file__).resolve().parents[1]
-s = read_gui_sources(root)
-presets = "\n".join((
-    (root / "src/window/window-presets.inc").read_text(),
-    (root / "src/viper-named-presets.h").read_text(),
-    (root / "src/viper-preset-dialog.h").read_text(),
-))
-assert 'QStandardPaths::GenericDataLocation' in presets
-assert '"/viper4linux/presets"' in presets
-assert 'QSettings::IniFormat' in presets
-assert 'QUuid::createUuid()' in presets
-assert 'preset.clear();' in presets
-assert 'preset.setValue("effects/" + key.mid(7), settings.value(key))' in presets
-assert 'migrateLegacyPreset(&error)' in presets
-assert 'presets/legacy_migrated' in presets
-assert 'if (settings.value("preset/valid", false).toBool()) {' in presets
-assert 'settings.setValue("presets/legacy_migrated", true);' in presets
-assert '"Previously Saved Preset"' in presets
-assert 'if (!writeNamedPreset(settings, name, path, error)) return false;' in presets
-assert 'preset.contains("effects/master_enabled")' in presets
-assert 'preset.contains("effects/limiter_output_percent")' in presets
-assert 'settings.remove("preset");' in presets
-assert '"Save Preset…"' in presets
-assert '"New Preset…"' in presets
-assert '"Preset name:"' in presets
-assert 'QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel' in presets
-assert '"Load Effect Preset"' in presets
-assert '"This replaces the current effect settings. Unsaved changes will be lost.' in presets
-assert '"Rename Preset"' in presets
-assert '"Delete Preset"' in presets
-# The dedicated check-save-preset-choice and check-preset-reset contracts
-# retain overwrite confirmation, cancel-as-default and reset safety checks.
-assert 'settings_.clear();' not in presets
-assert 'settings.clear();' not in presets
-assert 'settings_.remove("presets")' not in presets
-assert 'settings.remove("presets")' not in presets
-assert '"Presets…"' in s
-assert 'showPresetManager();' in s
-# Restore one complete effect state before publishing it. Normal reset and
-# ordinary slider edits still use the existing immediate-push behavior.
-restore = presets[presets.index('    void restoreFromPresetStaging() {'):
-                  presets.index('    void applyStagedPresetControls() {')]
-controls = presets[presets.index('    void applyStagedPresetControls() {'):
-                   presets.index('    void resetEffectsWithConfirmation() {')]
+gui = read_gui_sources(root)
+presets = (root / "src/window/window-presets.inc").read_text()
+storage = (root / "src/viper-named-presets.h").read_text()
+
+# Runtime check-named-presets.cpp exercises the file schema and migration.
+# GUI restore must remain guarded and publish the complete staged state once.
+restore = presets[presets.index("    void restoreFromPresetStaging() {"):
+                  presets.index("    void applyStagedPresetControls() {")]
+controls = presets[presets.index("    void applyStagedPresetControls() {"):
+                   presets.index("    void resetEffectsWithConfirmation() {")]
 assert 'if (!settings_.value("preset/valid", false).toBool()) return;' in restore
-assert 'const QScopedValueRollback<bool> deferPublishes(suppress_named_preset_push_, true);' in restore
-assert restore.index('deferPublishes') < restore.index('applyStagedPresetControls();')
-assert restore.count('push();') == 1
-assert restore.index('            }\n            push();') > restore.index('applyStagedPresetControls();')
-assert 'applySettings(' in controls
-assert 'restoreOutputPreset();' in controls
-assert 'restoreBassPreset();' in controls
-assert 'requestDdcReload();' in controls and 'requestIrsLoad();' in controls
-assert 'push();' not in controls
-assert '#include <QScopedValueRollback>' in s
-assert 'if (suppress_named_preset_push_) return;' in s
-reset = presets[presets.index('    void resetEffectsWithConfirmation() {'):]
-assert 'deferPublishes' not in reset
-assert 'void push() {' in s
-# New preset library only changes GUI and personal settings; no DSP source involved.
-print('PASS: named presets, collision confirmation, guarded loads, legacy migration, reset safety')
+assert "QScopedValueRollback<bool> deferPublishes" in restore
+assert restore.index("deferPublishes") < restore.index("applyStagedPresetControls();")
+assert restore.count("push();") == 1
+assert restore.index("push();") > restore.index("applyStagedPresetControls();")
+assert "push();" not in controls
+assert "if (suppress_named_preset_push_) return;" in gui
+assert "requestDdcReload();" in controls and "requestIrsLoad();" in controls
+
+# Never wipe the named-preset library as a side effect of saving/restoring.
+for forbidden in ('settings_.clear();', 'settings.clear();',
+                  'settings_.remove("presets")', 'settings.remove("presets")'):
+    assert forbidden not in presets + storage, forbidden
+print("PASS: guarded named-preset restore, one publish, no library deletion")
