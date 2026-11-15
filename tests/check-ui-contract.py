@@ -11,6 +11,26 @@ source = read_gui_sources(root)
 cards = re.findall(r'addEffectPanel\([^;]+?,\s*"([a-z_]+)"\s*,', source)
 assert len(cards) >= 24 and len(cards) == len(set(cards)), cards
 
+# Retain the existing GUI switch-connection guards: native mock tests do not
+# prove that the actual GUI buttons reach the corresponding DSP controls.
+required = {
+    'Bass': 'enabled_',
+    'Clarity': 'clarity_enabled_',
+    'Spectrum': 'spectrum_enabled_',
+    'Headphone Surround+': 'headphone_enabled_',
+    'Differential Surround': 'diff_enabled_',
+    'Field Surround': 'field_enabled_',
+    'Reverberation': 'reverb_enabled_',
+}
+for title, variable in required.items():
+    field = variable.rstrip('_')
+    assert re.search(r'\b(?:out\.)?' + re.escape(field) + r'_?\s*=\s*new EffectSwitch\(', source), variable
+    assert f'connect({variable}, &QCheckBox::toggled' in source, variable
+for title,control in [('ViPER Bass Mono','mono_enabled_'),('Psychoacoustic Bass','psycho_enabled_'),('Dynamic System','dyn_enabled_')]:
+    field = control.rstrip('_')
+    assert re.search(r'\b(?:out\.)?' + re.escape(field) + r'_?\s*=\s*new EffectSwitch\(', source), control
+    assert f'connect({control}, &QCheckBox::toggled' in source
+
 # Opening and closing an effect card must not change audio settings.
 handler = re.search(
     r'connect\(expand, &QToolButton::toggled, this, \[this, group, expand, key\]\(bool expanded\) \{(.*?)\n        \}\);',
@@ -32,6 +52,7 @@ assert source.index('eq_selected_preset_ = settings_.value("eq/selected_preset"'
 # Backend-to-GUI readback must not publish stale UI values over CLI edits.
 assert "const auto before = liveUiSnapshot();" in source
 assert "const QSignalBlocker blockDeq(deq_enabled_);" in source
+assert "const QSignalBlocker blockDdc(ddc_enabled_), blockSpeaker(speaker_enabled_);" in source
 assert "const int beforeNativeLowX = dyn_xlo_native_;" in source
 assert "if (before != liveUiSnapshot() || beforeNativeLowX != dyn_xlo_native_) persistCurrentSettings();" in source
 assert "if (before != liveUiSnapshot()) publishToBackend();" not in source
