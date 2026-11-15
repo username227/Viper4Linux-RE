@@ -7,7 +7,7 @@ cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 # still run the full suite, as scripts/verify.sh does.
 viper_mock_check=${VIPER_MOCK_SINGLE_CHECK:-all}
 case "$viper_mock_check" in
-    all|dynamic-eq-ui|about-and-deq-handoff|tray-contract|native-effect-routing|eq-presets|ir-reader|ddc-reader|native-effect-basic|native-effect-precision|cli-controls|cli-batch|cli-settings|cli-eq-presets|output-state) ;;
+    all|tray-contract|native-effect-routing|eq-presets|ir-reader|ddc-reader|native-effect-basic|native-effect-precision|cli-controls|cli-batch|cli-settings|cli-eq-presets|output-state) ;;
     *) printf 'Unknown mock check: %s\n' "$viper_mock_check" >&2; exit 2 ;;
 esac
 viper_selected() {
@@ -118,12 +118,6 @@ analogx_mode=0
 eq_levels_15="500,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
 INI
 printf 'convolver_kernel=%s/impulse.irs\n' "$config" >> "$config/ViPERforLinux/ViPERClean.conf"
-if viper_selected dynamic-eq-ui; then
-    python3 tests/check-dynamic-eq-ui-contract.py
-fi
-if viper_selected about-and-deq-handoff; then
-    python3 tests/check-about-and-deq-handoff.py
-fi
 if viper_selected tray-contract; then
     python3 tests/check-tray-contract.py
 fi

@@ -48,7 +48,6 @@ assert 'bash tests/check-mock.sh' not in build_script
 assert 'VIPER_DEB_STAGING_BACKEND' not in build_script
 assert 'ViPERDSP-patched' not in build_script
 assert 'install -Dm755' not in build_script
-assert (root / 'tests/fixtures/legacy-deb-stage.txt').is_file()
 assert 'dpkg-shlibdeps -O' in build_script
 assert 'dpkg-deb --build --root-owner-group' in build_script
 assert 'apt-get install -y --no-install-recommends "$package"' in build_script

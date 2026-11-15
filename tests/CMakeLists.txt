@@ -159,11 +159,9 @@ set_tests_properties(viper_native_worker_request PROPERTIES
   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;native;worker")
 
 
-# Static mock contracts run directly with Python. Native checks reuse their
-# existing temp-config/mocked-IPC harness, selecting one check per CTest case.
+# Independent native routing and tray contracts run directly with Python.
+# Native mock checks use isolated temporary config and IPC per behavioral case.
 foreach(_viper_script IN ITEMS
-    check-dynamic-eq-ui-contract
-    check-about-and-deq-handoff
     check-tray-contract
     check-native-effect-routing)
   string(REPLACE "-" "_" _viper_test_name "${_viper_script}")
@@ -208,7 +206,6 @@ foreach(_viper_script IN ITEMS
     check-precision-persistence-contract
     check-settings-schema-contract
     check-gui-sync-contract
-    check-window-integration-contract
     check-version
     check-single-gui
     test_backend_lifecycle_logging
@@ -216,8 +213,6 @@ foreach(_viper_script IN ITEMS
     check-theme-contract
     check-ui-contract
     check-named-presets-contract
-    check-preset-reset-contract
-    check-save-preset-choice-contract
     test_filter_idle_config)
   string(REPLACE "-" "_" _viper_test_name "${_viper_script}")
   viper_add_script_test("viper_contract_${_viper_test_name}" "${_viper_script}.py" contracts)

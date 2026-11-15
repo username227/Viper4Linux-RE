@@ -60,4 +60,28 @@ assert "if (before != liveUiSnapshot()) publishToBackend();" not in source
 # A connected but silent backend must not be presented as active audio.
 bridge = (root / "src/sync/gui-backend-bridge.inc").read_text()
 assert "Connected — no audio signal (DSP ready)" in bridge
-print("PASS: effect panels, non-mutating collapse, IR wiring, EQ restore, safe GUI readback")
+# Dynamic EQ selection/editing, saved state and signal suppression.
+plot = (root / "src/widgets/eq-overviews.h").read_text().split("class DynamicEqOverview final", 1)[1]
+assert "selectBand(nearest)" in plot
+assert "if (!editor_mode_ && openEditor) openEditor();" in plot
+assert "deq_overview_->selectBand = [this](int index)" in source
+assert "deq_band_select_->setCurrentIndex(index);" in source
+assert "const QSignalBlocker mainBlock(deq_count_), editorBlock(deq_editor_count_)" in source
+assert "if (!deq_user_modified_[i])" in source
+assert 'settings_.contains(k + "user_modified")' in source
+assert 'settings_.setValue(k+"user_modified", deq_user_modified_[i])' in source
+assert "void spreadDeqFrequencies()" in source
+assert 'settings_.setValue("ui/dynamicEqEditorSize"' in source
+assert "void restoreWindowSizes()" in source
+
+# Restore settings before signal wiring and correction library registration.
+main = (root / "src/viper-gui.cpp").read_text()
+assert (main.index("loadSavedEffectSettings();")
+        < main.index("connectEffectSignals(eq_reset, deq_spread);")
+        < main.index("setupThemeMonitoring();"))
+assert (main.index('addEffectPanel(correctionLayout, correctionDdc.group, "ddc", ddc_enabled_)')
+        < main.index("setupDdcLibrary(importDdc, refreshDdc);"))
+assert (main.index('addEffectPanel(correctionLayout, correctionConvolver.group, "convolver", convolver_enabled_)')
+        < main.index("setupIrsLibrary(browse, refresh);"))
+
+print("PASS: GUI controls, Dynamic EQ, readback, and safe initialization")

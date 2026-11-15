@@ -49,4 +49,14 @@ assert "InputScale" not in s
 assert "effect_replacements" not in s
 assert "std::isfinite(in_l[ix]) ? in_l[ix] : 0.0f" in s
 assert "std::isfinite(in_r[ix]) ? in_r[ix] : 0.0f" in s
+# Dynamic EQ updates must not cause a global dry transition or block audio.
+start = processor.index("    void apply_dynamic_eq_from_controls() {")
+end = processor.index("    void run_dry_while_loading(", start)
+method = processor[start:end]
+assert "if (!enabled && !last_deq_enabled) return;" in method
+assert "std::lock_guard<std::mutex> guard(wet_mutex);" in method
+assert "configure_dynamic_eq(enabled, count, bands);" in method
+assert "ir_transition.store(true" not in method
+assert "sleep_for" not in method
+
 print(f"PASS: {len(expected)} named native effect dispatches, ViPERDSP wet/dry paths, unity input and no replacement effects")
