@@ -11,6 +11,13 @@ for forbidden in ("push(", "publishToBackend(", "requestIrsLoad(",
                   "setChecked(", "persistCurrentSettings("):
     assert forbidden not in apply, forbidden
 
+# The theme selector callback must also avoid mutating DSP state.
+handler = re.search(r'connect\(theme_selector_, QOverload<int>::of\(&QComboBox::currentIndexChanged\),\s*this, \[this\]\(int index\) \{(.*?)\n\s*\}\);', source, re.S)
+assert handler, 'theme signal not wired'
+for forbidden in ('push(', 'publishToBackend(', 'requestIrsLoad(', 'setChecked('):
+    assert forbidden not in handler.group(1), forbidden
+
+
 # Check real declared theme colors, rather than frozen stylesheet formatting.
 def luminance(color):
     channels = [int(color[i:i+2], 16) / 255 for i in (1, 3, 5)]
