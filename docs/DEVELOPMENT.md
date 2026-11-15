@@ -293,11 +293,9 @@ ctest --test-dir build --output-on-failure
 ./viper4linux --preflight
 ```
 
-CTest registers the independent Python contract checks and native mock checks
-with individual numbered results, elapsed time and a final summary instead of
-hiding all checks inside four aggregate cases. Python `unittest` modules
-(including `test_output_*.py`) have separate CTest entries; each module's
-individual assertions remain visible through verbose output.
+CTest keeps independent behavioral tests while combining related GUI, preset,
+and native-source checks by subsystem. Python `unittest` modules (including
+`test_output_*.py`) retain separate CTest entries and diagnostics.
 
 Useful options:
 
@@ -309,13 +307,12 @@ ctest --test-dir build -R backend --output-on-failure
 ctest --test-dir build -V                 # full output, including passing checks
 ```
 
-The legacy all-in-one developer runner has been removed; the full suite now
-runs through individually registered CTest cases. `tests/check-package.sh`
+The legacy all-in-one developer runner has been removed. `tests/check-package.sh`
 remains a fast shell-based package gate for existing callers, and
-`tests/check-mock.sh` remains required by the individual CTest mock cases.
-No actual test assertions were removed. CTest runs the same mock
-harness with isolated temporary preferences and IPC, not the user's live
-PipeWire or installed backend.
+`tests/check-mock.sh` serves independent native mock cases. Obsolete and
+duplicate source checks were removed without dropping audio, device, GUI
+state, or settings safety protections. Mocks use isolated temporary preferences
+and IPC, never the user's live PipeWire or installed backend.
 Release-contract checks are registered only when the corresponding GitHub
 workflow file is present (it may be absent from unified source archives).
 

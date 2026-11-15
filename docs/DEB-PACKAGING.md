@@ -35,12 +35,6 @@ containers. These operations are not application installation rules.
 The source archive remains pinned, and the existing stable release workflow
 continues to generate the distro-specific packages.
 
-For historical parity regression, `tests/check-cmake-deb-parity.py`
-can compare the CMake stage to a **frozen test-only baseline** located in
-`tests/fixtures/legacy-deb-stage.txt`. That file is never called by the
-production Debian builder. The comparison runs in temporary directories,
-without `apt`, `dpkg`, or a live audio session.
-
 Debian packages continue to include the GPL text under
 `/usr/share/doc/viper4linux-re/LICENSE` and the package-specific `copyright`
 file credits Gerald Frank while keeping ViPERDSP's separate notices. Arch
