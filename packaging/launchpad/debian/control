@@ -12,7 +12,7 @@ Build-Depends:
  ladspa-sdk,
  pipewire,
  binutils,
- gzip,
+ gzip
 Standards-Version: 4.7.0
 Homepage: https://github.com/username227/Viper4Linux-RE
 Rules-Requires-Root: no
