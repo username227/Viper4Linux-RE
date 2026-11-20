@@ -145,7 +145,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           mkdir -p "dist/launchpad/$SERIES"
-          docker run --rm \
+          docker run --rm -i \
             -v "$GITHUB_WORKSPACE:/workspace:rw" -w /workspace \
             -e SERIES -e UBUNTU_VERSION \
             -e VIPER_PPA_REVISION=1 -e DEBIAN_FRONTEND=noninteractive \
