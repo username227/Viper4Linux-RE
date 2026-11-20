@@ -18,7 +18,7 @@ ViPER4Linux-RE brings native ViPERDSP audio effects to Linux through **PipeWire*
 | --- | --- | --- |
 | **Arch Linux** | [Stable AUR package](https://aur.archlinux.org/packages/viper4linux-re) | [Development AUR package](https://aur.archlinux.org/packages/viper4linux-re-git) or download the prebuilt Arch package from GitHub from the [Releases](https://github.com/username227/Viper4Linux-RE/releases) page |
 | **Ubuntu 24.04, 26.04, 26.10** | [ViPER4Linux-RE Launchpad PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) | Historical standalone Noble `.deb` assets remain in prior GitHub releases |
-| **Linux Mint 22.x** | [Same ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) as Ubuntu 24.04 (Noble); Mint-specific desktop integration is not yet independently tested | Historical standalone Noble/Mint `.deb` from v1.2.0 and older releases |
+| **Linux Mint 22.x** | [Same ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) as Ubuntu 24.04 (Noble) | Historical standalone Noble/Mint `.deb` from v1.2.0 and older releases |
 | **Debian 13 / LMDE 7** | Download the native Debian/LMDE `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page | Source build for experienced users |
 | **Other PipeWire-based distributions** | No validated native package yet | Build from source; compatibility is not guaranteed |
 
@@ -86,9 +86,10 @@ sudo apt update
 sudo apt install viper4linux-re
 ```
 
-Linux Mint 22.x is based on Ubuntu Noble and can use the Noble PPA build,
-but we have not independently validated Mint-specific desktop integration,
-audio routing or tray behavior. Check the configured PPA suite is `noble`.
+Linux Mint 22.x is based on Ubuntu Noble and uses the same Noble PPA build.
+Cinnamon desktop behavior, audio routing and tray integration have been actively
+tested on Arch Linux with Cinnamon; this is not a separate Mint-specific package
+test. Check that the configured PPA suite is `noble`.
 
 **Historical standalone downloads:** Older releases, including v1.2.0,
 retain their previously published Ubuntu/Mint `.deb`. Future release
