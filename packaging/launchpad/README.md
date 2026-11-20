@@ -6,18 +6,20 @@ published unified source archive, including its pinned ViPERDSP sources. The
 Arch stable package and existing Ubuntu/Debian release build scripts are
 unchanged.
 
-Noble +ppa2 has been published; additional Resolute and Stonking packages
-are **unpublished candidates**. The current project notice identifies
+Noble +ppa2 was published; Resolute and Stonking v1.2.0 builds completed
+successfully on Launchpad. Verify each publication status independently. The current project notice identifies
 separate upstream ViPERDSP terms. Do not assume Canonical has approved the
 redistribution arrangement merely because the source package builds.
 
 ## Initial supported series
 
 - `noble`: Ubuntu 24.04 / Linux Mint 22.x.
-- `resolute`: Ubuntu 26.04 LTS (new `+ppa1` candidate).
-- `stonking`: Ubuntu 26.10 (new `+ppa1` candidate).
+- `resolute`: Ubuntu 26.04 LTS (separate native PPA binary).
+- `stonking`: Ubuntu 26.10 (separate native PPA binary).
 - Ubuntu 25.10 reached end of life in July 2026 and is deliberately omitted.
-- Debian 13 and LMDE 7 use the existing native `.deb` release path, not Ubuntu PPAs.
+- Debian 13 and LMDE 7 retain the standalone native `.deb` release path.
+- Future releases no longer create a duplicate standalone Ubuntu/Mint `.deb`;
+  older published `.deb` assets remain available.
 - Only `amd64` is enabled to match the architectures already validated.
 
 ## Create a source package without uploading it
@@ -54,8 +56,9 @@ upload files and test `.deb` for review.
 
 These `ppa-VERSION-SERIES-unsigned-REVIEW` artifacts deliberately do not
 match the normal release-asset collection pattern. The existing release's
-four checksum entries (unified source, Arch, Ubuntu/Mint and Debian/LMDE)
-are unaffected. No workflow signs, sends files to Launchpad, tags a release,
+three checksum entries (unified source, Arch and Debian/LMDE)
+are independently verified. Assembly waits for all three Ubuntu PPA builds,
+and produces a separate `ppa-VERSION-all-series-unsigned-REVIEW` artifact. No workflow signs, sends files to Launchpad, tags a release,
 or changes the PPA without a separate maintainer action. A correction to an
 already-uploaded Debian version requires a new `+ppaN` revision; the
 current automated preparation deliberately starts new versions at `+ppa1`.
@@ -99,9 +102,10 @@ The existing Ubuntu 24.04/Mint 22 GitHub release .deb uses a version such as
 downgrade. Use `VIPER_PPA_REVISION=2` for a corrected PPA upload of the same
 upstream version; Launchpad will not accept reusing an existing version.
 
-The `prepare-launchpad-v1.2.0.yml` branch workflow also builds Resolute and
-Stonking in separate official Ubuntu containers, from the exact verified v1.2.0
-unified source archive. Each build runs the full CTest suite and checks the
+The one-time `prepare-launchpad-v1.2.0.yml` workflow validated the initial
+release-specific packaging. Future release preparation uses the generalized
+three-series matrix in `prepare-stable-release.yml`, from its newly prepared,
+checksum-verified unified source archive. Each build runs the full CTest suite and checks the
 candidate package's dependencies, installed paths, CLI, and clean removal.
 Unsigned source-upload files and test binaries are retained for maintainer
 review. No signing or Launchpad upload occurs. The production Launchpad builds
