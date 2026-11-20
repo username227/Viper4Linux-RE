@@ -1,12 +1,6 @@
 name: Prepare stable release
 
 on:
-  workflow_call:
-    inputs:
-      version:
-        description: "Candidate version (MAJOR.MINOR.PATCH)"
-        required: true
-        type: string
   workflow_dispatch:
     inputs:
       version:
