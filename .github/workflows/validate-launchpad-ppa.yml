@@ -1,0 +1,83 @@
+name: Launchpad PPA packaging (validation only)
+
+# Build a source package and then a native Ubuntu binary from that exact source.
+# Never upload, sign, install the application on the runner, tag, or release.
+on:
+  push:
+    branches:
+      - feature/launchpad-ppa-packaging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  noble:
+    name: Ubuntu 24.04 (Noble) — source and binary packaging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout application and pinned ViPERDSP
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install build and Debian source packaging dependencies
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential debhelper dpkg-dev fakeroot devscripts \
+            cmake pkg-config qt6-base-dev libx11-dev ladspa-sdk \
+            python3 pipewire binutils gzip xz-utils
+
+      - name: Syntax check source packaging script
+        run: bash -n scripts/prepare-launchpad-source.sh
+
+      - name: Create a disposable unified source test archive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$RUNNER_TEMP/source"
+          bash scripts/make-unified-source.sh 0.0.0 "$RUNNER_TEMP/source"
+          test -s "$RUNNER_TEMP/source/viper4linux-re-0.0.0-unified-source.tar.xz"
+
+      - name: Build unsigned Noble source package (no upload)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash scripts/prepare-launchpad-source.sh \
+            0.0.0 noble \
+            "$RUNNER_TEMP/source/viper4linux-re-0.0.0-unified-source.tar.xz" \
+            "$RUNNER_TEMP/packages"
+          test -s "$RUNNER_TEMP/packages/viper4linux-re_0.0.0-1~ubuntu24.04mint22+ppa1_source.changes"
+          test -s "$RUNNER_TEMP/packages/viper4linux-re_0.0.0-1~ubuntu24.04mint22+ppa1.dsc"
+
+      - name: Extract generated source and build native Ubuntu package
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          dpkg-source -x \
+            "$RUNNER_TEMP/packages/viper4linux-re_0.0.0-1~ubuntu24.04mint22+ppa1.dsc" \
+            "$RUNNER_TEMP/build"
+          cd "$RUNNER_TEMP/build"
+          dpkg-buildpackage -b -us -uc
+          test -s "$RUNNER_TEMP/viper4linux-re_0.0.0-1~ubuntu24.04mint22+ppa1_amd64.deb"
+          dpkg-deb --contents \
+            "$RUNNER_TEMP/viper4linux-re_0.0.0-1~ubuntu24.04mint22+ppa1_amd64.deb" \
+            | grep -F 'usr/lib/ladspa/viper_dsp_ladspa.so'
+          dpkg-deb --info \
+            "$RUNNER_TEMP/viper4linux-re_0.0.0-1~ubuntu24.04mint22+ppa1_amd64.deb"
+
+      - name: Save inspectable outputs (test artifacts only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: launchpad-noble-validation-only
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/packages/*
+            ${{ runner.temp }}/viper4linux-re_*.deb
