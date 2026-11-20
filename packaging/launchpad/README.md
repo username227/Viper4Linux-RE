@@ -58,5 +58,11 @@ The existing Ubuntu 24.04/Mint 22 GitHub release .deb uses a version such as
 downgrade. Use `VIPER_PPA_REVISION=2` for a corrected PPA upload of the same
 upstream version; Launchpad will not accept reusing an existing version.
 
+The first Noble `+ppa1` source upload was accepted, but its clean Launchpad
+binary build failed because CTest invokes `git` and `git` was absent from
+`Build-Depends`. Revision `+ppa2` declares `git` explicitly. Our GitHub runner
+already had `git`, which masked that missing build dependency during CI.
+Keep all tests enabled and verify the Launchpad chroot result after upload.
+
 A single PPA can host multiple Ubuntu suites. Each series requires a separate
 source upload (or a compatible package copy) and its own build validation.
