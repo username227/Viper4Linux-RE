@@ -33,7 +33,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential debhelper dpkg-dev fakeroot devscripts \
             cmake pkg-config qt6-base-dev libx11-dev ladspa-sdk \
-            python3 pipewire binutils gzip xz-utils
+            python3 pipewire binutils gzip xz-utils git
 
       - name: Fetch and verify the published v1.2.0 source archive
         shell: bash
