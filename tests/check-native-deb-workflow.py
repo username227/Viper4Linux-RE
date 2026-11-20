@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline checks for the native Ubuntu/Mint and Debian/LMDE .deb workflow."""
+"""Offline contracts for the standalone Debian .deb and three Ubuntu PPA jobs."""
 from pathlib import Path
 import hashlib
 import json
@@ -14,15 +14,19 @@ main_workflow = (root / '.github/workflows/prepare-stable-release.yml').read_tex
 build_script = (root / 'scripts/build-native-deb.sh').read_text()
 verify = root / 'scripts/verify-deb-release-source.py'
 assert not (root / '.github/workflows/prepare-deb-release.yml').exists(), 'Separate Debian-only workflow must not reappear'
-assert 'ubuntu:24.04' in main_workflow and 'ubuntu24.04-mint22' in main_workflow
+assert 'ubuntu24.04-mint22' not in main_workflow, 'Future releases must not duplicate Ubuntu PPA with standalone .deb'
 assert 'debian:trixie' in main_workflow and 'debian13-lmde7' in main_workflow
+assert '  launchpad-source:' in main_workflow
+assert all(series in main_workflow for series in ('series: noble', 'series: resolute', 'series: stonking'))
+assert 'ppa-${{ inputs.version }}-${{ matrix.series }}-unsigned-REVIEW' in main_workflow
+assert 'git ca-certificates' in main_workflow, 'PPA build containers must install git'
 assert 'actions/upload-artifact@v4' in main_workflow
 assert 'needs: prepare' in main_workflow, 'Main stable release must build .deb after Arch source preparation'
 assert 'actions/download-artifact@v4' in main_workflow
 assert 'debian:trixie' in main_workflow and 'ubuntu:24.04' in main_workflow
 assert 'scripts/build-native-deb.sh' in main_workflow
 assert 'actions/checkout@v4' in main_workflow
-assert '  assemble:' in main_workflow and 'needs: [prepare, deb]' in main_workflow
+assert '  assemble:' in main_workflow and 'needs: [prepare, deb, launchpad-source]' in main_workflow
 assert 'SOURCE-COMMIT' in main_workflow and 'GITHUB_SHA' in main_workflow
 assert 'complete-release-candidate' in main_workflow
 assert 'scripts/assemble-release-assets.sh' in main_workflow
@@ -32,7 +36,8 @@ assemble_script = (root / 'scripts/assemble-release-assets.sh').read_text()
 assert 'sha256sum -- "$archive"' in assemble_script
 assert 'rm -- "$out/SHA256SUMS" "$out/ARCH-SHA256SUMS"' in assemble_script
 assert 'DEB-SHA256SUMS-' not in assemble_script
-assert 'test "$(wc -l < SHA256SUMS)" -eq 4' in assemble_script
+assert 'test "$(wc -l < SHA256SUMS)" -eq 3' in assemble_script
+assert 'ubuntu24.04-mint22' not in assemble_script
 assert 'gh release create' not in main_workflow and 'git push' not in main_workflow
 # CMake is the only production application staging and DSP preparation path.
 assert 'DESTDIR="$pkgroot" cmake --install "$built"' in build_script

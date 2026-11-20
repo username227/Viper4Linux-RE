@@ -41,8 +41,7 @@ with tempfile.TemporaryDirectory(prefix='viper-assembled-native-') as d:
     (arch / arch_filename).write_bytes(b'mock arch binary payload')
     write_checksum(arch, arch_filename, 'ARCH-SHA256SUMS')
     debs = {}
-    for target, suffix in [('ubuntu24.04-mint22', '1~ubuntu24.04mint22'),
-                           ('debian13-lmde7', '1~debian13lmde7')]:
+    for target, suffix in [('debian13-lmde7', '1~debian13lmde7')]:
         directory = artifacts / f'viper4linux-re-{version}-{target}-deb'
         directory.mkdir()
         filename = f'viper4linux-re_{version}-{suffix}_amd64.deb'
@@ -54,13 +53,13 @@ with tempfile.TemporaryDirectory(prefix='viper-assembled-native-') as d:
     res = invoke(artifacts, output)
     assert res.returncode == 0, res.stderr + res.stdout
     assert 'PASS:' in res.stdout
-    assert len(list(output.glob('*.deb'))) == 2
+    assert len(list(output.glob('*.deb'))) == 1
     assert (output / arch_filename).exists()
     assert (output / '.SRCINFO').exists()
     checksums = list(output.glob('*SHA256SUMS*'))
     assert [f.name for f in checksums] == ['SHA256SUMS'], checksums
     lines = (output / 'SHA256SUMS').read_text().splitlines()
-    assert len(lines) == 4, lines
+    assert len(lines) == 3, lines
     assert {line.split('  ', 1)[1] for line in lines} == {
         source, arch_filename, *(path.name for path in debs.values())
     }, lines
@@ -81,4 +80,4 @@ with tempfile.TemporaryDirectory(prefix='viper-assembled-native-') as d:
     res = invoke(artifacts, temp / 'no-debug')
     assert res.returncode != 0 and 'Debug-symbol package' in res.stderr
 
-print('PASS: complete release bundle, three packages, checksum enforcement, revision and debug exclusion')
+print('PASS: unified source, Arch and Debian release bundle, checksum enforcement, revision and debug exclusion')
