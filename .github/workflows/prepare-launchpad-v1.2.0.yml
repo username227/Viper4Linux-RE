@@ -1,4 +1,4 @@
-name: Prepare v1.2.0 Launchpad +ppa2 (unsigned; no publication)
+name: Prepare v1.2.0 Launchpad ppa2 (unsigned; no publication)
 
 # Packaging-only staging: fetch the exact GitHub release asset, verify its
 # published checksum, produce a source package, and rebuild a Noble binary.
@@ -66,40 +66,12 @@ jobs:
           grep -Fx 'Distribution: noble' \
             "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa2_source.changes"
 
-      - name: Verify Launchpad build dependencies from generated source
+      - name: Verify required Git dependency is declared
         shell: bash
         run: |
           set -Eeuo pipefail
-          # Our CTest suite executes git commands even from a source tarball.
-          # GitHub-hosted runners preinstall git; Launchpad clean chroots don't.
-          grep -Eq '^[[:space:]]*git,[[:space:]]*
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          dpkg-source -x \
-            "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa2.dsc" \
-            "$RUNNER_TEMP/rebuilt-source"
-          (
-            cd "$RUNNER_TEMP/rebuilt-source"
-            dpkg-buildpackage -b -us -uc
-          )
-          package="$RUNNER_TEMP/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa2_amd64.deb"
-          test -s "$package"
-          dpkg-deb --contents "$package" \
-            | grep -F 'usr/lib/ladspa/viper_dsp_ladspa.so'
-          dpkg-deb --info "$package"
-
-      - name: Retain unsigned upload files and matching test .deb
-        uses: actions/upload-artifact@v4
-        with:
-          name: viper4linux-re-1.2.0-noble-ppa2-unsigned-REVIEW
-          retention-days: 14
-          if-no-files-found: error
-          path: |
-            ${{ runner.temp }}/packages/*
-            ${{ runner.temp }}/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa2_amd64.deb
- packaging/launchpad/debian/control
-          grep -F ' git,' "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa2.dsc"
+          grep -F ' git,' packaging/launchpad/debian/control
+          grep -E '^Build-Depends:.*git' "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa2.dsc"
 
       - name: Rebuild native package from generated source, including CTest
         shell: bash
@@ -121,7 +93,7 @@ jobs:
       - name: Retain unsigned upload files and matching test .deb
         uses: actions/upload-artifact@v4
         with:
-          name: viper4linux-re-1.2.0-noble-ppa-unsigned-REVIEW
+          name: viper4linux-re-1.2.0-noble-ppa2-unsigned-REVIEW
           retention-days: 14
           if-no-files-found: error
           path: |
