@@ -1,0 +1,25 @@
+Source: viper4linux-re
+Section: sound
+Priority: optional
+Maintainer: ViPER4Linux-RE contributors <noreply@github.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake (>= 3.20),
+ pkg-config,
+ python3,
+ qt6-base-dev (>= 6.4),
+ libx11-dev,
+ ladspa-sdk,
+ pipewire,
+ binutils,
+ gzip,
+Standards-Version: 4.7.0
+Homepage: https://github.com/username227/Viper4Linux-RE
+Rules-Requires-Root: no
+
+Package: viper4linux-re
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, pipewire, python3, qt6-qpa-plugins
+Description: Native ViPERDSP audio effects for PipeWire
+ ViPER4Linux-RE provides a native Qt6 interface, an independent PipeWire
+ DSP backend, effects presets and automatic output-device following.

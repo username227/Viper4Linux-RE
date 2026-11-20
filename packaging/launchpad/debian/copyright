@@ -1,0 +1,22 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ViPER4Linux-RE
+Source: https://github.com/username227/Viper4Linux-RE
+Comment:
+ The original application is GPL-3.0-only. The bundled ViPERDSP source has
+ separate notices and must not be mistaken for code licensed by this project.
+ See THIRD-PARTY-NOTICES.md and the upstream ViPERDSP repository.
+
+Files: *
+Copyright: 2026 Gerald Frank
+License: GPL-3.0-only
+
+Files: third_party/ViPERDSP/*
+Copyright: See upstream ViPERDSP sources and notices
+License: LicenseRef-ViPERDSP
+ The bundled upstream source has separate terms described in
+ THIRD-PARTY-NOTICES.md and its upstream repository. This notice does not
+ grant or assume a GPL license for ViPERDSP.
+
+License: GPL-3.0-only
+ The complete license is included in the upstream LICENSE file, and
+ is installed as /usr/share/doc/viper4linux-re/LICENSE.
