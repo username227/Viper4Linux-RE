@@ -3,7 +3,7 @@
 # source archive. No publication and no host application installation.
 set -Eeuo pipefail
 if [[ $# -ne 4 || ! $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo 'Usage: prepare-launchpad-source.sh VERSION noble|resolute UNIFIED_ARCHIVE OUTPUT_DIR' >&2
+  echo 'Usage: prepare-launchpad-source.sh VERSION noble|resolute|stonking UNIFIED_ARCHIVE OUTPUT_DIR' >&2
   exit 2
 fi
 
@@ -14,6 +14,7 @@ output=$4
 case "$series" in
   noble) distribution_suffix='1~ubuntu24.04mint22' ;;
   resolute) distribution_suffix='1~ubuntu26.04' ;;
+  stonking) distribution_suffix='1~ubuntu26.10' ;;
   *) echo "Unsupported Ubuntu series: $series" >&2; exit 2 ;;
 esac
 ppa_revision=${VIPER_PPA_REVISION:-1}

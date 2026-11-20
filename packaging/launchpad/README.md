@@ -1,4 +1,4 @@
-# Launchpad PPA preparation (review-only; no uploads)
+# Launchpad PPA preparation (review-only; no automatic uploads)
 
 Launchpad accepts **Debian source packages**, not our prebuilt release `.deb`
 files. This packaging layer uses the existing CMake install rules and the exact
@@ -6,14 +6,17 @@ published unified source archive, including its pinned ViPERDSP sources. The
 Arch stable package and existing Ubuntu/Debian release build scripts are
 unchanged.
 
-This is an **unpublished PPA candidate**. The current project notice identifies
+Noble +ppa2 has been published; additional Resolute and Stonking packages
+are **unpublished candidates**. The current project notice identifies
 separate upstream ViPERDSP terms. Do not assume Canonical has approved the
 redistribution arrangement merely because the source package builds.
 
 ## Initial supported series
 
 - `noble`: Ubuntu 24.04 / Linux Mint 22.x.
-- `resolute`: Ubuntu 26.04 (candidate only until its build passes its own tests).
+- `resolute`: Ubuntu 26.04 LTS (new `+ppa1` candidate).
+- `stonking`: Ubuntu 26.10 (new `+ppa1` candidate).
+- Ubuntu 25.10 reached end of life in July 2026 and is deliberately omitted.
 - Debian 13 and LMDE 7 use the existing native `.deb` release path, not Ubuntu PPAs.
 - Only `amd64` is enabled to match the architectures already validated.
 
@@ -57,6 +60,14 @@ The existing Ubuntu 24.04/Mint 22 GitHub release .deb uses a version such as
 `1.2.0-1~ubuntu24.04mint22+ppa1` so APT considers it an upgrade, not a
 downgrade. Use `VIPER_PPA_REVISION=2` for a corrected PPA upload of the same
 upstream version; Launchpad will not accept reusing an existing version.
+
+The `prepare-launchpad-v1.2.0.yml` branch workflow also builds Resolute and
+Stonking in separate official Ubuntu containers, from the exact verified v1.2.0
+unified source archive. Each build runs the full CTest suite and checks the
+candidate package's dependencies, installed paths, CLI, and clean removal.
+Unsigned source-upload files and test binaries are retained for maintainer
+review. No signing or Launchpad upload occurs. The production Launchpad builds
+and a post-publication install smoke test for each series remain required.
 
 The first Noble `+ppa1` source upload was accepted, but its clean Launchpad
 binary build failed because CTest invokes `git` and `git` was absent from
