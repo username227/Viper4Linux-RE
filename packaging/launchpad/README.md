@@ -40,6 +40,44 @@ in a clean Ubuntu environment, build the generated source package with
 build dependencies available; run the offline CTest suite and inspect the binary
 package. Do not publish merely because source packaging succeeded.
 
+## Release-preparation integration (unsigned candidates only)
+
+The branch's `.github/workflows/prepare-stable-release.yml` now includes a
+`launchpad-source` matrix job for **Noble, Resolute and Stonking**. When the
+maintainer manually runs **Prepare stable release** with a candidate version,
+the job downloads the exact checksum-verified unified source archive produced
+by that workflow's Arch/source preparation job. It does not require a published
+GitHub release or refetch a possibly older tag. Each Ubuntu-series container
+prepares `+ppa1` source, builds its native binary with the complete offline
+CTest suite, installs and removes that binary, and saves **unsigned** source
+upload files and test `.deb` for review.
+
+These `ppa-VERSION-SERIES-unsigned-REVIEW` artifacts deliberately do not
+match the normal release-asset collection pattern. The existing release's
+four checksum entries (unified source, Arch, Ubuntu/Mint and Debian/LMDE)
+are unaffected. No workflow signs, sends files to Launchpad, tags a release,
+or changes the PPA without a separate maintainer action. A correction to an
+already-uploaded Debian version requires a new `+ppaN` revision; the
+current automated preparation deliberately starts new versions at `+ppa1`.
+
+### Testing the **published** PPA is a separate post-upload gate
+
+The separate `.github/workflows/test-published-ppa-install.yml` fetches
+the **actual Launchpad binary**, not the source candidate. It checks APT
+origin/version, dependency resolution, installed files, LADSPA exports,
+read-only commands and clean removal on the selected Ubuntu series.
+It supports manual workflow dispatch parameters: `series` (`noble`,
+`resolute`, `stonking`), upstream `version` and `ppa_revision`.
+It must run **after** the matching Launchpad binary is published;
+automatically running it during release preparation would test an old
+published binary or fail before publication. The branch-push Noble
+test defaults to the already-published v1.2.0 `+ppa2`.
+
+The v1.2.0 branch validation has completed a native source rebuild,
+**50/50 CTests** on both Ubuntu 26.04 and 26.10, APT installation,
+library checks and clean removal. This is not equivalent to a successful
+Launchpad build or a published-package smoke test for those series.
+
 ## Upload, only after review and a successful build test
 
 1. Create a Launchpad account, register a suitable OpenPGP key and create a
