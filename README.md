@@ -160,7 +160,7 @@ environment; broader desktop and distribution compatibility needs more testing.
 | --- | --- |
 | **Arch Linux** | [Stable AUR](https://aur.archlinux.org/packages/viper4linux-re), [development AUR](https://aur.archlinux.org/packages/viper4linux-re-git), or prebuilt Arch package |
 | **Ubuntu 24.04, 26.04, 26.10** | [Install through the ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) |
-| **Linux Mint 22.x** | Noble PPA candidate; desktop compatibility needs Mint-specific verification |
+| **Linux Mint 22.x** | [Install through the same ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) as Ubuntu 24.04 (Noble); Mint-specific desktop integration has not yet been independently tested |
 | **Debian 13 / LMDE 7** | Download the native Debian/LMDE `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page |
 | **Other distributions** | Build from source; compatibility is not yet established |
 
