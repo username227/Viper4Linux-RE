@@ -3,6 +3,19 @@
 This file summarizes the user-facing changes in each release. Internal build,
 CI and documentation-only maintenance is generally excluded from these notes.
 
+## v1.2.1
+
+### Fixed
+
+- **Prevent high CPU usage after audio becomes idle**
+  ([PR #49](https://github.com/username227/Viper4Linux-RE/pull/49),
+  contributed by [ZeroAnarchy](https://github.com/ZeroAnarchy)):
+  Enable flush-to-zero handling for extremely small floating-point values
+  in the DSP audio callback. This prevents lingering filter signals from
+  triggering costly denormal arithmetic after playback stops, without
+  changing audible audio or saved effect settings. Includes a dedicated
+  regression test for the floating-point environment.
+
 ## v1.2.0
 
 ### Added
