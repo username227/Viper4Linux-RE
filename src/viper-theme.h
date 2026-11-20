@@ -20,6 +20,37 @@
 #include <QWidget>
 
 namespace viper_theme {
+
+/*
+ * Dialogs are separate top-level Qt windows even when parented to ViperWindow.
+ * Qt style sheets cascade into them, but the matching QWidget palette normally
+ * does not cross the window boundary. Keep both together: otherwise KDE/Qt can
+ * render dark labels over a light native dialog (or the reverse) on first launch.
+ *
+ * Scope this styling to each new dialog, never QApplication, so opening About
+ * or Preferences cannot change the desktop or other independent Qt windows.
+ */
+inline void applyDialogTheme(QDialog* dialog, const QWidget* parent) {
+    if (!dialog || !parent) return;
+    dialog->setAttribute(Qt::WA_WindowPropagation, true);
+    const QPalette pal = parent->palette();
+    dialog->setPalette(pal);
+    const QString background = pal.color(QPalette::Window).name();
+    const QString foreground = pal.color(QPalette::WindowText).name();
+    dialog->setObjectName(QStringLiteral("viperThemedDialog"));
+    // Set the root background and every text-bearing child explicitly; a
+    // QDialog's own rules take precedence over ViperWindow's inherited QSS.
+    // Leave native control decorations and focus/hover treatment alone.
+    dialog->setStyleSheet(QStringLiteral(
+        "#viperThemedDialog { background-color:%1; color:%2; } "
+        "#viperThemedDialog QLabel, #viperThemedDialog QGroupBox, "
+        "#viperThemedDialog QCheckBox, #viperThemedDialog QRadioButton, "
+        "#viperThemedDialog QPushButton { color:%2; } "
+        "#viperThemedDialog QScrollArea, "
+        "#viperThemedDialog QScrollArea > QWidget > QWidget { "
+        "background-color:%1; color:%2; }").arg(background, foreground));
+}
+
 inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                      QDialog* deqEditor, QDialog* eqEditor,
                      QTabWidget* tabs, QLabel* headerIcon, QLabel* status) {

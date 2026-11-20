@@ -399,6 +399,7 @@
 
     void showPreferences() {
         QDialog dialog(this);
+        viper_theme::applyDialogTheme(&dialog, this);
         dialog.setWindowTitle("Viper4Linux — Preferences");
         const QSize screenSize = dialog.screen()
             ? dialog.screen()->availableGeometry().size() : QSize(1280, 900);
@@ -707,6 +708,7 @@
         // A minimal, non-intrusive About dialog, kept independent of the
         // effect help. The development revision comes from the source commit.
         QMessageBox about(this);
+        viper_theme::applyDialogTheme(&about, this);
         about.setWindowTitle("About Viper4Linux");
         about.setWindowIcon(QIcon(":/viper4linux/blue.png"));
         about.setIconPixmap(QPixmap(":/viper4linux/blue.png").scaled(
