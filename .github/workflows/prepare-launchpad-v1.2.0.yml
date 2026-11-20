@@ -1,0 +1,91 @@
+name: Prepare v1.2.0 Launchpad upload (unsigned; no publication)
+
+# Packaging-only staging: fetch the exact GitHub release asset, verify its
+# published checksum, produce a source package, and rebuild a Noble binary.
+# This workflow never uploads to Canonical or accesses any private GPG key.
+on:
+  push:
+    branches:
+      - feature/launchpad-ppa-packaging
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-noble:
+    name: Real v1.2.0 release archive — Noble source and binary validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Launchpad packaging branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Debian source and build dependencies
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential debhelper dpkg-dev fakeroot devscripts \
+            cmake pkg-config qt6-base-dev libx11-dev ladspa-sdk \
+            python3 pipewire binutils gzip xz-utils
+
+      - name: Fetch and verify the published v1.2.0 source archive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          base='https://github.com/username227/Viper4Linux-RE/releases/download/v1.2.0'
+          mkdir -p "$RUNNER_TEMP/release"
+          cd "$RUNNER_TEMP/release"
+          curl -fLsS --retry 3 -o SHA256SUMS "$base/SHA256SUMS"
+          curl -fLsS --retry 3 -o viper4linux-re-1.2.0-unified-source.tar.xz \
+            "$base/viper4linux-re-1.2.0-unified-source.tar.xz"
+          grep -F 'viper4linux-re-1.2.0-unified-source.tar.xz' SHA256SUMS \
+            | tee SOURCE-SHA256SUMS | sha256sum --check -
+          test "$(wc -l < SOURCE-SHA256SUMS)" -eq 1
+          tar -tJf viper4linux-re-1.2.0-unified-source.tar.xz \
+            | grep -Fx 'viper4linux-re-1.2.0/RELEASE-VERSION'
+
+      - name: Assemble unsigned source package from release archive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/prepare-launchpad-source.sh
+          bash scripts/prepare-launchpad-source.sh \
+            1.2.0 noble \
+            "$RUNNER_TEMP/release/viper4linux-re-1.2.0-unified-source.tar.xz" \
+            "$RUNNER_TEMP/packages"
+          test -s "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa1_source.changes"
+          test -s "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa1.dsc"
+          # Ensure source package is bound to the intended distribution.
+          grep -Fx 'Distribution: noble' \
+            "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa1_source.changes"
+
+      - name: Rebuild native package from generated source, including CTest
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          dpkg-source -x \
+            "$RUNNER_TEMP/packages/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa1.dsc" \
+            "$RUNNER_TEMP/rebuilt-source"
+          (
+            cd "$RUNNER_TEMP/rebuilt-source"
+            dpkg-buildpackage -b -us -uc
+          )
+          package="$RUNNER_TEMP/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa1_amd64.deb"
+          test -s "$package"
+          dpkg-deb --contents "$package" \
+            | grep -F 'usr/lib/ladspa/viper_dsp_ladspa.so'
+          dpkg-deb --info "$package"
+
+      - name: Retain unsigned upload files and matching test .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: viper4linux-re-1.2.0-noble-ppa-unsigned-REVIEW
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/packages/*
+            ${{ runner.temp }}/viper4linux-re_1.2.0-1~ubuntu24.04mint22+ppa1_amd64.deb
