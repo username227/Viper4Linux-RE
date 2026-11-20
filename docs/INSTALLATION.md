@@ -18,7 +18,7 @@ ViPER4Linux-RE brings native ViPERDSP audio effects to Linux through **PipeWire*
 | --- | --- | --- |
 | **Arch Linux** | [Stable AUR package](https://aur.archlinux.org/packages/viper4linux-re) | [Development AUR package](https://aur.archlinux.org/packages/viper4linux-re-git) or download the prebuilt Arch package from GitHub from the [Releases](https://github.com/username227/Viper4Linux-RE/releases) page |
 | **Ubuntu 24.04, 26.04, 26.10** | [ViPER4Linux-RE Launchpad PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) | Historical standalone Noble `.deb` assets remain in prior GitHub releases |
-| **Linux Mint 22.x** | Noble PPA (Mint-specific desktop behavior remains unverified) | Historical standalone Noble/Mint `.deb` from v1.2.0 and older releases |
+| **Linux Mint 22.x** | [Same ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) as Ubuntu 24.04 (Noble); Mint-specific desktop integration is not yet independently tested | Historical standalone Noble/Mint `.deb` from v1.2.0 and older releases |
 | **Debian 13 / LMDE 7** | Download the native Debian/LMDE `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page | Source build for experienced users |
 | **Other PipeWire-based distributions** | No validated native package yet | Build from source; compatibility is not guaranteed |
 
