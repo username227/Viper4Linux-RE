@@ -1,0 +1,20 @@
+name: Temporary full release preparation validation (branch only)
+
+# This file is deleted after confirming a full 0.0.0 test run.
+# It does NOT publish a release, sign or upload a PPA, or touch a host audio system.
+on:
+  push:
+    branches:
+      - feature/launchpad-ppa-packaging
+    paths:
+      - .github/workflows/test-full-release-prep-branch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  full-release-dry-run:
+    name: Invoke regular release preparation on branch (0.0.0)
+    uses: ./.github/workflows/prepare-stable-release.yml
+    with:
+      version: '0.0.0'
