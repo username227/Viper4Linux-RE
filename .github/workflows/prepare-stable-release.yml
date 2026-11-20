@@ -170,6 +170,58 @@ jobs:
           test "$(wc -l < release-candidate/SHA256SUMS)" -eq 3
           (cd release-candidate && sha256sum --check SHA256SUMS)
 
+
+      - name: Download all three independently validated PPA candidates
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ppa-${{ inputs.version }}-*-unsigned-REVIEW
+          path: ppa-review
+
+      - name: Verify all three Ubuntu source packages and tested binaries
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          echo '### Three Ubuntu PPA candidates (unsigned; not uploaded)' >> "$GITHUB_STEP_SUMMARY"
+          echo '| Ubuntu | PPA version | Architecture |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
+          for series in noble resolute stonking; do
+            case "$series" in
+              noble) ubuntu=24.04; suffix='1~ubuntu24.04mint22' ;;
+              resolute) ubuntu=26.04; suffix='1~ubuntu26.04' ;;
+              stonking) ubuntu=26.10; suffix='1~ubuntu26.10' ;;
+            esac
+            version="${VERSION}-${suffix}+ppa1"
+            root="ppa-review/ppa-${VERSION}-${series}-unsigned-REVIEW"
+            changes=( "$root"/packages/*_source.changes )
+            dsc=( "$root"/packages/*.dsc )
+            deb=( "$root"/*.deb )
+            test "${#changes[@]}" -eq 1
+            test "${#dsc[@]}" -eq 1
+            test "${#deb[@]}" -eq 1
+            test -s "$root/packages/viper4linux-re_${VERSION}.orig.tar.xz"
+            test -s "$root/packages/viper4linux-re_${version}.debian.tar.xz"
+            grep -Fx "Distribution: $series" "${changes[0]}"
+            grep -Fx "Version: $version" "${changes[0]}"
+            grep -Fx 'Architecture: source' "${changes[0]}"
+            grep -E '^Build-Depends:.*git' "${dsc[0]}"
+            test "$(dpkg-deb -f "${deb[0]}" Package)" = viper4linux-re
+            test "$(dpkg-deb -f "${deb[0]}" Version)" = "$version"
+            test "$(dpkg-deb -f "${deb[0]}" Architecture)" = amd64
+            echo "| $ubuntu ($series) | $version | amd64 |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo 'PASS: three distro-specific source and binary candidate bundles verified.'
+
+      - name: Upload a single three-series unsigned PPA review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ppa-${{ inputs.version }}-all-series-unsigned-REVIEW
+          retention-days: 30
+          if-no-files-found: error
+          path: ppa-review/
+
       - name: Upload complete release candidate (no publication)
         uses: actions/upload-artifact@v4
         with:
