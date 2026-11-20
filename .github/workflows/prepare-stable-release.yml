@@ -75,7 +75,7 @@ jobs:
           include-hidden-files: true
 
   deb:
-    name: Native .deb — ${{ matrix.audience }}
+    name: Native standalone .deb — ${{ matrix.audience }}
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -83,9 +83,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: ubuntu24.04-mint22
-            image: ubuntu:24.04
-            audience: 'Ubuntu 24.04 and Mint 22.x'
           - target: debian13-lmde7
             image: debian:trixie
             audience: 'Debian 13 and LMDE 7'
@@ -144,7 +141,8 @@ jobs:
 
   assemble:
     name: Assemble all verified native release assets
-    needs: [prepare, deb]
+    # Only assemble a release candidate after Arch, Debian and all three PPA builds pass.
+    needs: [prepare, deb, launchpad-source]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -153,7 +151,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Download Arch/source and both Debian-family artifacts
+      - name: Download Arch/source and standalone Debian package
         uses: actions/download-artifact@v4
         with:
           pattern: viper4linux-re-${{ inputs.version }}-*
@@ -166,11 +164,63 @@ jobs:
         run: |
           set -Eeuo pipefail
           bash scripts/assemble-release-assets.sh "$VERSION" "$GITHUB_SHA" collected release-candidate
-          # The published bundle has one checksum manifest, with exactly four
-          # entries (source archive, Arch package, and both Debian builds).
+          # The GitHub release bundle has three distributable assets:
+          # unified source, Arch package and Debian 13/LMDE 7 package.
           test "$(find release-candidate -maxdepth 1 -name '*SHA256SUMS*' | wc -l)" -eq 1
-          test "$(wc -l < release-candidate/SHA256SUMS)" -eq 4
+          test "$(wc -l < release-candidate/SHA256SUMS)" -eq 3
           (cd release-candidate && sha256sum --check SHA256SUMS)
+
+
+      - name: Download all three independently validated PPA candidates
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ppa-${{ inputs.version }}-*-unsigned-REVIEW
+          path: ppa-review
+
+      - name: Verify all three Ubuntu source packages and tested binaries
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          shopt -s nullglob
+          echo '### Three Ubuntu PPA candidates (unsigned; not uploaded)' >> "$GITHUB_STEP_SUMMARY"
+          echo '| Ubuntu | PPA version | Architecture |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
+          for series in noble resolute stonking; do
+            case "$series" in
+              noble) ubuntu=24.04; suffix='1~ubuntu24.04mint22' ;;
+              resolute) ubuntu=26.04; suffix='1~ubuntu26.04' ;;
+              stonking) ubuntu=26.10; suffix='1~ubuntu26.10' ;;
+            esac
+            version="${VERSION}-${suffix}+ppa1"
+            root="ppa-review/ppa-${VERSION}-${series}-unsigned-REVIEW"
+            changes=( "$root"/packages/*_source.changes )
+            dsc=( "$root"/packages/*.dsc )
+            deb=( "$root"/*.deb )
+            test "${#changes[@]}" -eq 1
+            test "${#dsc[@]}" -eq 1
+            test "${#deb[@]}" -eq 1
+            test -s "$root/packages/viper4linux-re_${VERSION}.orig.tar.xz"
+            test -s "$root/packages/viper4linux-re_${version}.debian.tar.xz"
+            grep -Fx "Distribution: $series" "${changes[0]}"
+            grep -Fx "Version: $version" "${changes[0]}"
+            grep -Fx 'Architecture: source' "${changes[0]}"
+            grep -E '^Build-Depends:.*git' "${dsc[0]}"
+            test "$(dpkg-deb -f "${deb[0]}" Package)" = viper4linux-re
+            test "$(dpkg-deb -f "${deb[0]}" Version)" = "$version"
+            test "$(dpkg-deb -f "${deb[0]}" Architecture)" = amd64
+            echo "| $ubuntu ($series) | $version | amd64 |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo 'PASS: three distro-specific source and binary candidate bundles verified.'
+
+      - name: Upload a single three-series unsigned PPA review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ppa-${{ inputs.version }}-all-series-unsigned-REVIEW
+          retention-days: 30
+          if-no-files-found: error
+          path: ppa-review/
 
       - name: Upload complete release candidate (no publication)
         uses: actions/upload-artifact@v4
@@ -180,3 +230,140 @@ jobs:
           if-no-files-found: error
           path: release-candidate/
           include-hidden-files: true
+
+
+  launchpad-source:
+    name: Ubuntu ${{ matrix.version }} — unsigned Launchpad source + native CTest
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - series: noble
+            version: '24.04'
+            image: ubuntu:24.04
+          - series: resolute
+            version: '26.04'
+            image: ubuntu:26.04
+          - series: stonking
+            version: '26.10'
+            image: ubuntu:26.10
+    steps:
+      - name: Checkout Launchpad packaging tools from this candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the exact source archive created by release preparation
+        uses: actions/download-artifact@v4
+        with:
+          name: viper4linux-re-${{ inputs.version }}-release-candidate
+          path: dist/release
+
+      - name: Verify prepared source checksum
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd dist/release
+          name="viper4linux-re-${VERSION}-unified-source.tar.xz"
+          grep -F "$name" SHA256SUMS | tee PPA-SOURCE-SHA256SUMS |
+            sha256sum --check -
+          test "$(wc -l < PPA-SOURCE-SHA256SUMS)" -eq 1
+          test -s "$name"
+
+      - name: Build source package, complete CTest, and isolated installation
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          SERIES: ${{ matrix.series }}
+          UBUNTU_VERSION: ${{ matrix.version }}
+          IMAGE: ${{ matrix.image }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "dist/ppa/$SERIES"
+          docker run --rm -i \
+            -v "$GITHUB_WORKSPACE:/workspace:rw" -w /workspace \
+            -e RELEASE_VERSION -e SERIES -e UBUNTU_VERSION \
+            -e VIPER_PPA_REVISION=1 -e DEBIAN_FRONTEND=noninteractive \
+            "$IMAGE" bash -se <<'IN_UBUNTU'
+          set -Eeuo pipefail
+          . /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = "$UBUNTU_VERSION"
+          test "$(dpkg --print-architecture)" = amd64
+          root="/workspace/dist/ppa/$SERIES"
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential debhelper dpkg-dev fakeroot devscripts \
+            cmake pkg-config qt6-base-dev libx11-dev ladspa-sdk \
+            python3 pipewire binutils gzip xz-utils git ca-certificates
+          bash -n scripts/prepare-launchpad-source.sh
+          bash scripts/prepare-launchpad-source.sh \
+            "$RELEASE_VERSION" "$SERIES" \
+            "/workspace/dist/release/viper4linux-re-${RELEASE_VERSION}-unified-source.tar.xz" \
+            "$root/packages"
+          shopt -s nullglob
+          dsc_files=( "$root"/packages/*.dsc )
+          changes_files=( "$root"/packages/*_source.changes )
+          test "${#dsc_files[@]}" -eq 1
+          test "${#changes_files[@]}" -eq 1
+          grep -Fx "Distribution: $SERIES" "${changes_files[0]}"
+          grep -E '^Build-Depends:.*git' "${dsc_files[0]}"
+          dpkg-source -x "${dsc_files[0]}" "$root/rebuilt-source"
+          expected=$(dpkg-parsechangelog \
+            -l "$root/rebuilt-source/debian/changelog" -S Version)
+          test "${expected%%-*}" = "$RELEASE_VERSION"
+          [[ "$expected" == *'+ppa1' ]]
+          (cd "$root/rebuilt-source" && dpkg-buildpackage -b -us -uc)
+          package="$root/viper4linux-re_${expected}_amd64.deb"
+          test -s "$package"
+          dpkg-deb --contents "$package" |
+            grep -F 'usr/lib/ladspa/viper_dsp_ladspa.so'
+          apt-get install -y --no-install-recommends "$package"
+          test "$(dpkg-query -W -f='${Status}' viper4linux-re)" = 'install ok installed'
+          test "$(dpkg-query -W -f='${Version}' viper4linux-re)" = "$expected"
+          for app in viper4linux v4l-cli viper4linux-gui viper4linux-ctl \
+                     viper4linux-output viper4linux-output-state; do
+            test -x "/usr/bin/$app"
+          done
+          test -s /usr/lib/ladspa/viper_dsp_ladspa.so
+          nm -D /usr/lib/ladspa/viper_dsp_ladspa.so |
+            grep -E ' [TW] ladspa_descriptor$'
+          test -r /usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf
+          test -r /usr/share/applications/viper4linux.desktop
+          for binary in /usr/bin/viper4linux-gui /usr/bin/viper4linux-ctl \
+                        /usr/lib/ladspa/viper_dsp_ladspa.so; do
+            ldd "$binary" > /tmp/viper-ppa-ldd.txt
+            if grep -F 'not found' /tmp/viper-ppa-ldd.txt; then
+              echo "Unresolved runtime dependency: $binary" >&2
+              exit 1
+            fi
+          done
+          viper4linux-ctl --help >/dev/null
+          v4l-cli --help >/dev/null
+          viper4linux --fingerprint >/dev/null
+          apt-get remove -y viper4linux-re
+          ! dpkg-query -W -f='${Status}' viper4linux-re 2>/dev/null |
+            grep -Fxq 'install ok installed'
+          test ! -e /usr/bin/v4l-cli
+          test ! -e /usr/lib/ladspa/viper_dsp_ladspa.so
+          echo "PASS: $RELEASE_VERSION source candidate for Ubuntu $UBUNTU_VERSION ($SERIES)"
+          IN_UBUNTU
+
+      - name: Retain unsigned PPA source and checked binary separately
+        uses: actions/upload-artifact@v4
+        with:
+          # Deliberately does NOT match viper4linux-re-VERSION-*;
+          # the normal GitHub release assembler retains a three-item manifest.
+          name: ppa-${{ inputs.version }}-${{ matrix.series }}-unsigned-REVIEW
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            dist/ppa/${{ matrix.series }}/packages/*
+            dist/ppa/${{ matrix.series }}/*.deb
+
+# PPA candidates are review-only; no signing, Launchpad upload or release.

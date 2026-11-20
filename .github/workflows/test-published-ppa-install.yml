@@ -1,0 +1,125 @@
+name: Published PPA installation smoke (Ubuntu series)
+
+# This tests a binary which ALREADY EXISTS on Launchpad.
+# Release preparation runs separately and creates unsigned candidate packages;
+# it must not incorrectly claim this test validated a not-yet-published build.
+on:
+  push:
+    branches:
+      - feature/launchpad-ppa-packaging
+    paths:
+      - .github/workflows/test-published-ppa-install.yml
+  workflow_dispatch:
+    inputs:
+      series:
+        description: 'Published Ubuntu series to verify'
+        required: true
+        type: choice
+        options:
+          - noble
+          - resolute
+          - stonking
+        default: noble
+      version:
+        description: 'Expected upstream version, e.g. 1.2.0'
+        required: true
+        type: string
+        default: '1.2.0'
+      ppa_revision:
+        description: 'Expected PPA revision (Noble v1.2.0 uses 2)'
+        required: true
+        type: string
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  install-published-ppa:
+    name: Clean published PPA install / verify / remove
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SERIES: ${{ github.event_name == 'workflow_dispatch' && inputs.series || 'noble' }}
+      VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '1.2.0' }}
+      PPA_REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.ppa_revision || '2' }}
+    steps:
+      - name: Verify published PPA on selected Ubuntu series in a disposable container
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$PPA_REVISION" =~ ^[1-9][0-9]*$ ]]
+          case "$SERIES" in
+            noble) ubuntu_version=24.04; suffix='1~ubuntu24.04mint22' ;;
+            resolute) ubuntu_version=26.04; suffix='1~ubuntu26.04' ;;
+            stonking) ubuntu_version=26.10; suffix='1~ubuntu26.10' ;;
+            *) echo "Unsupported Ubuntu series: $SERIES" >&2; exit 2 ;;
+          esac
+          expected="${VERSION}-${suffix}+ppa${PPA_REVISION}"
+          docker run --rm -i \
+            -e EXPECTED_VERSION="$expected" \
+            -e EXPECTED_UBUNTU_VERSION="$ubuntu_version" \
+            -e DEBIAN_FRONTEND=noninteractive \
+            "ubuntu:$ubuntu_version" bash -se <<'IN_UBUNTU'
+          set -Eeuo pipefail
+          . /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = "$EXPECTED_UBUNTU_VERSION"
+          test "$(dpkg --print-architecture)" = amd64
+
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates gnupg software-properties-common binutils
+          add-apt-repository -y ppa:plenty-boot4220/viper4linux-re
+          apt-get update
+
+          echo 'Checking APT candidate and its Launchpad origin:'
+          policy=$(apt-cache policy viper4linux-re)
+          printf '%s\n' "$policy"
+          printf '%s\n' "$policy" |
+            grep -F 'ppa.launchpadcontent.net/plenty-boot4220/viper4linux-re'
+          candidate=$(printf '%s\n' "$policy" |
+            awk '$1 == "Candidate:" {print $2}')
+          test "$candidate" = "$EXPECTED_VERSION" || {
+            echo "Expected published $EXPECTED_VERSION, got: $candidate" >&2
+            exit 1
+          }
+
+          apt-get install -y viper4linux-re
+          test "$(dpkg-query -W -f='${Status}' viper4linux-re)" = 'install ok installed'
+          test "$(dpkg-query -W -f='${Version}' viper4linux-re)" = "$EXPECTED_VERSION"
+          for app in viper4linux v4l-cli viper4linux-gui viper4linux-ctl \
+                     viper4linux-output viper4linux-output-state; do
+            test -x "/usr/bin/$app"
+          done
+          test "$(readlink /usr/bin/viper4linux)" = viper4linux-ctl
+          test "$(readlink /usr/bin/v4l-cli)" = viper4linux-ctl
+          test -x /usr/lib/viper4linux/start-backend
+          test -s /usr/lib/ladspa/viper_dsp_ladspa.so
+          test -r /usr/share/viper4linux/routing-config/filter-chain.conf.d/99-viper-smart.conf
+          test -r /usr/share/applications/viper4linux.desktop
+          test -r /usr/share/doc/viper4linux-re/copyright
+          nm -D /usr/lib/ladspa/viper_dsp_ladspa.so |
+            grep -E ' [TW] ladspa_descriptor$'
+          for binary in /usr/bin/viper4linux-gui /usr/bin/viper4linux-ctl \
+                        /usr/lib/ladspa/viper_dsp_ladspa.so; do
+            ldd "$binary" > /tmp/viper-ppa-ldd.txt
+            if grep -F 'not found' /tmp/viper-ppa-ldd.txt; then
+              echo "Unresolved runtime library: $binary" >&2
+              exit 1
+            fi
+          done
+          viper4linux-ctl --help >/dev/null
+          v4l-cli --help >/dev/null
+          viper4linux --fingerprint >/dev/null
+          apt-get remove -y viper4linux-re
+          ! dpkg-query -W -f='${Status}' viper4linux-re 2>/dev/null |
+            grep -Fxq 'install ok installed'
+          test ! -e /usr/bin/v4l-cli
+          test ! -e /usr/lib/ladspa/viper_dsp_ladspa.so
+          echo "PASS: published PPA package $EXPECTED_VERSION on Ubuntu $EXPECTED_UBUNTU_VERSION"
+          IN_UBUNTU
+
+# No PipeWire session or display server is started in the container.
+# No GPG private key, source upload, release or host-side package install.

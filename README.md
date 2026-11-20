@@ -159,12 +159,15 @@ environment; broader desktop and distribution compatibility needs more testing.
 | Distribution | Installation |
 | --- | --- |
 | **Arch Linux** | [Stable AUR](https://aur.archlinux.org/packages/viper4linux-re), [development AUR](https://aur.archlinux.org/packages/viper4linux-re-git), or prebuilt Arch package |
-| **Ubuntu 24.04 / Linux Mint 22.x** | Download the native Ubuntu/Mint `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page |
+| **Ubuntu 24.04, 26.04, 26.10** | [Install through the ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) |
+| **Linux Mint 22.x** | Noble PPA candidate; desktop compatibility needs Mint-specific verification |
 | **Debian 13 / LMDE 7** | Download the native Debian/LMDE `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page |
 | **Other distributions** | Build from source; compatibility is not yet established |
 
-Download native packages, the pinned unified-source archive, and checksums from
-the [latest GitHub release](https://github.com/username227/Viper4Linux-RE/releases/latest).
+Future GitHub releases provide the native Arch package, standalone Debian 13/LMDE 7
+`.deb`, unified-source archive and checksums. The PPA builds an independent
+native binary for each supported Ubuntu release. Older releases retain their
+previously published standalone Ubuntu/Mint `.deb` files.
 Choose the package built for your distribution. For installation, updates,
 and removal, see the [installation guide](docs/INSTALLATION.md). Packaging
 internals are covered in the [Arch packaging](docs/ARCH-PACKAGING.md) and

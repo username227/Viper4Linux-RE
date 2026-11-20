@@ -20,16 +20,13 @@ test -s "$out/.SRCINFO" && test -s "$out/PKGBUILD"
 archive="viper4linux-re-${version}-unified-source.tar.xz"
 tar -xOf "$out/$archive" "viper4linux-re-${version}/SOURCE-MANIFEST.txt" \
     | grep -Fx "Application commit: $commit"
-for target in ubuntu24.04-mint22 debian13-lmde7; do
+for target in debian13-lmde7; do
     input="$collected/viper4linux-re-${version}-${target}-deb"
     (cd "$input" && sha256sum --check SHA256SUMS)
     shopt -s nullglob
     debs=("$input"/*.deb)
     test "${#debs[@]}" -eq 1 || { echo "Expected exactly one .deb for $target" >&2; exit 1; }
-    case "$target" in
-        ubuntu24.04-mint22) suffix='1~ubuntu24.04mint22' ;;
-        debian13-lmde7) suffix='1~debian13lmde7' ;;
-    esac
+    suffix='1~debian13lmde7'
     test "$(basename "${debs[0]}")" = "viper4linux-re_${version}-${suffix}_amd64.deb" || {
         echo "Unexpected Debian package: ${debs[0]}" >&2
         exit 1
@@ -43,21 +40,20 @@ test "${#main_packages[@]}" -eq 1 || {
     echo 'Expected exactly one Arch package.' >&2
     exit 1
 }
-test "$(find "$out" -maxdepth 1 -name '*.deb' | wc -l)" -eq 2
+test "$(find "$out" -maxdepth 1 -name '*.deb' | wc -l)" -eq 1
 ! find "$out" -maxdepth 1 -name '*debug*.pkg.tar.*' | grep -q . || {
     echo 'Debug-symbol package must not be distributed.' >&2
     exit 1
 }
 # The prep/Arch checksum files are internal to the build workflow. Replace
-# them with a single release-facing manifest containing only the four
+# them with a single release-facing manifest containing only the three
 # distributable binaries/source artifacts, in a deterministic order.
 rm -- "$out/SHA256SUMS" "$out/ARCH-SHA256SUMS"
 (
     cd "$out"
     sha256sum -- "$archive" "${main_packages[0]##*/}" \
-        "viper4linux-re_${version}-1~ubuntu24.04mint22_amd64.deb" \
         "viper4linux-re_${version}-1~debian13lmde7_amd64.deb" > SHA256SUMS
-    test "$(wc -l < SHA256SUMS)" -eq 4
+    test "$(wc -l < SHA256SUMS)" -eq 3
     sha256sum --check SHA256SUMS
 )
-echo 'PASS: unified source, Arch and two .deb packages, hashes and commit all verified.'
+echo 'PASS: unified source, Arch and standalone Debian .deb, hashes and commit all verified.'

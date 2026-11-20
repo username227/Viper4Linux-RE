@@ -17,11 +17,16 @@ ViPER4Linux-RE brings native ViPERDSP audio effects to Linux through **PipeWire*
 | Distribution | Recommended option | Other option |
 | --- | --- | --- |
 | **Arch Linux** | [Stable AUR package](https://aur.archlinux.org/packages/viper4linux-re) | [Development AUR package](https://aur.archlinux.org/packages/viper4linux-re-git) or download the prebuilt Arch package from GitHub from the [Releases](https://github.com/username227/Viper4Linux-RE/releases) page |
-| **Ubuntu 24.04 / Linux Mint 22.x** | Download the native Ubuntu/Mint `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page | Source build for experienced users |
+| **Ubuntu 24.04, 26.04, 26.10** | [ViPER4Linux-RE Launchpad PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) | Historical standalone Noble `.deb` assets remain in prior GitHub releases |
+| **Linux Mint 22.x** | Noble PPA (Mint-specific desktop behavior remains unverified) | Historical standalone Noble/Mint `.deb` from v1.2.0 and older releases |
 | **Debian 13 / LMDE 7** | Download the native Debian/LMDE `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page | Source build for experienced users |
 | **Other PipeWire-based distributions** | No validated native package yet | Build from source; compatibility is not guaranteed |
 
-Download the published native packages and checksums from the **[latest GitHub release](https://github.com/username227/Viper4Linux-RE/releases/latest)**. Use the package for your actual distribution base: the two `.deb` builds are **not interchangeable**. Linux Mint and LMDE desktop behavior still needs independent testing, even though packages are built and installation-checked on their corresponding Ubuntu and Debian bases.
+Future GitHub release assets contain the unified source, Arch package and
+standalone Debian 13/LMDE 7 `.deb`. Ubuntu packages are built and installed
+through a distribution-specific PPA; older releases, including v1.2.0, retain
+their original Ubuntu/Mint standalone `.deb` assets. Mint and LMDE desktop
+behavior still needs independent testing.
 
 ## Arch Linux
 
@@ -70,19 +75,24 @@ sudo pacman -U name-of-downloaded-package.pkg.tar.zst
 
 Replace the example filename with the release asset's actual name. This is a locally installed package: **`pacman -Syu` does not discover future GitHub releases or upgrade it automatically**. To upgrade, download the newer package and install it with `pacman -U`, or switch to the stable AUR recipe for AUR-helper-managed updates.
 
-## Ubuntu 24.04 and Linux Mint 22.x
+## Ubuntu 24.04, 26.04, 26.10 and Linux Mint 22.x
 
-1. Open the [latest GitHub release](https://github.com/username227/Viper4Linux-RE/releases/latest).
-2. Download the `.deb` asset whose name includes **`ubuntu24.04mint22`** and **`amd64`**. Do not choose the Debian 13/LMDE 7 build.
-3. Open the file in your graphical package installer, **or** install it from a terminal in the download directory:
+Ubuntu uses the same installation commands on each supported release; APT
+selects that distribution's native PPA binary:
 
 ```bash
-sudo apt install ./name-of-downloaded-package.deb
+sudo add-apt-repository ppa:plenty-boot4220/viper4linux-re
+sudo apt update
+sudo apt install viper4linux-re
 ```
 
-Replace the example filename with the actual file name. Using `apt install ./...` lets APT resolve the package's declared dependencies. The package assumes you already have a functioning PipeWire audio session.
+Linux Mint 22.x is based on Ubuntu Noble and can use the Noble PPA build,
+but we have not independently validated Mint-specific desktop integration,
+audio routing or tray behavior. Check the configured PPA suite is `noble`.
 
-**Compatibility scope:** The Ubuntu 24.04 package is built and installation-checked on Ubuntu 24.04. Linux Mint 22.x is an intended target, but its particular desktop, routing, and tray behavior still needs independent testing.
+**Historical standalone downloads:** Older releases, including v1.2.0,
+retain their previously published Ubuntu/Mint `.deb`. Future release
+preparation does not create a duplicate Ubuntu standalone `.deb`.
 
 ## Debian 13 and LMDE 7
 
@@ -98,7 +108,9 @@ Replace the example filename with the actual file name. The Debian 13 package is
 
 ## Verify a release download (optional)
 
-Each release includes a **`SHA256SUMS`** file covering the unified-source archive and all three native package files. To verify a package you downloaded, keep it and `SHA256SUMS` in the same directory and run:
+New releases include a **`SHA256SUMS`** manifest covering the unified-source
+archive, the Arch package and the standalone Debian/LMDE `.deb`. Historical
+releases retain their original checksum manifests. To verify a package you downloaded, keep it and `SHA256SUMS` in the same directory and run:
 
 ```bash
 sha256sum --check --ignore-missing SHA256SUMS
