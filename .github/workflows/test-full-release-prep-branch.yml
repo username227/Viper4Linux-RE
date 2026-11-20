@@ -1,5 +1,6 @@
 name: Temporary full release preparation validation (branch only)
 
+# Second complete test: verify protected RELEASE_VERSION is not shadowed by /etc/os-release.
 # This file is deleted after confirming a full 0.0.0 test run.
 # It does NOT publish a release, sign or upload a PPA, or touch a host audio system.
 on:

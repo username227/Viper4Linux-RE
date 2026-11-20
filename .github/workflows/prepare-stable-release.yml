@@ -283,7 +283,7 @@ jobs:
 
       - name: Build source package, complete CTest, and isolated installation
         env:
-          VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ inputs.version }}
           SERIES: ${{ matrix.series }}
           UBUNTU_VERSION: ${{ matrix.version }}
           IMAGE: ${{ matrix.image }}
@@ -293,7 +293,7 @@ jobs:
           mkdir -p "dist/ppa/$SERIES"
           docker run --rm -i \
             -v "$GITHUB_WORKSPACE:/workspace:rw" -w /workspace \
-            -e VERSION -e SERIES -e UBUNTU_VERSION \
+            -e RELEASE_VERSION -e SERIES -e UBUNTU_VERSION \
             -e VIPER_PPA_REVISION=1 -e DEBIAN_FRONTEND=noninteractive \
             "$IMAGE" bash -se <<'IN_UBUNTU'
           set -Eeuo pipefail
@@ -309,8 +309,8 @@ jobs:
             python3 pipewire binutils gzip xz-utils git ca-certificates
           bash -n scripts/prepare-launchpad-source.sh
           bash scripts/prepare-launchpad-source.sh \
-            "$VERSION" "$SERIES" \
-            "/workspace/dist/release/viper4linux-re-${VERSION}-unified-source.tar.xz" \
+            "$RELEASE_VERSION" "$SERIES" \
+            "/workspace/dist/release/viper4linux-re-${RELEASE_VERSION}-unified-source.tar.xz" \
             "$root/packages"
           shopt -s nullglob
           dsc_files=( "$root"/packages/*.dsc )
@@ -322,7 +322,7 @@ jobs:
           dpkg-source -x "${dsc_files[0]}" "$root/rebuilt-source"
           expected=$(dpkg-parsechangelog \
             -l "$root/rebuilt-source/debian/changelog" -S Version)
-          test "${expected%%-*}" = "$VERSION"
+          test "${expected%%-*}" = "$RELEASE_VERSION"
           [[ "$expected" == *'+ppa1' ]]
           (cd "$root/rebuilt-source" && dpkg-buildpackage -b -us -uc)
           package="$root/viper4linux-re_${expected}_amd64.deb"
@@ -357,7 +357,7 @@ jobs:
             grep -Fxq 'install ok installed'
           test ! -e /usr/bin/v4l-cli
           test ! -e /usr/lib/ladspa/viper_dsp_ladspa.so
-          echo "PASS: $VERSION source candidate for Ubuntu $UBUNTU_VERSION ($SERIES)"
+          echo "PASS: $RELEASE_VERSION source candidate for Ubuntu $UBUNTU_VERSION ($SERIES)"
           IN_UBUNTU
 
       - name: Retain unsigned PPA source and checked binary separately
