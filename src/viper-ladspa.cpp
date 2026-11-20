@@ -5,6 +5,7 @@
 #include "viper/ViPER.h"
 #include "viper-control.h"
 #include "viper-input-signal.h"
+#include "viper-fp-env.h"
 #include "viper-ir-wave.h"
 #include "viper-ddc.h"
 #include "viper-multiband-init.h"

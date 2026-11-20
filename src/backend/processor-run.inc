@@ -1,4 +1,6 @@
     void run(unsigned long frames) {
+        // Keep all DSP arithmetic out of slow x86/AArch64 subnormal handling.
+        viper_fp::enable_ftz_daz();
         if (controls) {
             controls->audio_callbacks.fetch_add(1, std::memory_order_relaxed);
             // Observe sanitized-input activity even during a temporary wet-engine

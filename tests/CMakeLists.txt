@@ -204,6 +204,16 @@ foreach(_viper_mock_case IN ITEMS
     LABELS "developer;mock")
 endforeach()
 
+# Audio-thread FTZ/DAZ mode: no Qt, PipeWire or native DSP required.
+add_executable(viper_test_fp_env check-fp-env.cpp)
+target_include_directories(viper_test_fp_env PRIVATE "${_viper_test_include}")
+target_compile_options(viper_test_fp_env PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME viper_native_fp_env
+  COMMAND "$<TARGET_FILE:viper_test_fp_env>")
+set_tests_properties(viper_native_fp_env PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;native;fp")
+
 # Build the tiny native activity-classification test once using CMake,
 # instead of recompiling it as a side effect of every CTest run.
 add_executable(viper_test_audio_activity check-audio-activity.cpp)

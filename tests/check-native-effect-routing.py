@@ -7,6 +7,7 @@ assert '#include "backend/processor.inc"' in (root / "src/viper-ladspa.cpp").rea
 processor = (root / "src/backend/processor.inc").read_text()
 assert '#include "processor-run.inc"' in processor, "Real-time callback include missing"
 callback = (root / "src/backend/processor-run.inc").read_text()
+assert "viper_fp::enable_ftz_daz();" in callback, "audio callback must enable FTZ/DAZ"
 assert "std::try_to_lock" in callback and "run_dry_while_loading(frames);" in callback
 assert "wet.Process(wet_audio, n);" in callback and "dry.Process(dry_audio, n);" in callback
 s = processor + "\n" + callback
