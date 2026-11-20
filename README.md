@@ -159,12 +159,20 @@ environment; broader desktop and distribution compatibility needs more testing.
 | Distribution | Installation |
 | --- | --- |
 | **Arch Linux** | [Stable AUR](https://aur.archlinux.org/packages/viper4linux-re), [development AUR](https://aur.archlinux.org/packages/viper4linux-re-git), or prebuilt Arch package |
-| **Ubuntu 24.04, 26.04, 26.10** | [Install through the ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) |
-| **Linux Mint 22.x** | [Install through the ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) |
+| **Ubuntu 24.04, 26.04, 26.10** | [Install through the ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) (see instructions below) |
+| **Linux Mint 22.x** | [Install through the ViPER4Linux-RE PPA](https://launchpad.net/~plenty-boot4220/+archive/ubuntu/viper4linux-re) (see instructions below) |
 | **Debian 13 / LMDE 7** | Download the native Debian/LMDE `.deb` from the [releases](https://github.com/username227/Viper4Linux-RE/releases) page |
 | **Other distributions** | Build from source; compatibility is not yet established |
 
-Future GitHub releases provide the native Arch package, standalone Debian 13/LMDE 7
+### Ubuntu and Mint PPA Instructions
+To automaticall download, install and update directly through apt, please execute the following commands to add the ppa, update apt sources and install the package:
+```
+sudo add-apt-repository ppa:plenty-boot4220/viper4linux-re
+sudo apt update
+sudo apt install viper4linux-re
+```
+
+**Note:** Future GitHub releases provide the native Arch package, standalone Debian 13/LMDE 7
 `.deb`, unified-source archive and checksums. The PPA builds an independent
 native binary for each supported Ubuntu release. Older releases retain their
 previously published standalone Ubuntu/Mint `.deb` files.
