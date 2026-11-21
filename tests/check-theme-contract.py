@@ -50,4 +50,17 @@ for name, fg, background, accent, tab in palettes:
     assert contrast(fg, background) >= 4.5, (name, "body")
     assert contrast(accent, tab) >= 4.5, (name, "tab")
 
+# Cinnamon must subscribe to actual setting changes, not periodically run
+# `gsettings get` from a GUI timer. Offscreen/CI cannot simulate Cinnamon's
+# D-Bus session; this source check guards the event-driven wiring.
+init = (root / "src/window/window-initialization.inc").read_text()
+gui = (root / "src/viper-gui.cpp").read_text()
+assert 'QStringLiteral("monitor")' in init
+assert 'QProcess::readyReadStandardOutput' in init
+assert 'QStringLiteral("get")' in init  # One startup snapshot only.
+assert 'cinnamon_theme_monitor_buffer_' in init  # Cope with split pipe reads.
+assert 'desktopThemeTimer' not in init
+assert 'QTimer::timeout' not in init
+assert 'cinnamon_theme_query_' not in gui
+
 print("PASS: theme contrast and non-mutating theme changes")
