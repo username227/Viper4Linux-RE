@@ -253,9 +253,9 @@
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged,
                 this, [this](Qt::ColorScheme) {
-            QTimer::singleShot(0, this, [this] {
+            QMetaObject::invokeMethod(this, [this] {
                 applyTheme(theme_selector_->currentIndex() == 1);
-            });
+            }, Qt::QueuedConnection);
         });
 #endif
         applyTheme(theme_selector_->currentIndex() == 1);
