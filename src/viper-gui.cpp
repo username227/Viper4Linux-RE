@@ -845,7 +845,9 @@ private:
     int x11_taskbar_restore_retries_ = 0;
     quint64 x11_taskbar_restore_settle_epoch_ = 0;
     QString theme_muted_color_ = "#536a74";
-    QProcess* cinnamon_theme_query_{};
+    QProcess* cinnamon_theme_monitor_{};
+    QByteArray cinnamon_theme_monitor_buffer_;
+    bool cinnamon_theme_saw_change_ = false;
     bool cinnamon_theme_known_ = false;
     bool cinnamon_theme_dark_ = false;
     QLabel* header_icon_{};
