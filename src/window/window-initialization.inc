@@ -228,6 +228,11 @@
                     applyCinnamonThemeSetting(QString::fromUtf8(line));
                 }
             });
+            connect(cinnamon_theme_monitor_, &QProcess::errorOccurred,
+                    this, [this](QProcess::ProcessError) {
+                qWarning("ViPER: Cinnamon theme change subscription failed: %s",
+                         qPrintable(cinnamon_theme_monitor_->errorString()));
+            });
             // Monitor is a long-lived change subscription. It performs no
             // polling and terminates with the GUI's parent QObject.
             connect(cinnamon_theme_monitor_, &QProcess::started, this, [this] {
