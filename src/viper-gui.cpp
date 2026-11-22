@@ -850,6 +850,11 @@ private:
     bool cinnamon_theme_saw_change_ = false;
     bool cinnamon_theme_known_ = false;
     bool cinnamon_theme_dark_ = false;
+    QProcess* cinnamon_scheme_monitor_{};
+    QByteArray cinnamon_scheme_monitor_buffer_;
+    bool cinnamon_scheme_saw_change_ = false;
+    bool cinnamon_preference_known_ = false;
+    bool cinnamon_preference_dark_ = false;
     QLabel* header_icon_{};
     QLabel* audio_output_label_{};
     QString last_output_memory_revision_;
