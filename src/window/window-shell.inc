@@ -191,11 +191,10 @@
         }
         if (!prepareBackendForGuiExit(explicitDecision)) return false;
         saveUiGeometry();
-        // Exit the event loop directly. QApplication::quit() first calls
-        // closeAllWindows(), which re-enters closeEvent() without the explicit
-        // keep/stop decision, re-showing the backend prompt (or looping forever
-        // once the backend is already stopped).
-        QTimer::singleShot(0, qApp, [] { QCoreApplication::exit(0); });
+        // Complete the user-approved exit without closing all windows and
+        // re-entering closeEvent(). The deferred operation also permits a
+        // pending CLI control-socket response to finish first.
+        viper_gui_exit::scheduleEventLoopExit();
         return true; // Allow the native CLI control socket to reply before exit.
     }
 
