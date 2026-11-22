@@ -32,7 +32,9 @@
             || qEnvironmentVariable("XDG_SESSION_DESKTOP").contains("cinnamon", Qt::CaseInsensitive);
     }
     bool systemPrefersDark() const {
-        if (runningCinnamon()) return cinnamon_theme_known_ && cinnamon_theme_dark_;
+        if (runningCinnamon())
+            return cinnamon_preference_known_ ? cinnamon_preference_dark_
+                                             : (cinnamon_theme_known_ && cinnamon_theme_dark_);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         return qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
 #else
