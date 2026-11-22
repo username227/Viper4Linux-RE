@@ -1023,6 +1023,20 @@ int main(int argc, char* argv[]) {
     const QByteArray x11StartupId = qgetenv("DESKTOP_STARTUP_ID");
     const QByteArray waylandActivationToken = qgetenv("XDG_ACTIVATION_TOKEN");
     QApplication app(argc, argv);
+    // Qt Wayland deliberately skips its Adwaita decorations on desktops
+    // other than GNOME. On native Cinnamon/Wayland that leaves the titlebar
+    // using Qt's generic (often light) decoration even when ViPER is dark.
+    // The built-in Adwaita decoration follows the freedesktop appearance
+    // portal's color-scheme and its change notifications. Honor any explicit
+    // user choice; X11/XWayland behavior is unchanged.
+    const bool cinnamonDesktop =
+        qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains("cinnamon", Qt::CaseInsensitive) ||
+        qEnvironmentVariable("XDG_SESSION_DESKTOP").contains("cinnamon", Qt::CaseInsensitive);
+    if (cinnamonDesktop &&
+        QGuiApplication::platformName() == QLatin1String("wayland") &&
+        !qEnvironmentVariableIsSet("QT_WAYLAND_DECORATION")) {
+        qputenv("QT_WAYLAND_DECORATION", QByteArrayLiteral("adwaita"));
+    }
     app.setApplicationName("Viper4Linux");
     app.setDesktopFileName("viper4linux");
     app.setWindowIcon(QIcon(":/viper4linux/blue.png"));
