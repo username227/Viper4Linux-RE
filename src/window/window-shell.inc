@@ -148,6 +148,9 @@
                 "The ViPER audio backend is still running. "
                 "Should it continue processing after the GUI closes?",
                 QMessageBox::NoButton, promptParent);
+            // Tray-only exit may have no visible parent; theme this prompt
+            // explicitly rather than relying on the application event filter.
+            viper_theme::applyDialogTheme(&prompt, this);
             prompt.setWindowIcon(QIcon(":/viper4linux/blue.png"));
             auto* keepButton = prompt.addButton("Keep backend running", QMessageBox::AcceptRole);
             auto* stopButton = prompt.addButton("Stop backend", QMessageBox::DestructiveRole);
@@ -460,7 +463,7 @@
 
         auto* startup = new QGroupBox(page);
         auto* startLayout = configureSection(startup, "Startup", "prefs_startup");
-        auto* autostart = new QCheckBox("Launch automatically when I log in", startup);
+        auto* autostart = new ViperPreferenceCheckBox("Launch automatically when I log in", startup);
         autostart->setChecked(QFile::exists(autostartFile()));
         startLayout->addWidget(autostart);
         startLayout->addWidget(new QLabel("When Viper4Linux starts:", startup));
@@ -480,7 +483,7 @@
 
         auto* windowBox = new QGroupBox(page);
         auto* windowLayout = configureSection(windowBox, "Window & tray behavior", "prefs_window");
-        auto* minimize = new QCheckBox("Minimize to tray instead of taskbar (X11 only)", windowBox);
+        auto* minimize = new ViperPreferenceCheckBox("Minimize to tray instead of taskbar (X11 only)", windowBox);
         // Check the GUI's actual Qt platform, not XDG_SESSION_TYPE: a user
         // can opt into XWayland manually from a Wayland desktop session.
         const bool x11Gui = QGuiApplication::platformName() == QLatin1String("xcb");
@@ -530,7 +533,7 @@
 
         auto* memoryGroup = new QGroupBox(page);
         auto* memoryLayout = configureSection(memoryGroup, "Audio Output memory", "prefs_memory");
-        auto* rememberOutputs = new QCheckBox("Remember effects separately for each Audio Output",
+        auto* rememberOutputs = new ViperPreferenceCheckBox("Remember effects separately for each Audio Output",
                                               memoryGroup);
         rememberOutputs->setChecked(outputMemoryEnabled());
         memoryLayout->addWidget(rememberOutputs);

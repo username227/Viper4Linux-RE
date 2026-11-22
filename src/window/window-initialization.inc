@@ -184,6 +184,47 @@
         connect(lufs_speed_, &QComboBox::currentIndexChanged, this, [this]{ push(); });
     }
 
+    // Both one-shot `gsettings get` and event-driven `gsettings monitor`
+    // return serialized GVariant strings, optionally prefixed by the key.
+    void applyCinnamonThemeSetting(QString value) {
+        value = value.trimmed();
+        if (value.startsWith(QStringLiteral("gtk-theme:")))
+            value = value.mid(QStringLiteral("gtk-theme:").size()).trimmed();
+        if (value.size() < 2 || !value.startsWith(QLatin1Char('\'')) ||
+            !value.endsWith(QLatin1Char('\''))) return;
+        const QString name = value.mid(1, value.size() - 2);
+        const bool isDark = name.contains(QStringLiteral("dark"), Qt::CaseInsensitive);
+        if (!cinnamon_theme_known_ || cinnamon_theme_dark_ != isDark) {
+            cinnamon_theme_known_ = true;
+            cinnamon_theme_dark_ = isDark;
+            applyTheme(theme_selector_->currentIndex() == 1);
+        }
+    }
+
+    // Cinnamon exposes an explicit application appearance preference through
+    // XApp's portal GSettings schema. The GTK theme name alone is not enough:
+    // users can prefer dark apps without choosing a theme named "*dark*".
+    void applyCinnamonColorScheme(QString value) {
+        value = value.trimmed();
+        if (value.startsWith(QStringLiteral("color-scheme:")))
+            value = value.mid(QStringLiteral("color-scheme:").size()).trimmed();
+        if (value.size() < 2 || !value.startsWith(QLatin1Char('\'')) ||
+            !value.endsWith(QLatin1Char('\''))) return;
+        const QString scheme = value.mid(1, value.size() - 2);
+        if (scheme != QLatin1String("prefer-dark") &&
+            scheme != QLatin1String("prefer-light") &&
+            scheme != QLatin1String("default")) return;
+        // "default" deliberately falls back to Cinnamon's GTK theme.
+        const bool known = scheme != QLatin1String("default");
+        const bool dark = scheme == QLatin1String("prefer-dark");
+        if (cinnamon_preference_known_ != known ||
+            (known && cinnamon_preference_dark_ != dark)) {
+            cinnamon_preference_known_ = known;
+            cinnamon_preference_dark_ = dark;
+            applyTheme(theme_selector_->currentIndex() == 1);
+        }
+    }
+
     void setupThemeMonitoring() {
         // Theme selection changes only the GUI, never DSP settings.
         connect(theme_selector_, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -191,42 +232,100 @@
             settings_.setValue("ui/theme", index == 1 ? "classic-v4a" : "modern");
             applyTheme(index == 1);
         });
-        // On Cinnamon/X11 Qt can report a dark colorScheme even while GTK
-        // desktop windows use a light theme. The authoritative choice there is
-        // Cinnamon's GTK theme setting, read asynchronously (no UI blocking).
-        // Until discovered, the required fallback is LIGHT.
+        // Cinnamon's GTK theme is authoritative here: Qt's colorScheme can
+        // disagree with GTK. Listen for GSettings change notifications instead
+        // of spawning a new `gsettings get` process every five seconds.
         if (runningCinnamon()) {
-            cinnamon_theme_query_ = new QProcess(this);
-            connect(cinnamon_theme_query_, &QProcess::finished,
-                    this, [this](int code, QProcess::ExitStatus exitStatus) {
-                if (exitStatus != QProcess::NormalExit || code != 0) return;
-                const QString value = QString::fromUtf8(cinnamon_theme_query_->readAllStandardOutput()).trimmed();
-                if (value.isEmpty() || !value.contains('\'')) return;
-                const bool isDark = value.contains("dark", Qt::CaseInsensitive);
-                if (!cinnamon_theme_known_ || cinnamon_theme_dark_ != isDark) {
-                    cinnamon_theme_known_ = true;
-                    cinnamon_theme_dark_ = isDark;
-                    applyTheme(theme_selector_->currentIndex() == 1);
+            cinnamon_theme_monitor_ = new QProcess(this);
+            connect(cinnamon_theme_monitor_, &QProcess::readyReadStandardOutput,
+                    this, [this] {
+                cinnamon_theme_monitor_buffer_.append(
+                    cinnamon_theme_monitor_->readAllStandardOutput());
+                // A pipe read is not necessarily one complete GVariant line.
+                for (;;) {
+                    const qsizetype newline = cinnamon_theme_monitor_buffer_.indexOf('\n');
+                    if (newline < 0) break;
+                    const QByteArray line = cinnamon_theme_monitor_buffer_.left(newline);
+                    cinnamon_theme_monitor_buffer_.remove(0, newline + 1);
+                    if (!line.startsWith("gtk-theme:")) continue;
+                    cinnamon_theme_saw_change_ = true;
+                    applyCinnamonThemeSetting(QString::fromUtf8(line));
                 }
             });
-            auto* desktopThemeTimer = new QTimer(this);
-            connect(desktopThemeTimer, &QTimer::timeout, this, [this] {
-                if (cinnamon_theme_query_->state() == QProcess::NotRunning) {
-                    cinnamon_theme_query_->start("gsettings",
-                        {"get", "org.cinnamon.desktop.interface", "gtk-theme"});
+            connect(cinnamon_theme_monitor_, &QProcess::errorOccurred,
+                    this, [this](QProcess::ProcessError) {
+                qWarning("ViPER: Cinnamon theme change subscription failed: %s",
+                         qPrintable(cinnamon_theme_monitor_->errorString()));
+            });
+            // Monitor is a long-lived change subscription. It performs no
+            // polling and terminates with the GUI's parent QObject.
+            connect(cinnamon_theme_monitor_, &QProcess::started, this, [this] {
+                auto* initial = new QProcess(this);
+                connect(initial, &QProcess::finished, this,
+                        [this, initial](int code, QProcess::ExitStatus status) {
+                    if (status == QProcess::NormalExit && code == 0 &&
+                        !cinnamon_theme_saw_change_)
+                        applyCinnamonThemeSetting(
+                            QString::fromUtf8(initial->readAllStandardOutput()));
+                    initial->deleteLater();
+                });
+                connect(initial, &QProcess::errorOccurred, this,
+                        [initial](QProcess::ProcessError) { initial->deleteLater(); });
+                initial->start(QStringLiteral("gsettings"),
+                    {QStringLiteral("get"), QStringLiteral("org.cinnamon.desktop.interface"),
+                     QStringLiteral("gtk-theme")});
+            });
+            cinnamon_theme_monitor_->start(QStringLiteral("gsettings"),
+                {QStringLiteral("monitor"), QStringLiteral("org.cinnamon.desktop.interface"),
+                 QStringLiteral("gtk-theme")});
+            // Application color preference is a separate setting from the GTK
+            // theme. Observe both, without polling or launching periodic reads.
+            cinnamon_scheme_monitor_ = new QProcess(this);
+            connect(cinnamon_scheme_monitor_, &QProcess::readyReadStandardOutput,
+                    this, [this] {
+                cinnamon_scheme_monitor_buffer_.append(
+                    cinnamon_scheme_monitor_->readAllStandardOutput());
+                for (;;) {
+                    const qsizetype newline = cinnamon_scheme_monitor_buffer_.indexOf('\n');
+                    if (newline < 0) break;
+                    const QByteArray line = cinnamon_scheme_monitor_buffer_.left(newline);
+                    cinnamon_scheme_monitor_buffer_.remove(0, newline + 1);
+                    if (!line.startsWith("color-scheme:")) continue;
+                    cinnamon_scheme_saw_change_ = true;
+                    applyCinnamonColorScheme(QString::fromUtf8(line));
                 }
             });
-            desktopThemeTimer->start(5000);
-            // First query happens right away, without waiting five seconds.
-            cinnamon_theme_query_->start("gsettings",
-                {"get", "org.cinnamon.desktop.interface", "gtk-theme"});
+            connect(cinnamon_scheme_monitor_, &QProcess::errorOccurred,
+                    this, [this](QProcess::ProcessError) {
+                qWarning("ViPER: Cinnamon color-scheme subscription failed: %s",
+                         qPrintable(cinnamon_scheme_monitor_->errorString()));
+            });
+            connect(cinnamon_scheme_monitor_, &QProcess::started, this, [this] {
+                auto* initial = new QProcess(this);
+                connect(initial, &QProcess::finished, this,
+                        [this, initial](int code, QProcess::ExitStatus status) {
+                    if (status == QProcess::NormalExit && code == 0 &&
+                        !cinnamon_scheme_saw_change_)
+                        applyCinnamonColorScheme(
+                            QString::fromUtf8(initial->readAllStandardOutput()));
+                    initial->deleteLater();
+                });
+                connect(initial, &QProcess::errorOccurred, this,
+                        [initial](QProcess::ProcessError) { initial->deleteLater(); });
+                initial->start(QStringLiteral("gsettings"),
+                    {QStringLiteral("get"), QStringLiteral("org.x.apps.portal"),
+                     QStringLiteral("color-scheme")});
+            });
+            cinnamon_scheme_monitor_->start(QStringLiteral("gsettings"),
+                {QStringLiteral("monitor"), QStringLiteral("org.x.apps.portal"),
+                 QStringLiteral("color-scheme")});
         }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged,
                 this, [this](Qt::ColorScheme) {
-            QTimer::singleShot(0, this, [this] {
+            QMetaObject::invokeMethod(this, [this] {
                 applyTheme(theme_selector_->currentIndex() == 1);
-            });
+            }, Qt::QueuedConnection);
         });
 #endif
         applyTheme(theme_selector_->currentIndex() == 1);

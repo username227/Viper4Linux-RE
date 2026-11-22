@@ -619,6 +619,9 @@ public:
         restoreWindowSizes();
         setupTray();
         pollBackend();
+        // Scope automatic modal-dialog theming to this GUI only.
+        // Install after initialization so no partially built widgets are styled.
+        qApp->installEventFilter(this);
     }
     // Public entry used only when a second launch asks us to show this window.
     void activateFromSecondLaunch() { restoreFromTray(); }
@@ -758,6 +761,24 @@ protected:
         });
     }
     bool eventFilter(QObject* watched, QEvent* event) override {
+        // Qt dialogs are separate top-level windows even when parented to our
+        // themed main window. Apply the matching palette before first show.
+        // Exclude native file pickers and the EQ editors with dedicated styles.
+        if (event->type() == QEvent::Polish) {
+            auto* dialog = qobject_cast<QDialog*>(watched);
+            if (dialog && dialog != eq_editor_ && dialog != deq_editor_ &&
+                !qobject_cast<QFileDialog*>(dialog) &&
+                !dialog->property("viperDialogPaletteApplied").toBool()) {
+                for (QWidget* parent = dialog->parentWidget(); parent;
+                     parent = parent->parentWidget()) {
+                    if (parent != this) continue;
+                    // Guard reentrant polish events before changing QSS.
+                    dialog->setProperty("viperDialogPaletteApplied", true);
+                    viper_theme::applyDialogTheme(dialog, this);
+                    break;
+                }
+            }
+        }
         // On Wayland we only retry initial minimization if the compositor
         // exposed the toplevel instead of keeping the requested taskbar state.
         if (watched == windowHandle() && event->type() == QEvent::Expose) {
@@ -845,9 +866,16 @@ private:
     int x11_taskbar_restore_retries_ = 0;
     quint64 x11_taskbar_restore_settle_epoch_ = 0;
     QString theme_muted_color_ = "#536a74";
-    QProcess* cinnamon_theme_query_{};
+    QProcess* cinnamon_theme_monitor_{};
+    QByteArray cinnamon_theme_monitor_buffer_;
+    bool cinnamon_theme_saw_change_ = false;
     bool cinnamon_theme_known_ = false;
     bool cinnamon_theme_dark_ = false;
+    QProcess* cinnamon_scheme_monitor_{};
+    QByteArray cinnamon_scheme_monitor_buffer_;
+    bool cinnamon_scheme_saw_change_ = false;
+    bool cinnamon_preference_known_ = false;
+    bool cinnamon_preference_dark_ = false;
     QLabel* header_icon_{};
     QLabel* audio_output_label_{};
     QString last_output_memory_revision_;
@@ -995,6 +1023,20 @@ int main(int argc, char* argv[]) {
     const QByteArray x11StartupId = qgetenv("DESKTOP_STARTUP_ID");
     const QByteArray waylandActivationToken = qgetenv("XDG_ACTIVATION_TOKEN");
     QApplication app(argc, argv);
+    // Qt Wayland deliberately skips its Adwaita decorations on desktops
+    // other than GNOME. On native Cinnamon/Wayland that leaves the titlebar
+    // using Qt's generic (often light) decoration even when ViPER is dark.
+    // The built-in Adwaita decoration follows the freedesktop appearance
+    // portal's color-scheme and its change notifications. Honor any explicit
+    // user choice; X11/XWayland behavior is unchanged.
+    const bool cinnamonDesktop =
+        qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains("cinnamon", Qt::CaseInsensitive) ||
+        qEnvironmentVariable("XDG_SESSION_DESKTOP").contains("cinnamon", Qt::CaseInsensitive);
+    if (cinnamonDesktop &&
+        QGuiApplication::platformName() == QLatin1String("wayland") &&
+        !qEnvironmentVariableIsSet("QT_WAYLAND_DECORATION")) {
+        qputenv("QT_WAYLAND_DECORATION", QByteArrayLiteral("adwaita"));
+    }
     app.setApplicationName("Viper4Linux");
     app.setDesktopFileName("viper4linux");
     app.setWindowIcon(QIcon(":/viper4linux/blue.png"));

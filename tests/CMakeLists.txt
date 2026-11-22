@@ -172,6 +172,19 @@ set_tests_properties(viper_native_worker_request PROPERTIES
   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" LABELS "developer;native;worker")
 
 
+# Palette propagation is tested on an offscreen Qt platform without a
+# running Cinnamon desktop or any ViPER audio backend.
+add_executable(viper_test_dialog_theme check-dialog-theme.cpp)
+target_include_directories(viper_test_dialog_theme PRIVATE "${_viper_test_include}")
+target_link_libraries(viper_test_dialog_theme PRIVATE Qt6::Widgets)
+target_compile_options(viper_test_dialog_theme PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+add_test(NAME viper_gui_dialog_theme COMMAND "$<TARGET_FILE:viper_test_dialog_theme>")
+set_tests_properties(viper_gui_dialog_theme PROPERTIES
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+  ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+  LABELS "developer;gui;theme")
+
 # Independent native routing and tray contracts run directly with Python.
 # Native mock checks use isolated temporary config and IPC per behavioral case.
 foreach(_viper_script IN ITEMS
@@ -247,7 +260,6 @@ foreach(_viper_script IN ITEMS
     check-single-gui
     test_backend_lifecycle_logging
     check-gui-backend-exit
-    check-theme-contract
     check-ui-contract
     check-named-presets-contract
     test_filter_idle_config)

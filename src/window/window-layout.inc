@@ -32,7 +32,9 @@
             || qEnvironmentVariable("XDG_SESSION_DESKTOP").contains("cinnamon", Qt::CaseInsensitive);
     }
     bool systemPrefersDark() const {
-        if (runningCinnamon()) return cinnamon_theme_known_ && cinnamon_theme_dark_;
+        if (runningCinnamon())
+            return cinnamon_preference_known_ ? cinnamon_preference_dark_
+                                             : (cinnamon_theme_known_ && cinnamon_theme_dark_);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         return qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
 #else
@@ -43,6 +45,12 @@
         theme_muted_color_ = viper_theme::apply(
             this, classic, systemPrefersDark(), deq_editor_, eq_editor_,
             tabs_, header_icon_, status_);
+        // A user can change Cinnamon appearance while a modal is open.
+        // Refresh only dialogs which belong to ViPER and were themed by us.
+        for (auto* dialog : findChildren<QDialog*>()) {
+            if (dialog->property("viperDialogPaletteApplied").toBool())
+                viper_theme::applyDialogTheme(dialog, this);
+        }
     }
     QVBoxLayout* addEffectsTab(const QString& tabName) {
         auto* scroll = new QScrollArea(tabs_);

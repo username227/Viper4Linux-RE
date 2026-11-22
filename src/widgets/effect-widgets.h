@@ -10,6 +10,8 @@
 #include <QPalette>
 #include <QPen>
 #include <QSlider>
+#include <QStyle>
+#include <QStyleOptionButton>
 #include <QString>
 #include <QWheelEvent>
 #include <QWidget>
@@ -24,6 +26,47 @@ protected:
     void wheelEvent(QWheelEvent* event) override {
         if (hasFocus()) QSlider::wheelEvent(event);
         else event->ignore(); // pass wheel to QScrollArea
+    }
+};
+
+// Preferences checkboxes use the platform's normal label, hit target, focus
+// and unchecked appearance. Only the checked indicator is redrawn: native Qt
+// styles can render the tick in low-contrast gray on an otherwise white square
+// when ViPER supplies a dark window palette.
+class ViperPreferenceCheckBox final : public QCheckBox {
+public:
+    explicit ViperPreferenceCheckBox(const QString& text, QWidget* parent = nullptr)
+        : QCheckBox(text, parent) {}
+
+protected:
+    void paintEvent(QPaintEvent* event) override {
+        QCheckBox::paintEvent(event);
+        if (checkState() != Qt::Checked) return;
+
+        QStyleOptionButton option;
+        initStyleOption(&option);
+        const QRect indicator = style()->subElementRect(
+            QStyle::SE_CheckBoxIndicator, &option, this);
+        if (!indicator.isValid() || indicator.width() < 6 || indicator.height() < 6)
+            return;
+
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        const QRectF square = QRectF(indicator).adjusted(1, 1, -1, -1);
+        painter.setPen(QPen(QColor("#8a969a"), 1.0));
+        painter.setBrush(Qt::white);
+        painter.drawRoundedRect(square, 1.4, 1.4);
+        QPainterPath check;
+        check.moveTo(square.left() + square.width() * 0.20,
+                     square.top() + square.height() * 0.53);
+        check.lineTo(square.left() + square.width() * 0.42,
+                     square.top() + square.height() * 0.74);
+        check.lineTo(square.left() + square.width() * 0.81,
+                     square.top() + square.height() * 0.25);
+        painter.setPen(QPen(Qt::black, qMax(1.5, square.width() * 0.13),
+                            Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(check);
     }
 };
 
