@@ -7,6 +7,8 @@ import subprocess
 import tarfile
 import tempfile
 
+os.environ['LC_ALL'] = 'C'
+
 root = Path(__file__).resolve().parents[1]
 
 
