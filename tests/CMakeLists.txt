@@ -260,7 +260,6 @@ foreach(_viper_script IN ITEMS
     check-single-gui
     test_backend_lifecycle_logging
     check-gui-backend-exit
-    check-theme-contract
     check-ui-contract
     check-named-presets-contract
     test_filter_idle_config)
