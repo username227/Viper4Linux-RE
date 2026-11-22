@@ -29,10 +29,10 @@ inline void applyDialogTheme(QDialog* dialog, const QWidget* owner) {
     const QPalette pal = owner->palette();
     dialog->setAttribute(Qt::WA_WindowPropagation, true);
     dialog->setPalette(pal);
-    const QString bg = pal.color(QPalette::Window).name();
-    const QString text = pal.color(QPalette::WindowText).name();
-    const QString input = pal.color(QPalette::Base).name();
-    const QString border = pal.color(QPalette::Mid).name();
+    const QString dialogBg = pal.color(QPalette::Window).name();
+    const QString dialogText = pal.color(QPalette::WindowText).name();
+    const QString dialogInput = pal.color(QPalette::Base).name();
+    const QString dialogBorder = pal.color(QPalette::Mid).name();
     dialog->setStyleSheet(QStringLiteral(R"VIPER_DIALOG(
         QDialog { background-color:%1; color:%2; }
         QLabel, QGroupBox, QCheckBox, QRadioButton { color:%2; }
@@ -45,7 +45,7 @@ inline void applyDialogTheme(QDialog* dialog, const QWidget* owner) {
         }
         QComboBox QAbstractItemView {
             background-color:%3; color:%2; }
-    )VIPER_DIALOG").arg(bg, text, input, border));
+    )VIPER_DIALOG").arg(dialogBg, dialogText, dialogInput, dialogBorder));
 }
 inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                      QDialog* deqEditor, QDialog* eqEditor,
