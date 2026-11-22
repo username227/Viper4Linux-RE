@@ -71,4 +71,16 @@ assert 'cinnamon_scheme_monitor_buffer_' in init
 assert 'cinnamon_preference_known_ ? cinnamon_preference_dark_' in source
 assert 'cinnamon_preference_known_' in gui
 
+# Cinnamon/Wayland must not keep Qt's generic light client-side frame when
+# its built-in portal-aware Adwaita decoration is present. Never change X11
+# or override a user-selected QT_WAYLAND_DECORATION plugin.
+assert 'QGuiApplication::platformName() == QLatin1String("wayland")' in gui
+assert '!qEnvironmentVariableIsSet("QT_WAYLAND_DECORATION")' in gui
+assert 'qputenv("QT_WAYLAND_DECORATION", QByteArrayLiteral("adwaita"))' in gui
+assert gui.index('QApplication app(argc, argv);') < gui.index('qputenv("QT_WAYLAND_DECORATION"') < gui.index('ViperWindow window;')
+assert 'viper_theme::applyDialogTheme(dialog, this)' in gui
+assert 'qApp->installEventFilter(this)' in gui
+assert 'QFrame#viperFooterDivider' in theme
+
+
 print("PASS: theme contrast and non-mutating theme changes")
