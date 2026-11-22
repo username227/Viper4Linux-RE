@@ -20,6 +20,33 @@
 #include <QWidget>
 
 namespace viper_theme {
+// Apply the main window's complete palette to one ViPER-owned modal dialog.
+// QDialog is a separate top-level widget; the main window's QSS foreground
+// rules may cascade while its matching QPalette background does not.
+// Never change QApplication's global palette or native file picker themes.
+inline void applyDialogTheme(QDialog* dialog, const QWidget* owner) {
+    if (!dialog || !owner) return;
+    const QPalette pal = owner->palette();
+    dialog->setAttribute(Qt::WA_WindowPropagation, true);
+    dialog->setPalette(pal);
+    const QString bg = pal.color(QPalette::Window).name();
+    const QString text = pal.color(QPalette::WindowText).name();
+    const QString input = pal.color(QPalette::Base).name();
+    const QString border = pal.color(QPalette::Mid).name();
+    dialog->setStyleSheet(QStringLiteral(R"VIPER_DIALOG(
+        QDialog { background-color:%1; color:%2; }
+        QLabel, QGroupBox, QCheckBox, QRadioButton { color:%2; }
+        QScrollArea, QScrollArea > QWidget > QWidget {
+            background-color:%1; color:%2; }
+        QPushButton, QComboBox, QLineEdit, QListWidget,
+        QPlainTextEdit, QTextBrowser, QSpinBox, QDoubleSpinBox {
+            background-color:%3; color:%2;
+            border:1px solid %4; border-radius:5px; padding:4px 7px;
+        }
+        QComboBox QAbstractItemView {
+            background-color:%3; color:%2; }
+    )VIPER_DIALOG").arg(bg, text, input, border));
+}
 inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                      QDialog* deqEditor, QDialog* eqEditor,
                      QTabWidget* tabs, QLabel* headerIcon, QLabel* status) {
@@ -125,6 +152,10 @@ inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                 frame->setStyleSheet(QString(
                     "QFrame#%1 { background-color:%2; border:1px solid %3; border-radius:16px; }")
                     .arg(name, bg, border));
+            } else if (frame->objectName() == "viperFooterDivider") {
+                frame->setStyleSheet(QStringLiteral(
+                    "QFrame#viperFooterDivider { background-color:%1; border:none; }")
+                    .arg(dark ? QStringLiteral("#52666a") : QStringLiteral("#bcc7cf")));
             } else if (frame->objectName() == "viperRoadmapCard") {
                 frame->setStyleSheet(QString(
                     "QFrame#viperRoadmapCard { background-color:%1; border:1px dashed %2; border-radius:13px; }")
