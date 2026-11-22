@@ -6,6 +6,8 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QPixmap>
+#include <QStyleOptionButton>
 #include <QPalette>
 #include <QTabWidget>
 #include <algorithm>
@@ -70,6 +72,34 @@ int main(int argc, char** argv) {
             passed &= check(preferences.palette().color(QPalette::WindowText) ==
                             palette.color(QPalette::WindowText),
                             "dialog foreground differs from owner");
+
+            // Check the rendered indicator, not a source string or CSS
+            // declaration: the checked tick must be genuinely black even
+            // when the dialog inherits ViPER's dark palette.
+            ViperPreferenceCheckBox preferenceCheck("Test checkbox", &preferences);
+            preferenceCheck.resize(220, 28);
+            preferenceCheck.setChecked(true);
+            preferenceCheck.ensurePolished();
+            QPixmap checkboxImage(preferenceCheck.size());
+            checkboxImage.fill(Qt::transparent);
+            preferenceCheck.render(&checkboxImage);
+            QStyleOptionButton checkOption;
+            checkOption.initFrom(&preferenceCheck);
+            const QRect indicator = preferenceCheck.style()->subElementRect(
+                QStyle::SE_CheckBoxIndicator, &checkOption, &preferenceCheck);
+            const QImage bitmap = checkboxImage.toImage();
+            int blackPixels = 0;
+            for (int y = indicator.top() + 3; y < indicator.bottom() - 2; ++y) {
+                for (int x = indicator.left() + 3; x < indicator.right() - 2; ++x) {
+                    if (!bitmap.rect().contains(x, y)) continue;
+                    const QColor pixel = bitmap.pixelColor(x, y);
+                    if (pixel.alpha() > 200 && pixel.red() < 65 &&
+                        pixel.green() < 65 && pixel.blue() < 65)
+                        ++blackPixels;
+                }
+            }
+            passed &= check(blackPixels >= 2,
+                            "checked Preferences indicator lacks a black tick");
 
             QMessageBox about(&owner);
             viper_theme::applyDialogTheme(&about, &owner);
