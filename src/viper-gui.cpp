@@ -619,6 +619,9 @@ public:
         restoreWindowSizes();
         setupTray();
         pollBackend();
+        // Scope automatic modal-dialog theming to this GUI only.
+        // Install after initialization so no partially built widgets are styled.
+        qApp->installEventFilter(this);
     }
     // Public entry used only when a second launch asks us to show this window.
     void activateFromSecondLaunch() { restoreFromTray(); }
@@ -758,6 +761,24 @@ protected:
         });
     }
     bool eventFilter(QObject* watched, QEvent* event) override {
+        // Qt dialogs are separate top-level windows even when parented to our
+        // themed main window. Apply the matching palette before first show.
+        // Exclude native file pickers and the EQ editors with dedicated styles.
+        if (event->type() == QEvent::Polish) {
+            auto* dialog = qobject_cast<QDialog*>(watched);
+            if (dialog && dialog != eq_editor_ && dialog != deq_editor_ &&
+                !qobject_cast<QFileDialog*>(dialog) &&
+                !dialog->property("viperDialogPaletteApplied").toBool()) {
+                for (QWidget* parent = dialog->parentWidget(); parent;
+                     parent = parent->parentWidget()) {
+                    if (parent != this) continue;
+                    // Guard reentrant polish events before changing QSS.
+                    dialog->setProperty("viperDialogPaletteApplied", true);
+                    viper_theme::applyDialogTheme(dialog, this);
+                    break;
+                }
+            }
+        }
         // On Wayland we only retry initial minimization if the compositor
         // exposed the toplevel instead of keeping the requested taskbar state.
         if (watched == windowHandle() && event->type() == QEvent::Expose) {
