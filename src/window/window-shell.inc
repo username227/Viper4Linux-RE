@@ -148,6 +148,9 @@
                 "The ViPER audio backend is still running. "
                 "Should it continue processing after the GUI closes?",
                 QMessageBox::NoButton, promptParent);
+            // Tray-only exit may have no visible parent; theme this prompt
+            // explicitly rather than relying on the application event filter.
+            viper_theme::applyDialogTheme(&prompt, this);
             prompt.setWindowIcon(QIcon(":/viper4linux/blue.png"));
             auto* keepButton = prompt.addButton("Keep backend running", QMessageBox::AcceptRole);
             auto* stopButton = prompt.addButton("Stop backend", QMessageBox::DestructiveRole);
