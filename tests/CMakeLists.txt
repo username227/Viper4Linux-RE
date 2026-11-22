@@ -185,6 +185,25 @@ set_tests_properties(viper_gui_dialog_theme PROPERTIES
   ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
   LABELS "developer;gui;theme")
 
+# Real Qt event delivery under the same production shutdown helper as
+# ViperWindow::quitGui(). No source-text matching, backend, or desktop access.
+add_executable(viper_test_gui_exit_event_loop check-gui-exit-event-loop.cpp)
+target_include_directories(viper_test_gui_exit_event_loop PRIVATE "${_viper_test_include}")
+target_link_libraries(viper_test_gui_exit_event_loop PRIVATE Qt6::Widgets)
+target_compile_options(viper_test_gui_exit_event_loop PRIVATE
+  -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
+foreach(_viper_exit_scenario IN ITEMS
+    close-keep close-stop close-cancel menu-keep menu-stop)
+  string(REPLACE "-" "_" _viper_exit_name "${_viper_exit_scenario}")
+  add_test(NAME "viper_gui_exit_${_viper_exit_name}"
+    COMMAND "$<TARGET_FILE:viper_test_gui_exit_event_loop>" "${_viper_exit_scenario}")
+  set_tests_properties("viper_gui_exit_${_viper_exit_name}" PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    TIMEOUT 8
+    LABELS "developer;gui;exit")
+endforeach()
+
 # Independent native routing and tray contracts run directly with Python.
 # Native mock checks use isolated temporary config and IPC per behavioral case.
 foreach(_viper_script IN ITEMS
