@@ -9,6 +9,7 @@
 #include <QCloseEvent>
 #include <QMainWindow>
 #include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QTimer>
