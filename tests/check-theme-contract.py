@@ -62,5 +62,13 @@ assert 'cinnamon_theme_monitor_buffer_' in init  # Cope with split pipe reads.
 assert 'desktopThemeTimer' not in init
 assert 'QTimer::timeout' not in init
 assert 'cinnamon_theme_query_' not in gui
+assert 'QStringLiteral("org.x.apps.portal")' in init
+assert 'QStringLiteral("color-scheme")' in init
+assert 'applyCinnamonColorScheme(QString value)' in init
+assert 'scheme == QLatin1String("prefer-dark")' in init
+assert 'scheme != QLatin1String("default")' in init
+assert 'cinnamon_scheme_monitor_buffer_' in init
+assert 'cinnamon_preference_known_ ? cinnamon_preference_dark_' in source
+assert 'cinnamon_preference_known_' in gui
 
 print("PASS: theme contrast and non-mutating theme changes")
