@@ -6,10 +6,10 @@ Scope: tracked production source, packaging scripts, CI workflows, and test help
 
 | Location | Previous behavior | Decision |
 |---|---|---|
-| `src/window/window-initialization.inc` | Every five seconds, run a new `gsettings get org.cinnamon.desktop.interface gtk-theme` process | **Removed**: one `gsettings monitor` change subscription plus a single startup snapshot. No periodic theme query. |
+| `src/window/window-initialization.inc` | Every five seconds, run a new `gsettings get org.cinnamon.desktop.interface gtk-theme` process | **Removed**: persistent change subscriptions for Cinnamon's GTK theme and the XApp application color preference, each with a single startup snapshot. No periodic theme queries. |
 | Same file, Qt color-scheme callback | Zero-delay QTimer to defer a theme application | Replaced with `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`, keeping deferred delivery without a timer. |
 
-The new Cinnamon listener is **event-driven** rather than a repeated query. It does not require a new build dependency. It still classifies GTK theme names by the presence of `dark`; this separate detection heuristic is not proved correct for arbitrary custom themes and must be checked against real desktop settings.
+The new Cinnamon subscriptions are **event-driven** rather than repeated queries and require no new build dependency. The explicit `org.x.apps.portal color-scheme` preference (`prefer-dark` / `prefer-light`) now takes precedence; when unset or `default`, the existing GTK theme-name heuristic is the fallback. That heuristic remains imperfect for custom themes without `dark` in their names.
 
 ## Periodic work that is still present
 
@@ -40,7 +40,7 @@ No always-on production polling was found in the scanned packaging/CI workflows.
 ## Verification requirements
 
 - Run `tests/check-theme-contract.py` and the full CTest suite on a machine with Qt6 installed.
-- On Cinnamon **X11 and Wayland**: change the GTK Controls theme light → dark → light while the GUI remains open; inspect the main window and About/Preferences. Test a cold start in each theme.
+- On Cinnamon **X11 and Wayland**: switch `org.x.apps.portal color-scheme` between `prefer-dark`, `prefer-light` and `default`, and switch the GTK Controls theme light → dark → light while the GUI remains open. Verify precedence, fallback, dialog colors and cold starts.
 - Confirm the `gsettings monitor` child exits with the GUI and that switching a non-GTK Cinnamon shell theme is not accidentally interpreted as changing the GTK Controls theme.
 - On KDE: independently test the separate dialog palette branch against ZeroAnarchy's reported first-launch symptom.
 - Run end-to-end GUI audio/status and lifecycle tests before attempting an IPC/heartbeat redesign.
