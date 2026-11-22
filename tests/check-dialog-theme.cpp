@@ -37,8 +37,6 @@ int main(int argc, char** argv) {
     QMainWindow owner;
     owner.setObjectName("viperWindow");
     QTabWidget tabs(&owner);
-    QLabel header(&owner);
-    QLabel status(&owner);
     const QPalette originalAppPalette = app.palette();
     bool passed = true;
 
@@ -47,7 +45,7 @@ int main(int argc, char** argv) {
             // Exercise the production appearance function and inspect the
             // resulting palette for Modern/Classic × dark/light.
             viper_theme::apply(&owner, classic, dark, nullptr, nullptr,
-                               &tabs, &header, &status);
+                               &tabs, nullptr, nullptr);
             const QPalette palette = owner.palette();
             passed &= check((palette.color(QPalette::Window).lightness() < 130) == dark,
                             "main window's light/dark mode differs from selected scheme");
