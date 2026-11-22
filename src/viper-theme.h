@@ -120,6 +120,14 @@ inline QString apply(QMainWindow* window, bool classic, bool prefersDark,
                 color:%2; background-color:%3;
                 border:1px solid %4; border-radius:7px; padding:5px 8px; }
             QPushButton:hover, QComboBox:hover { border-color:%5; }
+            /* Keep the application-menu button consistent with the theme
+               selector instead of inheriting Qt's native light button face. */
+            QToolButton#viperApplicationMenuButton {
+                color:%2; background-color:%3;
+                border:1px solid %4; border-radius:7px; padding:4px;
+            }
+            QToolButton#viperApplicationMenuButton:hover { border-color:%5; }
+            QToolButton#viperApplicationMenuButton:pressed { background-color:%6; }
             /* The Theme selector was visually verified under Cinnamon in r26.
                Apply its complete rounded cap AND explicit chevron to every
                combo so Qt cannot fall back to a square native arrow button.
