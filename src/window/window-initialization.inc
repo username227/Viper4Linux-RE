@@ -201,6 +201,30 @@
         }
     }
 
+    // Cinnamon exposes an explicit application appearance preference through
+    // XApp's portal GSettings schema. The GTK theme name alone is not enough:
+    // users can prefer dark apps without choosing a theme named "*dark*".
+    void applyCinnamonColorScheme(QString value) {
+        value = value.trimmed();
+        if (value.startsWith(QStringLiteral("color-scheme:")))
+            value = value.mid(QStringLiteral("color-scheme:").size()).trimmed();
+        if (value.size() < 2 || !value.startsWith(QLatin1Char('\'')) ||
+            !value.endsWith(QLatin1Char('\''))) return;
+        const QString scheme = value.mid(1, value.size() - 2);
+        if (scheme != QLatin1String("prefer-dark") &&
+            scheme != QLatin1String("prefer-light") &&
+            scheme != QLatin1String("default")) return;
+        // "default" deliberately falls back to Cinnamon's GTK theme.
+        const bool known = scheme != QLatin1String("default");
+        const bool dark = scheme == QLatin1String("prefer-dark");
+        if (cinnamon_preference_known_ != known ||
+            (known && cinnamon_preference_dark_ != dark)) {
+            cinnamon_preference_known_ = known;
+            cinnamon_preference_dark_ = dark;
+            applyTheme(theme_selector_->currentIndex() == 1);
+        }
+    }
+
     void setupThemeMonitoring() {
         // Theme selection changes only the GUI, never DSP settings.
         connect(theme_selector_, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -254,6 +278,47 @@
             cinnamon_theme_monitor_->start(QStringLiteral("gsettings"),
                 {QStringLiteral("monitor"), QStringLiteral("org.cinnamon.desktop.interface"),
                  QStringLiteral("gtk-theme")});
+            // Application color preference is a separate setting from the GTK
+            // theme. Observe both, without polling or launching periodic reads.
+            cinnamon_scheme_monitor_ = new QProcess(this);
+            connect(cinnamon_scheme_monitor_, &QProcess::readyReadStandardOutput,
+                    this, [this] {
+                cinnamon_scheme_monitor_buffer_.append(
+                    cinnamon_scheme_monitor_->readAllStandardOutput());
+                for (;;) {
+                    const qsizetype newline = cinnamon_scheme_monitor_buffer_.indexOf('\n');
+                    if (newline < 0) break;
+                    const QByteArray line = cinnamon_scheme_monitor_buffer_.left(newline);
+                    cinnamon_scheme_monitor_buffer_.remove(0, newline + 1);
+                    if (!line.startsWith("color-scheme:")) continue;
+                    cinnamon_scheme_saw_change_ = true;
+                    applyCinnamonColorScheme(QString::fromUtf8(line));
+                }
+            });
+            connect(cinnamon_scheme_monitor_, &QProcess::errorOccurred,
+                    this, [this](QProcess::ProcessError) {
+                qWarning("ViPER: Cinnamon color-scheme subscription failed: %s",
+                         qPrintable(cinnamon_scheme_monitor_->errorString()));
+            });
+            connect(cinnamon_scheme_monitor_, &QProcess::started, this, [this] {
+                auto* initial = new QProcess(this);
+                connect(initial, &QProcess::finished, this,
+                        [this, initial](int code, QProcess::ExitStatus status) {
+                    if (status == QProcess::NormalExit && code == 0 &&
+                        !cinnamon_scheme_saw_change_)
+                        applyCinnamonColorScheme(
+                            QString::fromUtf8(initial->readAllStandardOutput()));
+                    initial->deleteLater();
+                });
+                connect(initial, &QProcess::errorOccurred, this,
+                        [initial](QProcess::ProcessError) { initial->deleteLater(); });
+                initial->start(QStringLiteral("gsettings"),
+                    {QStringLiteral("get"), QStringLiteral("org.x.apps.portal"),
+                     QStringLiteral("color-scheme")});
+            });
+            cinnamon_scheme_monitor_->start(QStringLiteral("gsettings"),
+                {QStringLiteral("monitor"), QStringLiteral("org.x.apps.portal"),
+                 QStringLiteral("color-scheme")});
         }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged,
