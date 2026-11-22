@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Exercise the combined native release bundle and its failure guards offline."""
 import hashlib
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import tarfile
 import tempfile
+
+os.environ['LC_ALL'] = 'C'
 
 root = Path(__file__).resolve().parents[1]
 script = root / 'scripts/assemble-release-assets.sh'
