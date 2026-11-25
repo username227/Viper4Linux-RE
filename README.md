@@ -165,7 +165,7 @@ environment; broader desktop and distribution compatibility needs more testing.
 | **Other distributions** | Build from source; compatibility is not yet established |
 
 ### Ubuntu and Mint PPA Instructions
-To automaticall download, install and update directly through apt, please execute the following commands to add the ppa, update apt sources and install the package:
+To automatically download, install and update directly through apt, please execute the following commands to add the ppa, update apt sources and install the package:
 ```
 sudo add-apt-repository ppa:plenty-boot4220/viper4linux-re
 sudo apt update
