@@ -1,6 +1,7 @@
 // Output tab widget construction. Persistence, backend publishing, control
 // connections and independently collapsible card wrappers stay in ViperWindow.
 #pragma once
+#include "widgets/safe-combo-box.h"
 #include "widgets/effect-widgets.h"
 #include <QComboBox>
 #include <QFormLayout>
@@ -67,7 +68,7 @@ auto createOutputPanels(QWidget* parent, AddSlider addSlider) {
     lufs_form->addRow("Automatic loudness targeting", out.lufs_enabled);
     out.lufs_target = addSlider(lufs_form, "Target loudness", -240, -80);
     out.lufs_gain = addSlider(lufs_form, "Maximum gain adjustment", 0, 120);
-    out.lufs_speed = new QComboBox(lufs_group);
+    out.lufs_speed = new SafeComboBox(lufs_group);
     out.lufs_speed->addItems({"Slow", "Normal", "Fast"});
     lufs_form->addRow("Response speed", out.lufs_speed);
     out.lufsGroup = lufs_group;

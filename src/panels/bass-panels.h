@@ -1,6 +1,7 @@
 // Bass-panel UI construction only. All settings and DSP/CLI connections
 // remain with ViperWindow; the four card wrappers stay independently collapsible.
 #pragma once
+#include "widgets/safe-combo-box.h"
 #include "widgets/effect-widgets.h"
 #include <QComboBox>
 #include <QFormLayout>
@@ -45,7 +46,7 @@ auto createBassPanels(QWidget* parent, AddSlider addSlider) {
         auto* form = new QFormLayout(group);
         out.enabled = new EffectSwitch(group);
         form->addRow("Bass processing", out.enabled);
-        out.bass_mode = new QComboBox(group);
+        out.bass_mode = new SafeComboBox(group);
         out.bass_mode->addItems({"Natural", "Pure Bass+", "Subwoofer"});
         out.bass_mode->setToolTip("Select one of the three original ViPERDSP Bass processing algorithms.");
         form->addRow("Bass mode", out.bass_mode);
@@ -57,7 +58,7 @@ auto createBassPanels(QWidget* parent, AddSlider addSlider) {
         auto* mono_form = new QFormLayout(mono_group);
         out.mono_enabled = new EffectSwitch(mono_group);
         mono_form->addRow("Mono bass processing", out.mono_enabled);
-        out.mono_mode = new QComboBox(mono_group);
+        out.mono_mode = new SafeComboBox(mono_group);
         out.mono_mode->addItems({"Natural", "Pure Bass+", "Subwoofer"});
         mono_form->addRow("Bass mode", out.mono_mode);
         out.mono_strength = addSlider(mono_form, "Bass strength", 5, 100);
@@ -73,7 +74,7 @@ auto createBassPanels(QWidget* parent, AddSlider addSlider) {
         psycho_form->addRow("Harmonic bass enhancement", out.psycho_enabled);
         out.psycho_cutoff = addSlider(psycho_form, "Bass cutoff", 60, 150);
         out.psycho_intensity = addSlider(psycho_form, "Harmonic intensity", 0, 100);
-        out.psycho_order = new QComboBox(psycho_group);
+        out.psycho_order = new SafeComboBox(psycho_group);
         out.psycho_order->addItems({"2nd order", "3rd order", "4th order", "5th order"});
         psycho_form->addRow("Harmonic order", out.psycho_order);
         out.psycho_original = addSlider(psycho_form, "Original bass level", 0, 100);
