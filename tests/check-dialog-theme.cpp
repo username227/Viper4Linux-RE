@@ -1,7 +1,16 @@
 // Offscreen regression: verify the colors Qt actually assigns to the main
 // window and its dialogs, rather than parsing variable names in C++ source.
 #include "viper-theme.h"
+#include "widgets/safe-combo-box.h"
+#include "widgets/irs-combo-box.h"
 #include <QApplication>
+#include <QComboBox>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QVBoxLayout>
+#include <QWheelEvent>
+#include <QtTest/qtestspontaneevent.h>
 #include <QDialog>
 #include <QLabel>
 #include <QMainWindow>
@@ -32,6 +41,86 @@ static double luminance(const QColor& color) {
 static double contrast(const QColor& a, const QColor& b) {
     const double x = luminance(a), y = luminance(b);
     return (std::max(x, y) + 0.05) / (std::min(x, y) + 0.05);
+}
+
+
+// Wheel input over an unfocused selector must scroll the form, not edit a DSP
+// setting. Exercise actual Qt wheel delivery for normal and IRS/DDC combos.
+static bool checkComboWheel(QApplication& app) {
+    int changes = 0;
+    QScrollArea area;
+    auto* content = new QWidget;
+    auto* layout = new QVBoxLayout(content);
+    auto* normal = new SafeComboBox(content);
+    auto* library = new IrsComboBox(content);
+    normal->addItems({"First", "Second", "Third"});
+    library->addItems({"None", "Room A", "Room B"});
+    normal->setCurrentIndex(1);
+    library->setCurrentIndex(1);
+    layout->addWidget(normal);
+    layout->addWidget(library);
+    auto* other = new QPushButton("Move focus here", content);
+    layout->addWidget(other);
+    for (int i = 0; i < 30; ++i)
+        layout->addWidget(new QLabel(QString("Scrolling content %1").arg(i), content));
+    area.setWidget(content);
+    area.setWidgetResizable(true);
+    area.resize(280, 180);
+    area.show();
+    app.processEvents();
+
+    bool passed = check(area.verticalScrollBar()->maximum() > 0,
+                        "wheel regression needs a scrollable form");
+    auto sendWheel = [&app](QComboBox* combo, int angle) {
+        const QPoint center = combo->rect().center();
+        QWheelEvent wheel(QPointF(center), QPointF(combo->mapToGlobal(center)),
+                          QPoint(), QPoint(0, angle), Qt::NoButton, Qt::NoModifier,
+                          Qt::NoScrollPhase, false);
+        // sendEvent clears spontaneity and Qt then suppresses parent propagation.
+        // Match QtTest's spontaneous widget input delivery instead.
+        QSpontaneKeyEvent::setSpontaneous(&wheel);
+        app.notify(combo, &wheel);
+    };
+    other->setFocus();
+    app.processEvents();
+    passed &= check(other->hasFocus() && !normal->hasFocus() && !library->hasFocus(),
+                    "wheel regression needs both selectors initially unfocused");
+    QObject::connect(normal, &QComboBox::currentIndexChanged,
+                     [&changes](int) { ++changes; });
+    QObject::connect(library, &QComboBox::currentIndexChanged,
+                     [&changes](int) { ++changes; });
+    const int beforeScroll = area.verticalScrollBar()->value();
+    sendWheel(normal, -120);
+    passed &= check(normal->currentIndex() == 1 && changes == 0 && !normal->hasFocus(),
+                    "unfocused standard combo changed under the mouse wheel");
+    passed &= check(area.verticalScrollBar()->value() > beforeScroll,
+                    "ignored combo wheel did not reach the parent scroll area");
+
+    area.verticalScrollBar()->setValue(0);
+    other->setFocus();
+    app.processEvents();
+    const int beforeLibraryScroll = area.verticalScrollBar()->value();
+    sendWheel(library, -120);
+    passed &= check(library->currentIndex() == 1 && changes == 0 && !library->hasFocus(),
+                    "unfocused IRS/DDC selector changed under the mouse wheel");
+    passed &= check(area.verticalScrollBar()->value() > beforeLibraryScroll,
+                    "ignored IRS/DDC wheel did not reach the parent scroll area");
+    area.verticalScrollBar()->setValue(0);
+
+    normal->setFocus();
+    app.processEvents();
+    passed &= check(normal->hasFocus(), "standard combo could not receive focus");
+    sendWheel(normal, -120);
+    passed &= check(normal->currentIndex() == 2 && changes == 1,
+                    "focused combo lost its intentional wheel selection");
+
+    library->setFocus();
+    app.processEvents();
+    passed &= check(library->hasFocus(), "IRS/DDC combo could not receive focus");
+    sendWheel(library, -120);
+    passed &= check(library->currentIndex() == 2 && changes == 2,
+                    "focused IRS/DDC selector lost its intentional wheel selection");
+    return passed;
 }
 
 int main(int argc, char** argv) {
@@ -115,5 +204,6 @@ int main(int argc, char** argv) {
     passed &= check(app.palette().color(QPalette::Window) ==
                     originalAppPalette.color(QPalette::Window),
                     "themed windows changed QApplication palette");
+    passed &= checkComboWheel(app);
     return passed ? 0 : 1;
 }

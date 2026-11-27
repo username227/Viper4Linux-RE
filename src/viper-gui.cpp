@@ -19,6 +19,7 @@
 #include "panels/output-panels.h"
 #include "panels/spatial-panels.h"
 #include "widgets/effect-widgets.h"
+#include "widgets/safe-combo-box.h"
 #include "widgets/irs-combo-box.h"
 #include "viper-theme.h"
 #include "viper-named-presets.h"
@@ -162,7 +163,7 @@ public:
         headerGrid->addWidget(title, 0, 1);
         auto* themeLabel = new QLabel("Theme", central);
         headerGrid->addWidget(themeLabel, 0, 2);
-        theme_selector_ = new QComboBox(central);
+        theme_selector_ = new SafeComboBox(central);
         theme_selector_->setObjectName("viperThemeSelector");
         theme_selector_->setAccessibleName("Interface color scheme");
         theme_selector_->setToolTip("Change only the GUI colors; audio settings are unaffected.");

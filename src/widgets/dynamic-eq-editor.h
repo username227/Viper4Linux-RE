@@ -1,6 +1,7 @@
 // Dynamic EQ detailed editor: layout and widgets only.
 // State transitions and native DSP values remain in the main window.
 #pragma once
+#include "widgets/safe-combo-box.h"
 #include "widgets/eq-overviews.h"
 #include <QAbstractItemView>
 #include <QComboBox>
@@ -103,14 +104,14 @@ inline DynamicEqEditorWidgets createDynamicEqEditor(QWidget* parent) {
         deq_content_layout->addWidget(result.selectedLabel);
         auto* deq_form_editor = new QFormLayout();
         deq_form_editor->setRowWrapPolicy(QFormLayout::WrapLongRows);
-        result.bandSelector = new QComboBox(deq_content);
+        result.bandSelector = new SafeComboBox(deq_content);
         result.bandSelector->setObjectName("viperDynamicEqBandSelector");
         deq_form_editor->addRow("Selected band", result.bandSelector);
         result.frequency = new QSpinBox(deq_content);
         result.frequency->setRange(20,20000);
         result.frequency->setSuffix(" Hz");
         deq_form_editor->addRow("Center / shelf frequency", result.frequency);
-        result.filterType = new QComboBox(deq_content);
+        result.filterType = new SafeComboBox(deq_content);
         result.filterType->addItems({"Peak", "Low shelf", "High shelf"});
         deq_form_editor->addRow("Filter shape", result.filterType);
         result.q = new QDoubleSpinBox(deq_content);

@@ -1,6 +1,7 @@
 // ViPER4Linux-RE: IRS/DDC selector with immutable popup contents while open.
 // The shared file-list refresh is used by both correction libraries.
 #pragma once
+#include "widgets/safe-combo-box.h"
 
 #include <QAbstractItemView>
 #include <QComboBox>
@@ -18,9 +19,9 @@
 // Library contents stay immutable while their popup is open. If the files
 // change during a selection, the next popup opening reconciles the list.
 // This also handles a directory event delivered immediately after closing.
-class IrsComboBox final : public QComboBox {
+class IrsComboBox final : public SafeComboBox {
 public:
-    explicit IrsComboBox(QWidget* parent) : QComboBox(parent) {
+    explicit IrsComboBox(QWidget* parent) : SafeComboBox(parent) {
         // A single very long filename must NEVER set the minimum form width.
         // The full value is preserved in itemData and the tooltip/detail label.
         setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);

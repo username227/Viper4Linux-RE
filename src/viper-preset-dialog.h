@@ -1,4 +1,5 @@
 #pragma once
+#include "widgets/safe-combo-box.h"
 #include "viper-named-presets.h"
 #include <QCoreApplication>
 #include <QDateTime>
@@ -184,7 +185,7 @@ struct PresetDialogActions {
                 "Select the physical Audio Output whose saved effect settings will be replaced.", &picker);
             explanation->setWordWrap(true);
             layout->addWidget(explanation);
-            auto* targets = new QComboBox(&picker);
+            auto* targets = new SafeComboBox(&picker);
             for (auto it = outputs.begin(); it != outputs.end(); ++it) {
                 const QString name = it.value().toObject().value("description").toString();
                 targets->addItem(name + (it.key() == current ? " (active)" : " (remembered)"),

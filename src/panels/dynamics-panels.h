@@ -1,6 +1,7 @@
 // Dynamics control construction. ViperWindow keeps all settings,
 // signal wiring, DSP synchronization and effect-card expansion.
 #pragma once
+#include "widgets/safe-combo-box.h"
 #include "widgets/effect-widgets.h"
 #include <QByteArray>
 #include <QCheckBox>
@@ -67,7 +68,7 @@ MultibandPanel createMultibandPanel(
         mb_form->setRowWrapPolicy(QFormLayout::WrapLongRows);
         out.mb_enabled = new EffectSwitch(mb_group);
         mb_form->addRow("Enable native multiband compression", out.mb_enabled);
-        out.mb_band_count = new QComboBox(mb_group);
+        out.mb_band_count = new SafeComboBox(mb_group);
         out.mb_band_count->addItems({"3 bands", "5 bands"});
         mb_form->addRow("Processing bands", out.mb_band_count);
         // Frequency bands follow bass -> treble. Select one to edit; all five

@@ -2,6 +2,7 @@
 // to preserve the established order relative to EQ editor setup and other tabs.
 // All signal connections, state, preset actions, and DSP transport stay in ViperWindow.
 #pragma once
+#include "widgets/safe-combo-box.h"
 #include "widgets/effect-widgets.h"
 #include "widgets/eq-overviews.h"
 #include <QComboBox>
@@ -43,7 +44,7 @@ inline EqAndDynamicPanels createEqAndDynamicPanels(QWidget* parent) {
         eq_row->setContentsMargins(0, 0, 0, 0);
         eq_row->setSpacing(6);
         eq_row->addWidget(new QLabel("Bands", eq_controls));
-        out.eq_mode = new QComboBox(eq_controls);
+        out.eq_mode = new SafeComboBox(eq_controls);
         out.eq_mode->setObjectName("viperEqBandCount");
         for (int count : {10, 15, 25, 31})
             out.eq_mode->addItem(QString::number(count), count);
@@ -53,7 +54,7 @@ inline EqAndDynamicPanels createEqAndDynamicPanels(QWidget* parent) {
         out.eq_mode->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         eq_row->addWidget(out.eq_mode, 2);
         eq_row->addWidget(new QLabel("Preset", eq_controls));
-        out.eq_preset = new QComboBox(eq_controls);
+        out.eq_preset = new SafeComboBox(eq_controls);
         out.eq_preset->setObjectName("viperEqPreset");
         out.eq_preset->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
         out.eq_preset->setMinimumContentsLength(9);
@@ -124,7 +125,7 @@ auto createClaritySpectrumPanels(QWidget* parent, AddSlider addSlider) {
         auto* clarity_form = new QFormLayout(clarity_group);
         out.clarity_enabled = new EffectSwitch(clarity_group);
         clarity_form->addRow("Clarity processing", out.clarity_enabled);
-        out.clarity_mode = new QComboBox(clarity_group);
+        out.clarity_mode = new SafeComboBox(clarity_group);
         out.clarity_mode->addItems({"Natural", "Ozone", "XHiFi"});
         clarity_form->addRow("Clarity mode", out.clarity_mode);
         out.clarity_gain = addSlider(clarity_form, "Clarity strength", 0, 45); // tenths, 0..4.5
@@ -164,7 +165,7 @@ auto createTubeAnalogXPanels(QWidget* parent, AddSlider addSlider) {
         auto* tube_form = new QFormLayout(tube_group);
         out.tube_enabled = new EffectSwitch(tube_group);
         tube_form->addRow("Enable tube simulation", out.tube_enabled);
-        out.tube_model = new QComboBox(tube_group);
+        out.tube_model = new SafeComboBox(tube_group);
         out.tube_model->addItems({"12AX7 (High Gain)", "12AU7 (Low Gain)", "6N1P (Medium Gain)"});
         out.tube_model->setToolTip("Native ViPERDSP vacuum-tube models.");
         tube_form->addRow("Tube model", out.tube_model);
@@ -179,7 +180,7 @@ auto createTubeAnalogXPanels(QWidget* parent, AddSlider addSlider) {
         auto* analogx_form = new QFormLayout(analogx_group);
         out.analogx_enabled = new EffectSwitch(analogx_group);
         analogx_form->addRow("Enable AnalogX", out.analogx_enabled);
-        out.analogx_mode = new QComboBox(analogx_group);
+        out.analogx_mode = new SafeComboBox(analogx_group);
         out.analogx_mode->addItems({"Mild", "Medium", "Strong"});
         out.analogx_mode->setToolTip("Native ViPERDSP AnalogX coloration modes.");
         analogx_form->addRow("Processing mode", out.analogx_mode);

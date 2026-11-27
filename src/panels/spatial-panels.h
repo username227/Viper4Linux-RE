@@ -1,6 +1,7 @@
 // Spatial tab controls only. All persistence, DSP connections and card
 // enable/expand logic remain in the main window.
 #pragma once
+#include "widgets/safe-combo-box.h"
 #include "widgets/effect-widgets.h"
 #include <QCheckBox>
 #include <QComboBox>
@@ -55,7 +56,7 @@ auto createSpatialPanels(QWidget* parent, AddSlider addSlider) {
     auto* crossfeed_form = new QFormLayout(out.crossfeedGroup);
     out.crossfeed_enabled = new EffectSwitch(out.crossfeedGroup);
     crossfeed_form->addRow("Speaker-like headphone crossfeed", out.crossfeed_enabled);
-    out.crossfeed_mode = new QComboBox(out.crossfeedGroup);
+    out.crossfeed_mode = new SafeComboBox(out.crossfeedGroup);
     out.crossfeed_mode->addItems({"Mild", "Medium", "Strong"});
     out.crossfeed_mode->setToolTip("Native ViPERDSP Cure: filtered left/right crossfeed presets.");
     crossfeed_form->addRow("Crossfeed strength", out.crossfeed_mode);
@@ -64,7 +65,7 @@ auto createSpatialPanels(QWidget* parent, AddSlider addSlider) {
         auto* headphone_form = new QFormLayout(headphone_group);
         out.headphone_enabled = new EffectSwitch(headphone_group);
         headphone_form->addRow("Surround processing", out.headphone_enabled);
-        out.headphone_quality = new QComboBox(headphone_group);
+        out.headphone_quality = new SafeComboBox(headphone_group);
         out.headphone_quality->addItems({"Level 1", "Level 2", "Level 3", "Level 4", "Level 5"});
         out.headphone_quality->setToolTip("Five distinct upstream VHE surround profiles; higher levels are not necessarily better. Supported at 44.1 and 48 kHz.");
         headphone_form->addRow("Surround level", out.headphone_quality);
