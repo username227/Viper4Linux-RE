@@ -174,9 +174,10 @@ set_tests_properties(viper_native_worker_request PROPERTIES
 
 # Palette propagation is tested on an offscreen Qt platform without a
 # running Cinnamon desktop or any ViPER audio backend.
+find_package(Qt6 6.4 COMPONENTS Test REQUIRED)
 add_executable(viper_test_dialog_theme check-dialog-theme.cpp)
 target_include_directories(viper_test_dialog_theme PRIVATE "${_viper_test_include}")
-target_link_libraries(viper_test_dialog_theme PRIVATE Qt6::Widgets)
+target_link_libraries(viper_test_dialog_theme PRIVATE Qt6::Widgets Qt6::Test)
 target_compile_options(viper_test_dialog_theme PRIVATE
   -O2 -UNDEBUG -Wall -Wextra -Wpedantic -Werror)
 add_test(NAME viper_gui_dialog_theme COMMAND "$<TARGET_FILE:viper_test_dialog_theme>")

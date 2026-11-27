@@ -10,6 +10,7 @@
 #include <QScrollBar>
 #include <QVBoxLayout>
 #include <QWheelEvent>
+#include <QtTest/qtestspontaneevent.h>
 #include <QDialog>
 #include <QLabel>
 #include <QMainWindow>
@@ -46,6 +47,7 @@ static double contrast(const QColor& a, const QColor& b) {
 // Wheel input over an unfocused selector must scroll the form, not edit a DSP
 // setting. Exercise actual Qt wheel delivery for normal and IRS/DDC combos.
 static bool checkComboWheel(QApplication& app) {
+    int changes = 0;
     QScrollArea area;
     auto* content = new QWidget;
     auto* layout = new QVBoxLayout(content);
@@ -69,30 +71,41 @@ static bool checkComboWheel(QApplication& app) {
 
     bool passed = check(area.verticalScrollBar()->maximum() > 0,
                         "wheel regression needs a scrollable form");
-    auto sendWheel = [](QComboBox* combo, int angle) {
+    auto sendWheel = [&app](QComboBox* combo, int angle) {
         const QPoint center = combo->rect().center();
         QWheelEvent wheel(QPointF(center), QPointF(combo->mapToGlobal(center)),
                           QPoint(), QPoint(0, angle), Qt::NoButton, Qt::NoModifier,
-                          Qt::ScrollUpdate, false);
-        QApplication::sendEvent(combo, &wheel);
+                          Qt::NoScrollPhase, false);
+        // sendEvent clears spontaneity and Qt then suppresses parent propagation.
+        // Match QtTest's spontaneous widget input delivery instead.
+        QSpontaneKeyEvent::setSpontaneous(&wheel);
+        app.notify(combo, &wheel);
     };
     other->setFocus();
     app.processEvents();
-    int changes = 0;
+    passed &= check(other->hasFocus() && !normal->hasFocus() && !library->hasFocus(),
+                    "wheel regression needs both selectors initially unfocused");
     QObject::connect(normal, &QComboBox::currentIndexChanged,
                      [&changes](int) { ++changes; });
     QObject::connect(library, &QComboBox::currentIndexChanged,
                      [&changes](int) { ++changes; });
     const int beforeScroll = area.verticalScrollBar()->value();
     sendWheel(normal, -120);
-    passed &= check(normal->currentIndex() == 1 && changes == 0,
+    passed &= check(normal->currentIndex() == 1 && changes == 0 && !normal->hasFocus(),
                     "unfocused standard combo changed under the mouse wheel");
     passed &= check(area.verticalScrollBar()->value() > beforeScroll,
                     "ignored combo wheel did not reach the parent scroll area");
 
+    area.verticalScrollBar()->setValue(0);
+    other->setFocus();
+    app.processEvents();
+    const int beforeLibraryScroll = area.verticalScrollBar()->value();
     sendWheel(library, -120);
-    passed &= check(library->currentIndex() == 1 && changes == 0,
+    passed &= check(library->currentIndex() == 1 && changes == 0 && !library->hasFocus(),
                     "unfocused IRS/DDC selector changed under the mouse wheel");
+    passed &= check(area.verticalScrollBar()->value() > beforeLibraryScroll,
+                    "ignored IRS/DDC wheel did not reach the parent scroll area");
+    area.verticalScrollBar()->setValue(0);
 
     normal->setFocus();
     app.processEvents();

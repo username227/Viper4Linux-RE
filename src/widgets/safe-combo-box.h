@@ -7,7 +7,10 @@
 
 class SafeComboBox : public QComboBox {
 public:
-    explicit SafeComboBox(QWidget* parent = nullptr) : QComboBox(parent) {}
+    explicit SafeComboBox(QWidget* parent = nullptr) : QComboBox(parent) {
+        // Keep Tab and click focus, but never acquire focus from the wheel.
+        setFocusPolicy(Qt::StrongFocus);
+    }
 
 protected:
     void wheelEvent(QWheelEvent* event) override {
